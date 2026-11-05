@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         HintaTutka
 // @namespace    https://github.com/FIMARx/hintatutka
-// @version      6.6
-// @description  Suomen älykkäin hintatutka: Elektroniikka, huonekalut, ruoka, Tori.fi & Vinted — hintakäyrät, yksikköhinnat (€/kg, €/l), klubitarjoukset & suora Prisma/K-Rauta/Clas Ohlson/Puuilo/Motonet/Tokmanni-haku 58 sivustolla
+// @version      7.0
+// @description  Suomen älykkäin hintatutka: Elektroniikka, huonekalut, ruoka, Tori.fi, Vinted & Huuto.net — hintakäyrät, yksikköhinnat (€/kg, €/l), hintavahti, tinkausapuri, S-bonus, kunnostetut & suora haku 77 sivustolla
 // @author       FIMARx
 // @homepageURL  https://github.com/FIMARx/hintatutka
 // @supportURL   https://github.com/FIMARx/hintatutka/issues
@@ -46,6 +46,27 @@
 // @match        https://*.tori.fi/*
 // @match        https://*.vinted.fi/*
 // @match        https://vinted.fi/*
+// @match        https://*.huuto.net/*
+// @match        https://huuto.net/*
+// @match        https://*.swappie.com/*
+// @match        https://swappie.com/*
+// @match        https://*.taitonetti.fi/*
+// @match        https://*.fonum.fi/*
+// @match        https://*.xxl.fi/*
+// @match        https://*.varuste.net/*
+// @match        https://*.intersport.fi/*
+// @match        https://*.scandinavianoutdoor.fi/*
+// @match        https://*.stadium.fi/*
+// @match        https://*.ya.fi/*
+// @match        https://*.lyko.com/*
+// @match        https://*.kicks.fi/*
+// @match        https://*.mustijamirri.fi/*
+// @match        https://*.zooplus.fi/*
+// @match        https://*.petenkoiratarvike.com/*
+// @match        https://*.adlibris.com/*
+// @match        https://*.suomalainen.com/*
+// @match        https://*.taloon.com/*
+// @match        https://*.netrauta.fi/*
 // @match        https://*.s-kaupat.fi/*
 // @match        https://*.k-ruoka.fi/*
 // @match        https://*.fiksuruoka.fi/*
@@ -74,6 +95,9 @@
 // @connect      tori.fi
 // @connect      www.vinted.fi
 // @connect      vinted.fi
+// @connect      api.huuto.net
+// @connect      www.huuto.net
+// @connect      huuto.net
 // @connect      www.prisma.fi
 // @connect      prisma.fi
 // @connect      www.k-rauta.fi
@@ -104,7 +128,7 @@
     // =========================================================================
     // CONFIGURATION & THRESHOLDS
     // =========================================================================
-    const SCRIPT_VERSION = '6.6';
+    const SCRIPT_VERSION = '7.0';
     const GITHUB_RAW_SCRIPT_URL = 'https://raw.githubusercontent.com/FIMARx/hintatutka/main/HintaTutka.user.js';
     const GITHUB_API_CONTENTS_URL = 'https://api.github.com/repos/FIMARx/hintatutka/contents/HintaTutka.user.js';
     const GITHUB_REPO_URL = 'https://github.com/FIMARx/hintatutka';
@@ -117,8 +141,8 @@
         usedOkDiscountPct: 5.0,
         cacheTtlMs: 15 * 60 * 1000,
         updateCheckTtlMs: 60 * 1000,
-        storageKeyUpdateCheck: 'ufhpc_github_update_v66',
-        storageKeyObservedOffers: 'ufhpc_observed_offers_v66',
+        storageKeyUpdateCheck: 'ufhpc_github_update_v70',
+        storageKeyObservedOffers: 'ufhpc_observed_offers_v70',
         storageKeyCollapsed: 'ufhpc_sidebar_collapsed_v55',
         storageKeyExpanded: 'ufhpc_sidebar_expanded_v55',
         storageKeyLang: 'ufhpc_sidebar_lang_v55',
@@ -127,17 +151,25 @@
         storageKeyInStock: 'ufhpc_filter_stock_v55',
         storageKeyToriDiili: 'ufhpc_filter_toridiili_v55',
         storageKeyVintedOnly: 'ufhpc_filter_vinted_v66',
+        storageKeyHuutoOnly: 'ufhpc_filter_huuto_v70',
+        storageKeyDockSide: 'ufhpc_dock_side_v70',
+        storageKeyWatchlist: 'ufhpc_watchlist_items_v70',
         storageKeyChartTab: 'ufhpc_chart_tab_v55',
         maxStoresShown: 8,
         maxToriShown: 4
     };
 
     // =========================================================================
-    // SUPPORTED STORES REGISTRY (58 SITES: TECH, GROCERIES, FURNITURE, DIY & SECOND-HAND)
+    // SUPPORTED STORES REGISTRY (77 SITES: TECH, GROCERIES, FURNITURE, DIY, SPORTS, REFURB & SECOND-HAND)
     // =========================================================================
     const STORES = [
         { match: 'tori.fi', name: 'Tori.fi (Käytetty)', isUsedSite: true, selectors: ['main .h2', '[data-testid="object-title"] ~ div .h2', 'div.h2'] },
         { match: 'vinted.fi', name: 'Vinted (Käytetty)', isUsedSite: true, selectors: ['[data-testid="item-price"] p', '[data-testid="item-price"]', '[data-testid="item-sidebar-price-container"]', 'p.web_ui__Text__subtitle', 'h1 ~ div span'] },
+        { match: 'huuto.net', name: 'Huuto.net (Käytetty)', isUsedSite: true, selectors: ['h1.title', 'h1', '[class*="price" i]', '.price'] },
+        // Refurbished Tech Specialists (12-24 mo warranty)
+        { match: 'swappie.com', name: 'Swappie (Kunnostettu)', isRefurbishedSite: true, selectors: ['[data-testid*="price" i]', '.price', '[class*="Price" i]', '[itemprop="price"]'] },
+        { match: 'taitonetti.fi', name: 'Taitonetti (Kunnostettu)', isRefurbishedSite: true, selectors: ['.product-price', '.price', '[itemprop="price"]'] },
+        { match: 'fonum.fi', name: 'Fonum (Kunnostettu)', isRefurbishedSite: true, selectors: ['.product-price', '.price', '[itemprop="price"]'] },
         { match: 'hinta.fi', name: 'Hinta.fi', selectors: ['.hv-price-min', '[itemprop="lowPrice"]', '[itemprop="price"]'] },
         { match: 'verkkokauppa.com', name: 'Verkkokauppa.com', selectors: ['[data-price="current"]', 'ins[data-price]', '[class*="Price-sc"] ins', '[class*="ProductPrice"] [data-price]'] },
         { match: 'gigantti.fi', name: 'Gigantti', selectors: ['[data-testid="price-container"] span', '[class*="price-box"] [class*="price"]', '.product-price-container'] },
@@ -171,6 +203,23 @@
         { match: 'satshop.fi', name: 'SatShop.fi', selectors: ['.price-box .price', '.product-price', '[itemprop="price"]'] },
         { match: 'dustin', name: 'Dustin', selectors: ['[data-testid*="price"]', '.c-price', '[itemprop="price"]'] },
         { match: 'amazon.de', name: 'Amazon.de', selectors: ['#corePriceDisplay_desktop_feature_div .a-price .a-offscreen', '#corePrice_feature_div .a-price .a-offscreen', '.a-price.aok-align-center .a-offscreen'] },
+        // Sports & Outdoor Equipment
+        { match: 'xxl.fi', name: 'XXL', selectors: ['[data-testid*="price" i]', '.price-item', '.product-price', '[itemprop="price"]'] },
+        { match: 'varuste.net', name: 'Varuste.net', selectors: ['.item_price', '.price', '[itemprop="price"]'] },
+        { match: 'intersport.fi', name: 'Intersport', selectors: ['[data-testid*="price" i]', '.product-price', '[itemprop="price"]'] },
+        { match: 'scandinavianoutdoor.fi', name: 'Scandinavian Outdoor', selectors: ['.product-price', '.price', '[itemprop="price"]'] },
+        { match: 'stadium.fi', name: 'Stadium', selectors: ['.product-price', '.price', '[itemprop="price"]'] },
+        // Pharmacies, Health & Beauty
+        { match: 'ya.fi', name: 'Yliopiston Apteekki', categoryHint: 'grocery', selectors: ['.product-price', '.price', '[itemprop="price"]'] },
+        { match: 'lyko.com', name: 'Lyko', selectors: ['[data-test*="price" i]', '.product-price', '[itemprop="price"]'] },
+        { match: 'kicks.fi', name: 'Kicks', selectors: ['.product-price', '.price', '[itemprop="price"]'] },
+        // Pet Supplies & Veterinary Food
+        { match: 'mustijamirri.fi', name: 'Musti ja Mirri', categoryHint: 'grocery', selectors: ['.product-price', '.price', '[itemprop="price"]'] },
+        { match: 'zooplus.fi', name: 'Zooplus', categoryHint: 'grocery', selectors: ['[data-testid*="price" i]', '.product-price', '[itemprop="price"]'] },
+        { match: 'petenkoiratarvike.com', name: 'Peten Koiratarvike', categoryHint: 'grocery', selectors: ['.product-price', '.price', '[itemprop="price"]'] },
+        // Books & Stationery
+        { match: 'adlibris.com', name: 'Adlibris', selectors: ['[data-testid*="price" i]', '.product-price', '[itemprop="price"]'] },
+        { match: 'suomalainen.com', name: 'Suomalainen Kirjakauppa', selectors: ['.product-price', '.price', '[itemprop="price"]'] },
         // Groceries, Supermarkets & Everyday Discount Stores
         { match: 's-kaupat.fi', name: 'S-kaupat', categoryHint: 'grocery', selectors: ['[data-test-id="product-price__unit-price"]', '[data-test-id*="price"]', '[class*="ProductPrice"]'] },
         { match: 'k-ruoka.fi', name: 'K-Ruoka', categoryHint: 'grocery', selectors: ['[data-testid="product-unit-price"]', '[data-testid*="price"]', '[class*="price-value"]', '[class*="ProductPrice"]'] },
@@ -179,7 +228,7 @@
         { match: 'ruohonjuuri.fi', name: 'Ruohonjuuri', selectors: ['.product__price', '.price-item--regular', '[itemprop="price"]'] },
         { match: 'tokmanni.fi', name: 'Tokmanni', selectors: ['[data-price-type="finalPrice"]', '.price-box .price', '[itemprop="price"]'] },
         { match: 'puuilo.fi', name: 'Puuilo', selectors: ['[data-price-type="finalPrice"]', '.price-box .price', '[itemprop="price"]'] },
-        // Furniture, Tables, Home & DIY Stores
+        // Furniture, Tables, Home & Renovation Stores
         { match: 'ikea.com', name: 'IKEA', categoryHint: 'furniture', selectors: ['.pip-temp-price__integer', '.pip-price__integer', '[data-testid="pip-price"]', '.pip-temp-price'] },
         { match: 'jysk.fi', name: 'JYSK', categoryHint: 'furniture', selectors: ['.ssr-product-price__value', '.product-price-value', '[itemprop="price"]'] },
         { match: 'sotka.fi', name: 'Sotka', categoryHint: 'furniture', selectors: ['.product-price', '.price-now', '[itemprop="price"]'] },
@@ -190,6 +239,8 @@
         { match: 'finnishdesignshop.fi', name: 'Finnish Design Shop', categoryHint: 'furniture', selectors: ['.product-price', '[itemprop="price"]', '.price'] },
         { match: 'k-rauta.fi', name: 'K-Rauta', selectors: ['[data-testid*="price"]', '.price-view', '[itemprop="price"]'] },
         { match: 'bauhaus.fi', name: 'Bauhaus', selectors: ['[data-price-type="finalPrice"]', '.price-box .price', '[itemprop="price"]'] },
+        { match: 'taloon.com', name: 'Taloon.com', selectors: ['.product-price', '.price', '[itemprop="price"]'] },
+        { match: 'netrauta.fi', name: 'Netrauta', selectors: ['.product-price', '.price', '[itemprop="price"]'] },
         { match: 'motonet.fi', name: 'Motonet', selectors: ['[data-testid*="price"]', '.product-price', '[itemprop="price"]'] },
         { match: 'biltema.fi', name: 'Biltema', selectors: ['[data-testid*="price"]', '.product-price', '[itemprop="price"]'] },
         { match: 'clasohlson.com', name: 'Clas Ohlson', selectors: ['.product-price', '.price-value', '[class*="product-price" i]', '[class*="ProductPrice" i]', '[class*="price-box" i]', '[data-testid*="price" i]', '[itemprop="price"]', '.price'] },
@@ -271,7 +322,22 @@
             inlineExpensive: (diff, pct, low, store) => `KALLIS! +${diff} (+${pct}%) • Halvin: ${low} (${store})`,
             inlineUsedGood: (saveEur, savePct, newLow, store) => `HYVÄ LÖYTÖ! ${saveEur} (${savePct}%) halvempi kuin uusi (${newLow} @ ${store})`,
             inlineUsedOk: (saveEur, savePct, newLow, store) => `OK KÄYTETTY (${saveEur} / ${savePct}% vs. uusi ${newLow} @ ${store})`,
-            inlineUsedBad: (newLow, store) => `KALLIS KÄYTETYKSI! Uutena kaupasta takuulla: ${newLow} (${store})`
+            inlineUsedBad: (newLow, store) => `KALLIS KÄYTETYKSI! Uutena kaupasta takuulla: ${newLow} (${store})`,
+            watchlistBtn: '⭐ Hintavahti',
+            watchlistAdded: '⭐ Tuote lisätty hintavahtiin!',
+            watchlistRemoved: '✕ Tuote poistettu hintavahdista',
+            watchlistTitle: '⭐ Seurantalista / Hintavahti',
+            watchlistEmpty: 'Ei seurattavia tuotteita vielä. Klikkaa ⭐ lisätäksesi tuotteen seurantaan!',
+            watchlistClear: 'Tyhjennä lista',
+            bargainAdvisor: 'Tinkausapuri',
+            bargainFairOffer: 'Reilu vastatarjous',
+            bargainMsgText: (prod, offer) => `Moi! Olen kiinnostunut tuotteesta "${prod}". Voisitko myydä sen hintaan ${offer} noudolla tai postituksella? Terveisin!`,
+            copyOfferBtn: '📋 Kopioi tarjousviesti',
+            offerCopied: '📋 Tarjousviesti kopioitu leikepöydälle!',
+            shareBtn: '📋 Jaa',
+            shareCopied: '📋 Hintaraportti kopioitu leikepöydälle!',
+            dockSwitch: 'Vaihda puolta (Vasen ↔ Oikea)',
+            huutoTitle: 'Huuto.net'
         },
         en: {
             greenLabel: 'CHEAP / GREAT DEAL',
@@ -342,7 +408,22 @@
             inlineExpensive: (diff, pct, low, store) => `TOO EXPENSIVE! +${diff} (+${pct}%) • Lowest: ${low} (${store})`,
             inlineUsedGood: (saveEur, savePct, newLow, store) => `GREAT USED DEAL! ${saveEur} (${savePct}%) below new (${newLow} @ ${store})`,
             inlineUsedOk: (saveEur, savePct, newLow, store) => `OK USED PRICE (${saveEur} / ${savePct}% vs. new ${newLow} @ ${store})`,
-            inlineUsedBad: (newLow, store) => `OVERPRICED USED! Brand new in store: ${newLow} (${store})`
+            inlineUsedBad: (newLow, store) => `OVERPRICED USED! Brand new in store: ${newLow} (${store})`,
+            watchlistBtn: '⭐ Watchlist',
+            watchlistAdded: '⭐ Added to Price Watchlist!',
+            watchlistRemoved: '✕ Removed from Price Watchlist',
+            watchlistTitle: '⭐ Price Watchlist',
+            watchlistEmpty: 'No tracked products yet. Click ⭐ to add this product to your Watchlist!',
+            watchlistClear: 'Clear Watchlist',
+            bargainAdvisor: 'Bargaining Advisor',
+            bargainFairOffer: 'Fair Counter-Offer',
+            bargainMsgText: (prod, offer) => `Hi! I am interested in "${prod}". Would you be willing to sell it for ${offer} with pickup or shipping? Best regards!`,
+            copyOfferBtn: '📋 Copy Offer Message',
+            offerCopied: '📋 Offer message copied to clipboard!',
+            shareBtn: '📋 Share',
+            shareCopied: '📋 Price summary copied to clipboard!',
+            dockSwitch: 'Switch Side (Left ↔ Right)',
+            huutoTitle: 'Huuto.net'
         }
     };
 
@@ -536,7 +617,7 @@
     function cleanTitle(str) {
         if (!str) return '';
         return normalizeSwappedModelOrder(str)
-            .replace(/[-|•–].*?(Verkkokauppa|Gigantti|Power|Proshop|Jimm's|Datatronic|Multitronic|Tietokonekauppa|Data-Systems|Komponenttikauppa|Cruzbroker|MaxGaming|VPD|Puolenkuun|Veikon|Euronics|Kärkkäinen|Prisma|Telia|Elisa|DNA|HobbyHall|Bigbox|Kasuplan|Mikromafia|TeraStore|DigiDreamer|MEGASTORE|e-ville|SatShop|Dustin|Amazon|Tori|Vinted|S-kaupat|K-Ruoka|Fiksuruoka|Matsmart|Ruohonjuuri|Tokmanni|Puuilo|IKEA|JYSK|Sotka|Asko|Masku|Isku|Veke|Finnish Design Shop|K-Rauta|Bauhaus|Motonet|Biltema|Clas Ohlson|Rusta|Stockmann).*$/i, '')
+            .replace(/[-|•–].*?(Verkkokauppa|Gigantti|Power|Proshop|Jimm's|Datatronic|Multitronic|Tietokonekauppa|Data-Systems|Komponenttikauppa|Cruzbroker|MaxGaming|VPD|Puolenkuun|Veikon|Euronics|Kärkkäinen|Prisma|Telia|Elisa|DNA|HobbyHall|Bigbox|Kasuplan|Mikromafia|TeraStore|DigiDreamer|MEGASTORE|e-ville|SatShop|Dustin|Amazon|Tori|Vinted|Huuto|Swappie|Taitonetti|Fonum|XXL|Varuste|Intersport|Scandinavian Outdoor|Stadium|Yliopiston Apteekki|Lyko|Kicks|Musti ja Mirri|Zooplus|Peten Koiratarvike|Adlibris|Suomalainen|Taloon|Netrauta|S-kaupat|K-Ruoka|Fiksuruoka|Matsmart|Ruohonjuuri|Tokmanni|Puuilo|IKEA|JYSK|Sotka|Asko|Masku|Isku|Veke|Finnish Design Shop|K-Rauta|Bauhaus|Motonet|Biltema|Clas Ohlson|Rusta|Stockmann).*$/i, '')
             .replace(/^(Myydään|M:|ALE)\s+/i, '')
             .replace(/\s+/g, ' ')
             .trim();
@@ -842,6 +923,9 @@
         if (host.includes('vinted.fi')) {
             return !/\/items\/\d+/i.test(p);
         }
+        if (host.includes('huuto.net')) {
+            return !/\/kohteet\//i.test(p);
+        }
         if (host.includes('hinta.fi')) {
             return !/^\/\d+\b/.test(p);
         }
@@ -915,7 +999,7 @@
             }
         }
 
-        const hasProductUrlPattern = /\/(product|products|tuote|tuotteet|produkt|produkter|dp|gp\/product|p|recommerce\/forsale\/item|items)\b/i.test(location.pathname) ||
+        const hasProductUrlPattern = /\/(product|products|tuote|tuotteet|produkt|produkter|dp|gp\/product|p|recommerce\/forsale\/item|items|kohteet|varuste|mallit|item)\b/i.test(location.pathname) ||
             /\/Product\/Show\//i.test(location.pathname) ||
             /\.html$/i.test(location.pathname);
         const hasProductMeta = Boolean(
@@ -1665,15 +1749,109 @@
         return { query: queries[0] || '', items: [] };
     }
 
+    async function fetchHuutoUsedListings(productInfo, marketProduct, customQuery = null) {
+        const rawName = customQuery || marketProduct?.title || productInfo?.name || '';
+        if (!rawName) return { query: '', items: [] };
+
+        const targetTitle = marketProduct?.title || productInfo?.name || '';
+        const conciseQuery = extractConciseModelQuery(rawName);
+        const simplifiedQuery = simplifyProductNameForSearch(rawName);
+        const queries = Array.from(new Set([conciseQuery, simplifiedQuery, rawName].filter(Boolean)));
+        const referenceNewPrice = getFilteredOffersAndLowest(marketProduct, false, false).lowestPrice || productInfo?.currentPrice || null;
+
+        for (const q of queries) {
+            const cacheKey = `huuto_${normalizeQueryForCache(q)}`;
+            const cached = getCached(cacheKey);
+            if (cached && Array.isArray(cached.items)) {
+                if (cached.items.length > 0) return cached;
+            }
+
+            try {
+                const searchUrl = `https://api.huuto.net/1.1/items?words=${encodeURIComponent(q)}&limit=25`;
+                const resp = await gmFetch(searchUrl, {
+                    headers: { 'Accept': 'application/json' }
+                });
+                if (resp.status !== 200 || !resp.responseText) continue;
+
+                let data;
+                try {
+                    data = JSON.parse(resp.responseText);
+                } catch (_) {
+                    continue;
+                }
+
+                const rawItems = Array.isArray(data.items) ? data.items : [];
+                const items = [];
+                const seenIds = new Set();
+                const accessoryRx = /\b(kotelo|suojakotelo|kantolaukku|laukku|reppu|suodin|suodatin|suodinsarja|linssinsuojus|potkurit|potkuri|propeller|propellers|laturi|lataustelakka|akku|akut|battery|batteries|varaosa|varaosat|panssarilasi|suojalasi|pölysuoja|pelkkä\s*laatikko|tyhjä\s*laatikko|box\s*only|empty\s*box)\b/i;
+                const targetIsAccessory = accessoryRx.test(targetTitle);
+
+                for (const it of rawItems) {
+                    if (!it || !it.id || seenIds.has(it.id)) continue;
+                    seenIds.add(it.id);
+
+                    const title = (it.title || '').replace(/\s+/g, ' ').trim();
+                    const price = Number(it.buyNowPrice || it.currentPrice || 0);
+                    if (!price || price <= 0) continue;
+
+                    if (!targetIsAccessory && accessoryRx.test(title)) continue;
+
+                    if (referenceNewPrice && referenceNewPrice > 30) {
+                        const ratio = price / referenceNewPrice;
+                        const isFurn = productInfo?.category === 'furniture' || detectProductCategory(targetTitle) === 'furniture';
+                        const minRatio = isFurn ? 0.08 : 0.32;
+                        const maxRatio = isFurn ? 1.35 : 1.30;
+                        if (ratio < minRatio || ratio > maxRatio) continue;
+                    }
+
+                    if (!doesToriHeadingMatchQuery(title, q, targetTitle, false)) {
+                        continue;
+                    }
+
+                    const imageUrl = it.images?.[0]?.links?.thumbnail || it.images?.[0]?.links?.medium || null;
+                    const dateStr = it.listTime ? String(it.listTime).slice(0, 10).split('-').reverse().slice(0, 2).join('.') : 'Huuto';
+
+                    items.push({
+                        id: `huuto_${it.id}`,
+                        source: 'huuto',
+                        title,
+                        brand: null,
+                        condition: it.category || null,
+                        price,
+                        location: it.location || 'Huuto.net',
+                        url: it.links?.alternative || `https://www.huuto.net/kohteet/${it.id}`,
+                        imageUrl,
+                        hasToriDiili: false,
+                        hasVintedProtection: false,
+                        isHuuto: true,
+                        isCompany: false,
+                        timestamp: Date.now(),
+                        dateStr
+                    });
+                }
+
+                items.sort((a, b) => a.price - b.price);
+                const res = { query: q, items };
+                setCached(cacheKey, res);
+                if (items.length > 0) return res;
+            } catch (_) {
+                // Ignore Huuto fetch error
+            }
+        }
+        return { query: queries[0] || '', items: [] };
+    }
+
     async function fetchUsedMarketListings(productInfo, marketProduct, customQuery = null) {
-        const [toriData, vintedData] = await Promise.all([
+        const [toriData, vintedData, huutoData] = await Promise.all([
             fetchToriUsedListings(productInfo, marketProduct, customQuery).catch(() => ({ query: '', items: [], stats: null })),
-            fetchVintedUsedListings(productInfo, marketProduct, customQuery).catch(() => ({ query: '', items: [] }))
+            fetchVintedUsedListings(productInfo, marketProduct, customQuery).catch(() => ({ query: '', items: [] })),
+            fetchHuutoUsedListings(productInfo, marketProduct, customQuery).catch(() => ({ query: '', items: [] }))
         ]);
 
         const toriItems = toriData?.items || [];
         const vintedItems = vintedData?.items || [];
-        const combinedItems = [...toriItems, ...vintedItems].sort((a, b) => a.price - b.price);
+        const huutoItems = huutoData?.items || [];
+        const combinedItems = [...toriItems, ...vintedItems, ...huutoItems].sort((a, b) => a.price - b.price);
 
         let stats = null;
         if (combinedItems.length > 0) {
@@ -1690,15 +1868,17 @@
             stats = toriData?.stats || null;
         }
 
-        const primaryQuery = toriData?.query || vintedData?.query || customQuery || extractConciseModelQuery(productInfo?.name) || '';
+        const primaryQuery = toriData?.query || vintedData?.query || huutoData?.query || customQuery || extractConciseModelQuery(productInfo?.name) || '';
         return {
             query: primaryQuery,
             items: combinedItems,
             stats,
             toriCount: toriItems.length,
             vintedCount: vintedItems.length,
+            huutoCount: huutoItems.length,
             toriQuery: toriData?.query || primaryQuery,
-            vintedQuery: vintedData?.query || primaryQuery
+            vintedQuery: vintedData?.query || primaryQuery,
+            huutoQuery: huutoData?.query || primaryQuery
         };
     }
 
@@ -3444,7 +3624,7 @@
                         <polygon points="${areaPoints}" fill="url(#ufhpc-tori-grad-${prefix})"/>
                         <polyline points="${linePoints}" fill="none" stroke="#fb7185" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         ${coords.map(c => `
-                            <circle cx="${c.x}" cy="${c.y}" r="2.8" fill="${c.item.source === 'vinted' ? '#2dd4bf' : (c.item.hasToriDiili ? '#fda4af' : '#fb7185')}" stroke="#0f1118" stroke-width="1.2"/>
+                            <circle cx="${c.x}" cy="${c.y}" r="2.8" fill="${c.item.source === 'vinted' ? '#2dd4bf' : (c.item.source === 'huuto' ? '#fbbf24' : (c.item.hasToriDiili ? '#fda4af' : '#fb7185'))}" stroke="#0f1118" stroke-width="1.2"/>
                         `).join('')}
                         <line id="ufhpc-hover-line-${prefix}" x1="0" y1="${padTop}" x2="0" y2="${padTop + plotH}"
                               stroke="rgba(255,255,255,0.45)" stroke-width="1" stroke-dasharray="2,2" visibility="hidden"/>
@@ -3486,6 +3666,30 @@
             }
             .ufhpc-wrapper.is-collapsed {
                 transform: translate(calc(100% - 42px), -50%);
+            }
+            .ufhpc-wrapper.is-dock-left {
+                right: auto;
+                left: 0;
+                flex-direction: row-reverse;
+            }
+            .ufhpc-wrapper.is-dock-left.is-collapsed {
+                transform: translate(calc(-100% + 42px), -50%);
+            }
+            .ufhpc-wrapper.is-dock-left .ufhpc-handle {
+                border-radius: 0 14px 14px 0;
+                border-left: none;
+                border-right: 1px solid rgba(255, 255, 255, 0.12);
+                box-shadow: 6px 0 24px rgba(0, 0, 0, 0.45);
+            }
+            .ufhpc-wrapper.is-dock-left .ufhpc-handle-bar {
+                left: auto;
+                right: 0;
+            }
+            .ufhpc-wrapper.is-dock-left .ufhpc-panel {
+                border-radius: 0 16px 16px 0;
+                border-left: none;
+                border-right: 1px solid rgba(255, 255, 255, 0.12);
+                box-shadow: 10px 10px 40px rgba(0, 0, 0, 0.6);
             }
 
             /* Side Handle / Draggable Edge Tab */
@@ -4414,7 +4618,7 @@
             /* External Action Buttons */
             .ufhpc-actions {
                 display: grid;
-                grid-template-columns: 1fr 1fr 1fr;
+                grid-template-columns: repeat(auto-fit, minmax(68px, 1fr));
                 gap: 6px;
             }
             .ufhpc-btn {
@@ -4463,6 +4667,207 @@
                 background: rgba(9, 177, 186, 0.25);
                 color: #5eead4;
             }
+            .ufhpc-btn-huuto {
+                background: rgba(245, 158, 11, 0.14);
+                color: #fbbf24;
+                border: 1px solid rgba(245, 158, 11, 0.35);
+            }
+            .ufhpc-btn-huuto:hover {
+                background: rgba(245, 158, 11, 0.25);
+                color: #fde68a;
+            }
+
+            .ufhpc-pill-btn.is-active-huuto {
+                background: rgba(245, 158, 11, 0.25);
+                color: #fbbf24;
+                border-color: rgba(245, 158, 11, 0.55);
+            }
+            .ufhpc-tori-row.is-huuto-row {
+                background: rgba(245, 158, 11, 0.045);
+                border-color: rgba(245, 158, 11, 0.18);
+            }
+            .ufhpc-tori-row.is-huuto-row:hover {
+                background: rgba(245, 158, 11, 0.12);
+                border-color: rgba(245, 158, 11, 0.35);
+            }
+            .ufhpc-tori-tag.huuto {
+                background: rgba(245, 158, 11, 0.18);
+                color: #fbbf24;
+                border-color: rgba(245, 158, 11, 0.35);
+            }
+
+            /* Bargaining Advisor Box */
+            .ufhpc-bargain-box {
+                margin-top: 10px;
+                padding: 10px 12px;
+                background: rgba(99, 102, 241, 0.08);
+                border: 1px dashed rgba(129, 140, 248, 0.45);
+                border-radius: 10px;
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+            }
+            .ufhpc-bargain-head {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                font-size: 11px;
+                font-weight: 700;
+                color: #a5b4fc;
+            }
+            .ufhpc-bargain-tag {
+                font-size: 11px;
+                color: #34d399;
+            }
+            .ufhpc-bargain-quote {
+                font-size: 11px;
+                color: #e2e8f0;
+                font-style: italic;
+                background: rgba(0, 0, 0, 0.25);
+                padding: 6px 8px;
+                border-radius: 6px;
+                line-height: 1.35;
+            }
+            .ufhpc-btn-copy-offer {
+                align-self: flex-start;
+                background: rgba(99, 102, 241, 0.22);
+                color: #c7d2fe;
+                border: 1px solid rgba(129, 140, 248, 0.4);
+                border-radius: 6px;
+                padding: 4px 9px;
+                font-size: 10px;
+                font-weight: 700;
+                cursor: pointer;
+                transition: all 0.15s ease;
+            }
+            .ufhpc-btn-copy-offer:hover {
+                background: rgba(99, 102, 241, 0.4);
+                color: #ffffff;
+            }
+
+            /* Store Bonus Box */
+            .ufhpc-bonus-box {
+                margin-top: 8px;
+                padding: 7px 10px;
+                background: rgba(16, 185, 129, 0.08);
+                border: 1px solid rgba(16, 185, 129, 0.3);
+                border-radius: 8px;
+                font-size: 11px;
+                color: #d1fae5;
+                line-height: 1.35;
+            }
+
+            /* Watchlist Modal Drawer */
+            .ufhpc-watchlist-modal {
+                position: absolute;
+                inset: 0;
+                background: rgba(14, 16, 23, 0.98);
+                backdrop-filter: blur(20px);
+                z-index: 100;
+                padding: 16px;
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+                border-radius: 16px;
+                overflow-y: auto;
+            }
+            .ufhpc-watchlist-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                font-size: 13.5px;
+                font-weight: 800;
+                color: #fbbf24;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                padding-bottom: 8px;
+            }
+            .ufhpc-watchlist-body {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                flex: 1;
+            }
+            .ufhpc-watchlist-card {
+                background: rgba(255, 255, 255, 0.04);
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                border-radius: 8px;
+                padding: 9px 11px;
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+            }
+            .ufhpc-watchlist-card-top {
+                display: flex;
+                align-items: flex-start;
+                justify-content: space-between;
+                gap: 8px;
+            }
+            .ufhpc-watchlist-card-title {
+                font-size: 11px;
+                font-weight: 700;
+                color: #f1f5f9;
+                text-decoration: none;
+                line-height: 1.3;
+            }
+            .ufhpc-watchlist-card-title:hover {
+                color: #38bdf8;
+                text-decoration: underline;
+            }
+            .ufhpc-watchlist-del-btn {
+                background: transparent;
+                border: none;
+                cursor: pointer;
+                font-size: 12px;
+                opacity: 0.6;
+                transition: opacity 0.15s ease;
+            }
+            .ufhpc-watchlist-del-btn:hover {
+                opacity: 1;
+            }
+            .ufhpc-watchlist-card-meta {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                font-size: 10px;
+                color: #94a3b8;
+            }
+            .ufhpc-watchlist-card-price {
+                font-weight: 700;
+                color: #34d399;
+            }
+            .ufhpc-btn-clear-watchlist {
+                align-self: center;
+                background: rgba(239, 68, 68, 0.12);
+                border: 1px solid rgba(239, 68, 68, 0.35);
+                color: #f87171;
+                font-size: 10px;
+                font-weight: 700;
+                padding: 5px 12px;
+                border-radius: 6px;
+                cursor: pointer;
+            }
+            .ufhpc-btn-clear-watchlist:hover {
+                background: rgba(239, 68, 68, 0.25);
+            }
+
+            /* Toast Notification */
+            .ufhpc-toast-msg {
+                position: fixed;
+                bottom: 24px;
+                right: 24px;
+                background: rgba(15, 23, 42, 0.95);
+                border: 1px solid rgba(56, 189, 248, 0.5);
+                color: #f8fafc;
+                padding: 10px 16px;
+                border-radius: 10px;
+                font-size: 12px;
+                font-weight: 700;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+                z-index: 2147483647;
+                backdrop-filter: blur(12px);
+                pointer-events: none;
+                transition: opacity 0.25s ease;
+            }
 
             .ufhpc-empty {
                 font-size: 11px;
@@ -4494,15 +4899,18 @@
                 ? locParts[locParts.length - 1].trim()
                 : item.location;
             const isVinted = item.source === 'vinted';
+            const isHuuto = item.source === 'huuto';
             return `
-                <a class="ufhpc-tori-row ${isVinted ? 'is-vinted-row' : ''}" href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(item.title)} — ${escapeHtml(item.location)}">
+                <a class="ufhpc-tori-row ${isVinted ? 'is-vinted-row' : (isHuuto ? 'is-huuto-row' : '')}" href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(item.title)} — ${escapeHtml(item.location)}">
                     ${item.imageUrl ? `<img class="ufhpc-tori-thumb" src="${escapeHtml(item.imageUrl)}" alt="" loading="lazy" />` : ''}
                     <div class="ufhpc-tori-info">
                         <div class="ufhpc-tori-heading">${escapeHtml(item.title)}</div>
                         <div class="ufhpc-tori-meta">
                             ${isVinted
                                 ? `<span class="ufhpc-tori-tag vinted">Vinted</span>`
-                                : `<span class="ufhpc-tori-loc">📍 ${escapeHtml(shortLocation)}</span>`}
+                                : (isHuuto
+                                    ? `<span class="ufhpc-tori-tag huuto">Huuto</span>`
+                                    : `<span class="ufhpc-tori-loc">📍 ${escapeHtml(shortLocation)}</span>`)}
                             ${item.dateStr ? `<span class="ufhpc-tori-date">• ${escapeHtml(item.dateStr)}</span>` : ''}
                             ${item.hasToriDiili ? `<span class="ufhpc-tori-tag">ToriDiili</span>` : ''}
                             ${(isVinted && item.hasVintedProtection) ? `<span class="ufhpc-tori-tag vinted-shield" title="Vinted Ostajan turva">🛡️ Vinted</span>` : ''}
@@ -4510,7 +4918,7 @@
                         </div>
                     </div>
                     <div class="ufhpc-store-right">
-                        <span class="ufhpc-tori-price" ${isVinted ? 'style="color:#5eead4;"' : ''}>${formatEur(item.price, 0)}</span>
+                        <span class="ufhpc-tori-price" ${isVinted ? 'style="color:#5eead4;"' : (isHuuto ? 'style="color:#fbbf24;"' : '')}>${formatEur(item.price, 0)}</span>
                         ${savingsPct && savingsPct > 0 ? `<span class="ufhpc-store-ship">${escapeHtml(t.toriSavings(savingsPct))}</span>` : ''}
                     </div>
                 </a>
@@ -4531,6 +4939,9 @@
             this.inStockOnly = localStorage.getItem(CONFIG.storageKeyInStock) === '1';
             this.toriDiiliOnly = localStorage.getItem(CONFIG.storageKeyToriDiili) === '1';
             this.vintedOnly = localStorage.getItem(CONFIG.storageKeyVintedOnly) === '1';
+            this.huutoOnly = localStorage.getItem(CONFIG.storageKeyHuutoOnly) === '1';
+            this.dockSide = localStorage.getItem(CONFIG.storageKeyDockSide) || 'right';
+            this.showWatchlistDrawer = false;
             this.chartTab = localStorage.getItem(CONFIG.storageKeyChartTab) || (detectCurrentStore().isUsedSite ? 'tori' : 'new');
             this.lastProductInfo = null;
             this.lastComparison = null;
@@ -4551,12 +4962,86 @@
             styleEl.textContent = createSidebarStyles();
 
             this.wrapperEl = document.createElement('div');
-            this.wrapperEl.className = `ufhpc-wrapper ${this.isCollapsed ? 'is-collapsed' : ''}`;
+            this.wrapperEl.className = `ufhpc-wrapper ${this.isCollapsed ? 'is-collapsed' : ''} ${this.dockSide === 'left' ? 'is-dock-left' : ''}`;
             this.wrapperEl.style.setProperty('--sidebar-top', `${this.topPct}%`);
 
             this.shadow.appendChild(styleEl);
             this.shadow.appendChild(this.wrapperEl);
             document.body.appendChild(this.hostEl);
+        }
+
+        showToast(msg) {
+            if (!this.shadow) return;
+            const existing = this.shadow.querySelector('.ufhpc-toast-msg');
+            if (existing) existing.remove();
+
+            const toast = document.createElement('div');
+            toast.className = 'ufhpc-toast-msg';
+            toast.textContent = msg;
+            this.shadow.appendChild(toast);
+
+            setTimeout(() => {
+                if (toast && toast.parentNode) {
+                    toast.style.opacity = '0';
+                    setTimeout(() => toast.remove(), 260);
+                }
+            }, 3000);
+        }
+
+        getWatchlist() {
+            try {
+                const raw = GM_getValue(CONFIG.storageKeyWatchlist, '[]');
+                const parsed = JSON.parse(raw);
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (_) {
+                return [];
+            }
+        }
+
+        saveWatchlist(items) {
+            try {
+                GM_setValue(CONFIG.storageKeyWatchlist, JSON.stringify(items));
+            } catch (_) {}
+        }
+
+        isCurrentInWatchlist(name) {
+            const list = this.getWatchlist();
+            const cleanUrl = location.href.split('#')[0];
+            return list.some(it => it.url === cleanUrl || (it.name && name && it.name.toLowerCase() === name.toLowerCase()));
+        }
+
+        toggleWatchlist(productInfo, marketProd, lowestPrice, cheapestStore) {
+            const list = this.getWatchlist();
+            const cleanUrl = location.href.split('#')[0];
+            const name = marketProd?.title || productInfo?.name || document.title;
+            const idx = list.findIndex(it => it.url === cleanUrl || (it.name && name && it.name.toLowerCase() === name.toLowerCase()));
+            let added = false;
+            if (idx >= 0) {
+                list.splice(idx, 1);
+                added = false;
+            } else {
+                list.unshift({
+                    url: cleanUrl,
+                    name,
+                    store: detectCurrentStore().name,
+                    initialPrice: productInfo?.currentPrice || 0,
+                    lowestPrice: lowestPrice || productInfo?.currentPrice || 0,
+                    lowestStore: cheapestStore || detectCurrentStore().name,
+                    dateAdded: new Date().toLocaleDateString('fi-FI')
+                });
+                added = true;
+            }
+            this.saveWatchlist(list);
+            return added;
+        }
+
+        toggleDockSide() {
+            this.dockSide = this.dockSide === 'left' ? 'right' : 'left';
+            localStorage.setItem(CONFIG.storageKeyDockSide, this.dockSide);
+            if (this.wrapperEl) {
+                this.wrapperEl.classList.toggle('is-dock-left', this.dockSide === 'left');
+            }
+            this.showToast(this.dockSide === 'left' ? '↔ Siirretty vasempaan reunaan' : '↔ Siirretty oikeaan reunaan');
         }
 
         setThemeVars(theme) {
@@ -4735,6 +5220,7 @@
                         <a class="ufhpc-btn ufhpc-btn-hinta" href="https://hinta.fi/haku?q=${fallbackQuery}" target="_blank" rel="noopener">Hinta.fi ↗</a>
                         <a class="ufhpc-btn ufhpc-btn-tori" href="https://www.tori.fi/recommerce/forsale/search?q=${toriQuery}" target="_blank" rel="noopener">Tori ↗</a>
                         <a class="ufhpc-btn ufhpc-btn-vinted" href="https://www.vinted.fi/catalog?search_text=${toriQuery}" target="_blank" rel="noopener">Vinted ↗</a>
+                        <a class="ufhpc-btn ufhpc-btn-huuto" href="https://www.huuto.net/haku?words=${toriQuery}" target="_blank" rel="noopener">Huuto ↗</a>
                     </div>
                 </div>
             `;
@@ -5008,6 +5494,15 @@
                 const vintedItems = filteredTori.filter(item => item.source === 'vinted');
                 if (vintedItems.length > 0) filteredTori = vintedItems;
             }
+            if (this.huutoOnly) {
+                const huutoItems = filteredTori.filter(item => item.source === 'huuto');
+                if (huutoItems.length > 0) filteredTori = huutoItems;
+            }
+
+            const toriCount = toriData.toriCount ?? (toriData.items?.filter(x => x.source === 'tori').length || 0);
+            const vintedCount = toriData.vintedCount ?? (toriData.items?.filter(x => x.source === 'vinted').length || 0);
+            const huutoCount = toriData.huutoCount ?? (toriData.items?.filter(x => x.source === 'huuto').length || 0);
+            const huutoSearchUrl = `https://www.huuto.net/haku?words=${encodeURIComponent(toriData.huutoQuery || toriData.query || extractConciseModelQuery(productInfo.name) || searchTermRaw)}`;
 
             let toriHtml = '';
             if (toriData.items && toriData.items.length > 0) {
@@ -5021,6 +5516,9 @@
                             </button>
                             <button type="button" class="ufhpc-pill-btn ${this.vintedOnly ? 'is-active-vinted' : ''}" id="ufhpc-btn-vintedfilter" title="Näytä vain Vinted-kohteet">
                                 🏷️ Vinted
+                            </button>
+                            <button type="button" class="ufhpc-pill-btn ${this.huutoOnly ? 'is-active-huuto' : ''}" id="ufhpc-btn-huutofilter" title="Näytä vain Huuto.net-kohteet">
+                                🏷️ Huuto
                             </button>
                         </div>
                     </div>
@@ -5074,8 +5572,6 @@
                     ? (unitInfo.quantityStr ? `Pakkauskoko: ${unitInfo.quantityStr}` : storeName)
                     : (toriData.stats ? `Käytetty mediaani: ${formatEur(toriData.stats.medianPrice, 0)}` : low30dSub));
 
-            const toriCount = toriData.toriCount ?? (toriData.items?.filter(x => x.source !== 'vinted').length || 0);
-            const vintedCount = toriData.vintedCount ?? (toriData.items?.filter(x => x.source === 'vinted').length || 0);
             const vintedSearchUrl = `https://www.vinted.fi/catalog?search_text=${encodeURIComponent(toriData.vintedQuery || toriData.query || extractConciseModelQuery(productInfo.name) || searchTermRaw)}`;
 
             const actionBtnsHtml = productInfo.category === 'grocery' ? `
@@ -5098,6 +5594,9 @@
                 <a class="ufhpc-btn ufhpc-btn-vinted" href="${escapeHtml(vintedSearchUrl)}" target="_blank" rel="noopener noreferrer">
                     Vinted (${vintedCount}) ↗
                 </a>
+                <a class="ufhpc-btn ufhpc-btn-huuto" href="${escapeHtml(huutoSearchUrl)}" target="_blank" rel="noopener noreferrer">
+                    Huuto (${huutoCount}) ↗
+                </a>
             ` : `
                 <a class="ufhpc-btn ufhpc-btn-hinta" href="${escapeHtml(hintaUrl)}" target="_blank" rel="noopener noreferrer">
                     Hinta.fi ↗
@@ -5108,7 +5607,91 @@
                 <a class="ufhpc-btn ufhpc-btn-vinted" href="${escapeHtml(vintedSearchUrl)}" target="_blank" rel="noopener noreferrer">
                     Vinted (${vintedCount}) ↗
                 </a>
+                <a class="ufhpc-btn ufhpc-btn-huuto" href="${escapeHtml(huutoSearchUrl)}" target="_blank" rel="noopener noreferrer">
+                    Huuto (${huutoCount}) ↗
+                </a>
             `);
+
+            // Bargaining Advisor on Used Item Pages
+            let bargainHtml = '';
+            const currentStore = detectCurrentStore();
+            if (currentStore.isUsedSite && productInfo.currentPrice > 0) {
+                const asking = productInfo.currentPrice;
+                const med = toriData?.stats?.medianPrice;
+                let suggested = null;
+                if (med && asking > med) {
+                    suggested = Math.round(med * 0.93);
+                } else {
+                    suggested = Math.round(asking * 0.88);
+                }
+                if (lowestPrice && lowestPrice > 0) {
+                    suggested = Math.min(suggested, Math.round(lowestPrice * 0.75));
+                }
+                if (suggested > 0 && suggested < asking) {
+                    const bargainOfferText = t.bargainMsgText(productInfo.name || 'tuote', formatEur(suggested, 0));
+                    bargainHtml = `
+                        <div class="ufhpc-bargain-box">
+                            <div class="ufhpc-bargain-head">
+                                <span>🤝 ${escapeHtml(t.bargainAdvisor)}</span>
+                                <span class="ufhpc-bargain-tag">${escapeHtml(t.bargainFairOffer)}: <strong>${formatEur(suggested, 0)}</strong></span>
+                            </div>
+                            <div class="ufhpc-bargain-quote">"${escapeHtml(bargainOfferText)}"</div>
+                            <button type="button" class="ufhpc-btn-copy-offer" id="ufhpc-btn-copy-offer" data-offer-msg="${escapeHtml(bargainOfferText)}">
+                                ${escapeHtml(t.copyOfferBtn)}
+                            </button>
+                        </div>
+                    `;
+                }
+            }
+
+            // Store Bonus Calculator (S-Bonus & K-Plussa)
+            let bonusHtml = '';
+            const hostLow = location.hostname.toLowerCase();
+            if ((hostLow.includes('s-kaupat') || hostLow.includes('prisma')) && productInfo.currentPrice >= 10) {
+                const bonusEur = (productInfo.currentPrice * 0.05).toFixed(2);
+                const effPrice = (productInfo.currentPrice - Number(bonusEur)).toFixed(2);
+                bonusHtml = `
+                    <div class="ufhpc-bonus-box">
+                        <span>💳 <strong>S-Bonus (5%):</strong> jopa <strong>-${bonusEur.replace('.', ',')} €</strong> takaisin rahana tilille (todellinen hinta <strong>${effPrice.replace('.', ',')} €</strong>)</span>
+                    </div>
+                `;
+            } else if (hostLow.includes('k-ruoka') && productInfo.currentPrice >= 5) {
+                const plussa = Math.round(productInfo.currentPrice);
+                bonusHtml = `
+                    <div class="ufhpc-bonus-box">
+                        <span>💳 <strong>K-Plussa:</strong> kerryttää n. <strong>${plussa}</strong> Plussa-pistettä</span>
+                    </div>
+                `;
+            }
+
+            const watchlist = this.getWatchlist();
+            const isSaved = this.isCurrentInWatchlist(marketProd?.title || productInfo.name);
+
+            const watchlistModalHtml = this.showWatchlistDrawer ? `
+                <div class="ufhpc-watchlist-modal">
+                    <div class="ufhpc-watchlist-header">
+                        <span>⭐ ${escapeHtml(t.watchlistTitle)} (${watchlist.length})</span>
+                        <button type="button" class="ufhpc-icon-btn" id="ufhpc-watchlist-close-btn" title="Sulje">✕</button>
+                    </div>
+                    <div class="ufhpc-watchlist-body">
+                        ${watchlist.length === 0 ? `<div class="ufhpc-empty">${escapeHtml(t.watchlistEmpty)}</div>` :
+                          watchlist.map((item, idx) => `
+                            <div class="ufhpc-watchlist-card">
+                                <div class="ufhpc-watchlist-card-top">
+                                    <a class="ufhpc-watchlist-card-title" href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.name)}</a>
+                                    <button type="button" class="ufhpc-watchlist-del-btn" data-del-idx="${idx}" title="Poista">🗑️</button>
+                                </div>
+                                <div class="ufhpc-watchlist-card-meta">
+                                    <span>${escapeHtml(item.store)} • ${escapeHtml(item.dateAdded)}</span>
+                                    <span class="ufhpc-watchlist-card-price">${formatEur(item.initialPrice)}</span>
+                                </div>
+                            </div>
+                          `).join('')
+                        }
+                    </div>
+                    ${watchlist.length > 0 ? `<button type="button" class="ufhpc-btn-clear-watchlist" id="ufhpc-btn-clear-watchlist">${escapeHtml(t.watchlistClear)}</button>` : ''}
+                </div>
+            ` : '';
 
             const compareColumnHtml = this.isExpanded
                 ? this.buildComparisonColumnHtml(t, theme, lowestPrice, toriData)
@@ -5150,6 +5733,7 @@
                     <div class="ufhpc-handle-chevron">❮</div>
                 </div>
                 <div class="ufhpc-panel ${this.isExpanded ? 'is-expanded' : ''}">
+                    ${watchlistModalHtml}
                     ${updateBannerHtml}
                     <div class="ufhpc-header">
                         <div class="ufhpc-brand">
@@ -5163,6 +5747,18 @@
                             </div>
                         </div>
                         <div class="ufhpc-header-btns">
+                            <button class="ufhpc-icon-btn ${isSaved ? 'is-active' : ''}" id="ufhpc-watchlist-toggle-btn" title="${escapeHtml(isSaved ? t.watchlistRemoved : t.watchlistBtn)}">
+                                ${isSaved ? '⭐' : '☆'}
+                            </button>
+                            <button class="ufhpc-icon-btn" id="ufhpc-watchlist-open-btn" title="${escapeHtml(t.watchlistTitle)}">
+                                🔔${watchlist.length > 0 ? ` ${watchlist.length}` : ''}
+                            </button>
+                            <button class="ufhpc-icon-btn" id="ufhpc-share-btn" title="${escapeHtml(t.shareBtn)}">
+                                📋
+                            </button>
+                            <button class="ufhpc-icon-btn" id="ufhpc-dock-btn" title="${escapeHtml(t.dockSwitch)}">
+                                ↔
+                            </button>
                             <button class="ufhpc-icon-btn ${this.isExpanded ? 'is-active-compare' : ''}" id="ufhpc-expand-btn" title="Expand / Compare two models side-by-side">
                                 ${escapeHtml(this.isExpanded ? t.compareCloseBtn : t.compareBtn)}
                             </button>
@@ -5180,6 +5776,8 @@
                                 </div>
                                 <div class="ufhpc-verdict-sub">${escapeHtml(theme.sublabel)}</div>
                             </div>
+                            ${bargainHtml}
+                            ${bonusHtml}
 
                             <div class="ufhpc-metrics">
                                 <div class="ufhpc-metric-box">
@@ -5490,9 +6088,13 @@
             if (toriDiiliBtn) {
                 toriDiiliBtn.addEventListener('click', () => {
                     this.toriDiiliOnly = !this.toriDiiliOnly;
-                    if (this.toriDiiliOnly) this.vintedOnly = false;
+                    if (this.toriDiiliOnly) {
+                        this.vintedOnly = false;
+                        this.huutoOnly = false;
+                    }
                     localStorage.setItem(CONFIG.storageKeyToriDiili, this.toriDiiliOnly ? '1' : '0');
                     localStorage.setItem(CONFIG.storageKeyVintedOnly, '0');
+                    localStorage.setItem(CONFIG.storageKeyHuutoOnly, '0');
                     this.refreshView();
                 });
             }
@@ -5501,10 +6103,113 @@
             if (vintedFilterBtn) {
                 vintedFilterBtn.addEventListener('click', () => {
                     this.vintedOnly = !this.vintedOnly;
-                    if (this.vintedOnly) this.toriDiiliOnly = false;
+                    if (this.vintedOnly) {
+                        this.toriDiiliOnly = false;
+                        this.huutoOnly = false;
+                    }
                     localStorage.setItem(CONFIG.storageKeyVintedOnly, this.vintedOnly ? '1' : '0');
                     localStorage.setItem(CONFIG.storageKeyToriDiili, '0');
+                    localStorage.setItem(CONFIG.storageKeyHuutoOnly, '0');
                     this.refreshView();
+                });
+            }
+
+            const huutoFilterBtn = this.shadow.getElementById('ufhpc-btn-huutofilter');
+            if (huutoFilterBtn) {
+                huutoFilterBtn.addEventListener('click', () => {
+                    this.huutoOnly = !this.huutoOnly;
+                    if (this.huutoOnly) {
+                        this.toriDiiliOnly = false;
+                        this.vintedOnly = false;
+                    }
+                    localStorage.setItem(CONFIG.storageKeyHuutoOnly, this.huutoOnly ? '1' : '0');
+                    localStorage.setItem(CONFIG.storageKeyToriDiili, '0');
+                    localStorage.setItem(CONFIG.storageKeyVintedOnly, '0');
+                    this.refreshView();
+                });
+            }
+
+            const dockBtn = this.shadow.getElementById('ufhpc-dock-btn');
+            if (dockBtn) {
+                dockBtn.addEventListener('click', () => this.toggleDockSide());
+            }
+
+            const shareBtn = this.shadow.getElementById('ufhpc-share-btn');
+            if (shareBtn) {
+                shareBtn.addEventListener('click', () => {
+                    const prodName = this.lastComparison?.product?.title || productInfo.name || document.title;
+                    const store = detectCurrentStore().name;
+                    const price = productInfo.currentPrice ? formatEur(productInfo.currentPrice) : '—';
+                    const lowest = this.lastComparison?.product ? formatEur(getFilteredOffersAndLowest(this.lastComparison.product, this.includeShipping, this.inStockOnly).lowestPrice) : price;
+                    const toriMed = this.lastComparison?.tori?.stats?.medianPrice ? formatEur(this.lastComparison.tori.stats.medianPrice, 0) : null;
+                    const report = `⚡ HintaTutka: ${prodName}\n• ${store}: ${price}\n• Uutena halvin: ${lowest}${toriMed ? `\n• Käytettynä mediaani: ${toriMed}` : ''}\n🔗 ${location.href.split('#')[0]}`;
+                    navigator.clipboard.writeText(report).then(() => {
+                        this.showToast('📋 Hintaraportti kopioitu leikepöydälle!');
+                    }).catch(() => {
+                        this.showToast('📋 Raportti kopioitu');
+                    });
+                });
+            }
+
+            const watchlistToggleBtn = this.shadow.getElementById('ufhpc-watchlist-toggle-btn');
+            if (watchlistToggleBtn) {
+                watchlistToggleBtn.addEventListener('click', () => {
+                    const lowest = this.lastComparison?.product ? getFilteredOffersAndLowest(this.lastComparison.product, this.includeShipping, this.inStockOnly).lowestPrice : productInfo.currentPrice;
+                    const added = this.toggleWatchlist(productInfo, this.lastComparison?.product, lowest);
+                    this.showToast(added ? '⭐ Lisätty hintavahtiin!' : '✕ Poistettu hintavahdista');
+                    this.refreshView();
+                });
+            }
+
+            const watchlistOpenBtn = this.shadow.getElementById('ufhpc-watchlist-open-btn');
+            if (watchlistOpenBtn) {
+                watchlistOpenBtn.addEventListener('click', () => {
+                    this.showWatchlistDrawer = !this.showWatchlistDrawer;
+                    this.refreshView();
+                });
+            }
+
+            const watchlistCloseBtn = this.shadow.getElementById('ufhpc-watchlist-close-btn');
+            if (watchlistCloseBtn) {
+                watchlistCloseBtn.addEventListener('click', () => {
+                    this.showWatchlistDrawer = false;
+                    this.refreshView();
+                });
+            }
+
+            const clearWatchlistBtn = this.shadow.getElementById('ufhpc-btn-clear-watchlist');
+            if (clearWatchlistBtn) {
+                clearWatchlistBtn.addEventListener('click', () => {
+                    this.saveWatchlist([]);
+                    this.showToast('🗑️ Hintavahti tyhjennetty');
+                    this.refreshView();
+                });
+            }
+
+            const delBtns = this.shadow.querySelectorAll('.ufhpc-watchlist-del-btn');
+            delBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const idx = parseInt(btn.getAttribute('data-del-idx'), 10);
+                    const list = this.getWatchlist();
+                    if (idx >= 0 && idx < list.length) {
+                        list.splice(idx, 1);
+                        this.saveWatchlist(list);
+                        this.showToast('🗑️ Tuote poistettu');
+                        this.refreshView();
+                    }
+                });
+            });
+
+            const copyOfferBtn = this.shadow.getElementById('ufhpc-btn-copy-offer');
+            if (copyOfferBtn) {
+                copyOfferBtn.addEventListener('click', () => {
+                    const msg = copyOfferBtn.getAttribute('data-offer-msg');
+                    if (msg) {
+                        navigator.clipboard.writeText(msg).then(() => {
+                            this.showToast('📋 Tarjousviesti kopioitu!');
+                        }).catch(() => {});
+                    }
                 });
             }
 
