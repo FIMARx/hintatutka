@@ -2,13 +2,13 @@
 
 # ⚡ HintaTutka
 
-**Suomen älykkäin reaaliaikainen hintatutka: Elektroniikka, Huonekalut, Ruoka & Tori.fi**  
-*The ultimate real-time price comparison, unit-price analyzer (`€/kg`, `€/l`), price history chart & Tori.fi used market overlay for 55 Finnish & EU online stores.*
+**Suomen älykkäin reaaliaikainen hintatutka: Elektroniikka, Huonekalut, Ruoka, Tori.fi & Vinted**  
+*The ultimate real-time price comparison, unit-price analyzer (`€/kg`, `€/l`), price history chart & Tori.fi / Vinted used market overlay for 58 Finnish & EU online stores.*
 
-[![Version](https://img.shields.io/badge/version-6.5-10b981?style=for-the-badge)](https://github.com/FIMARx/hintatutka)
+[![Version](https://img.shields.io/badge/version-6.6-10b981?style=for-the-badge)](https://github.com/FIMARx/hintatutka)
 [![Author](https://img.shields.io/badge/author-FIMARx-6366f1?style=for-the-badge)](https://github.com/FIMARx)
 [![Install](https://img.shields.io/badge/Install-HintaTutka.user.js-f43f5e?style=for-the-badge&logo=tampermonkey)](https://raw.githubusercontent.com/FIMARx/hintatutka/main/HintaTutka.user.js)
-[![Stores](https://img.shields.io/badge/stores-57%20supported-f59e0b?style=for-the-badge)](#)
+[![Stores](https://img.shields.io/badge/stores-58%20supported-f59e0b?style=for-the-badge)](#)
 [![Languages](https://img.shields.io/badge/FI%20%7C%20EN-supported-3b82f6?style=for-the-badge)](#)
 
 </div>
@@ -17,13 +17,13 @@
 
 ## 🚀 Mikä on HintaTutka? / What is HintaTutka?
 
-**HintaTutka** on Tampermonkey / Violentmonkey -lisäosa, joka tuo tyylikkään, lasimorfisen hintatutka-sivupaneelin suoraan **55 suomalaisen ja eurooppalaisen verkkokaupan** (elektroniikka, ruokakaupat, huonekaluliikkeet, rautakaupat sekä **Tori.fi**) tuotesivuille.
+**HintaTutka** on Tampermonkey / Violentmonkey -lisäosa, joka tuo tyylikkään, lasimorfisen hintatutka-sivupaneelin suoraan **58 suomalaisen ja eurooppalaisen verkkokaupan** (elektroniikka, ruokakaupat, huonekaluliikkeet, rautakaupat sekä **Tori.fi & Vinted**) tuotesivuille.
 
 Se kertoo välittömästi yhdellä silmäyksellä:
 1. **Onko kaupan hinta oikeasti edullinen vai ylihintainen?** (Vihreä = Halvin/Edullinen, Keltainen = OK, Punainen = Kallis).
 2. **Onko "halvin hinta" vain klubitarjous?** (`👑 HH PLUS`, `Klubihinta`, `MyPOWER`, `Jäsenhinta`) — näyttää sekä klubihinnan, normaalihinnan että halvimman kaupan *ilman* klubijäsenyyttä.
 3. **Miltä tuotteen hintahistoria näyttää?** Interaktiivinen SVG-hintakäyrä kaikkien aikojen alimmalla hinnalla (**ATL**) sekä hiiren kohdistimella toimivalla päivämäärä- ja kauppatarkastelulla.
-4. **Paljonko sama tuote (tai huonekalu/pöytä) maksaa käytettynä Tori.fi:ssä?** Hakee automaattisesti vastaavat myynti-ilmoitukset Tori.fi:stä, suodattaa pois varaosat/Osto-ilmoitukset ja piirtää käytettyjen hintajakaumakäyrän.
+4. **Paljonko sama tuote (tai vaate/elektroniikka/huonekalu) maksaa käytettynä Tori.fi:ssä tai Vintedissä?** Hakee automaattisesti myynti-ilmoitukset Tori.fi:stä ja Vintedistä, suodattaa pois tarvikkeet/Osto-ilmoitukset ja piirtää käytettyjen hintajakaumakäyrän.
 5. **Paljonko ruoka tai päivittäistavara maksaa kilolta tai litralta (`€/kg`, `€/l`)?** Laskee automaattisesti pakkauskoosta (myös monipakkaukset kuten `6 x 330 ml` tai `500 g`) yksikköhinnan ja tarjoaa pikavertailun **S-kaupat.fi**-, **K-Ruoka.fi**-, **Fiksuruoka**- ja **Ruohonjuuri**-valikoimiin.
 6. **Kumpi malli tai vaihtoehto kannattaa ostaa?** Laajennettava **2-sarakkeinen vertailutila (`⚔️ Vertaa`)**, jolla vertaat kahta mallia (esim. *DJI Mini 5 Pro* vs. *DJI Mini 4 Pro* tai *IKEA MALM* vs. *IKEA MITTZON*) rinnakkain sekä uutena että käytettynä!
 
@@ -46,10 +46,12 @@ Se kertoo välittömästi yhdellä silmäyksellä:
   * Laskee reaaliaikaisesti Tori.fi-ilmoitusten **halvimman hinnan**, **keskiarvon** ja **mediaanin**.
   * Klikkaa mitä tahansa pistettä käyrällä avataksesi kyseisen Tori-ilmoituksen suoraan uuteen välilehteen.
 
-### ♻️ 3. Älykäs Tori.fi-käytettyjen haku & Tori.fi-sivutuki
-* **Tarkka mallitunnistus**: Erottaa mallisukupolvet ja -tasot (esim. *DJI Mini 5 Pro* vs. *DJI Mini 4 Pro* tai *iPhone 16 Pro* vs. *iPhone 16*), normalisoi myyjien käänteiset otsikot (esim. *"DJI Mini Pro 4"* → *"DJI Mini 4 Pro"*) ja suodattaa automaattisesti pois suojakuoret, panssarilasit, laturit, ND-suotimet, rikkinäiset laitteet ja *Ostetaan*-ilmoitukset.
-* **🛡️ ToriDiili-suodatin**: Suodata yhdellä klikkauksella vain ToriDiili-ostoturvalla ja toimituksella varustetut ilmoitukset.
-* **Toimii myös suoraan Tori.fi-ilmoitussivuilla**: Kun avaat minkä tahansa Tori.fi-myynti-ilmoituksen, HintaTutka kertoo heti, onko pyyntihinta **Hyvä löytö**, **OK (tinkivaraa)** vai **Ylihintainen käytetyksi** verrattuna kaupan uuteen takuulliseen tuotteeseen!
+### ♻️ 3. Älykäs käytettyjen markkinahaku (Tori.fi & Vinted) ja suora sivutuki
+* **Tori.fi & Vinted yhdistettynä**: Hakee reaaliaikaisesti myynti-ilmoitukset sekä **Tori.fi**:stä että **Vinted.fi**:stä suoraan samaan näkymään `KÄYTETYT`-osioon, varustettuna selkeillä kauppatunnisteilla (`🏷️ Vinted` ja `🛡️ ToriDiili`).
+* **Tarkka mallitunnistus**: Erottaa mallisukupolvet ja -tasot (esim. *DJI Mini 5 Pro* vs. *DJI Mini 4 Pro* tai *iPhone 16 Pro* vs. *iPhone 16*), normalisoi myyjien käänteiset otsikot (esim. *"DJI Mini Pro 4"* → *"DJI Mini 4 Pro"*) ja suodattaa automaattisesti pois suojakuoret, panssarilasit, laturit, ND-suotimet, pelkät laatikot, rikkinäiset laitteet ja *Ostetaan*-ilmoitukset.
+* **🛡️ ToriDiili- ja 🏷️ Vinted -suodattimet**: Rajaa tulokset yhdellä klikkauksella vain ToriDiili-ostoturvalla varustettuihin tai vain Vinted-ilmoituksiin.
+* **Toimii suoraan Tori.fi- ja Vinted-tuotesivuilla**: Kun avaat minkä tahansa Tori.fi-ilmoituksen tai Vinted-tuotteen (`vinted.fi/items/...`), HintaTutka analysoi hinnan heti ja kertoo, onko pyyntihinta **Hyvä löytö**, **OK käytetyn hinta** vai **Ylihintainen käytetyksi** verrattuna kauppojen uuteen takuulliseen hintaan!
+* **Pikahakulinkit**: Suorat pikapainikkeet hakutuloksiin: `Tori (X) ↗` ja `Vinted (X) ↗`.
 
 ### ⚔️ 4. Rinnakkaisvertailu (`⚔️ Vertaa`) & Live-hakuehdotukset
 * Klikkaa yläpalkin **`⚔️ Vertaa`** -painiketta laajentaaksesi paneelin 2-sarakkeiseksi vertailunäkymäksi (`358px` ↔ `700px`).
@@ -78,7 +80,7 @@ HintaTutka toimii automaattisesti kaikilla kielipoluilla (`/fi/`, `/en/`, `/sv/`
 | **Huonekalut, Pöydät & Koti** | **IKEA**, **JYSK**, **Sotka**, **Asko**, **Masku**, **Isku**, **Veke**, **Finnish Design Shop**, **Stockmann**, **Rusta**, **Clas Ohlson** |
 | **Rauta, Autoilu & Tavaratalot** | **K-Rauta**, **Bauhaus**, **Motonet**, **Biltema**, Prisma, Kärkkäinen, Amazon.de, Dustin / DustinHome, e-ville, SatShop |
 | **Operaattorit** | Elisa, Telia, DNA |
-| **Käytetyt (Vertaiskauppa)** | **Tori.fi** *(sekä kaupan tuotesivuilla että suoraan Tori.fi-ilmoitussivuilla)* |
+| **Käytetyt (Vertaiskauppa)** | **Tori.fi**, **Vinted.fi** *(sekä kauppojen tuotesivuilla että suoraan Tori.fi- ja Vinted-tuotesivuilla)* |
 
 ---
 
@@ -90,7 +92,7 @@ HintaTutka toimii automaattisesti kaikilla kielipoluilla (`/fi/`, `/en/`, `/sv/`
 2. Klikkaa alla olevaa asennuslinkkiä:
    * 👉 **[Asenna HintaTutka (`HintaTutka.user.js`)](https://raw.githubusercontent.com/FIMARx/hintatutka/main/HintaTutka.user.js)**
 3. Vahvista asennus klikkaamalla **Install / Asenna**.
-4. Avaa mikä tahansa tuotesivu (esim. Verkkokauppa.com, Gigantti, IKEA, JYSK, S-kaupat.fi, K-Ruoka.fi tai Tori.fi) — **HintaTutka** avautuu automaattisesti oikeaan reunaan!
+4. Avaa mikä tahansa tuotesivu (esim. Verkkokauppa.com, Gigantti, IKEA, JYSK, S-kaupat.fi, K-Ruoka.fi, Tori.fi tai Vinted.fi) — **HintaTutka** avautuu automaattisesti oikeaan reunaan!
 
 ---
 
@@ -100,8 +102,9 @@ HintaTutka toimii automaattisesti kaikilla kielipoluilla (`/fi/`, `/en/`, `/sv/`
 - [x] Tori.fi-käytettyjen markkinahaku, hintajakaumakäyrä & suora Tori.fi-sivutuki
 - [x] 2-sarakkeinen mallivertailu (`⚔️ Vertaa`) & Live Autocomplete -hakuehdotukset
 - [x] Klubitarjousten (`👑 HH PLUS`, `Klubihinta`, `MyPOWER`) tunnistus ja erottelu normaalihinnoista
-- [x] Laajennus päivittäistavaroihin, ruokakauppoihin (yksikköhinnat `€/kg`, `€/l`) sekä huonekaluihin ja kodin tuotteisiin (pöydät, tuolit, kalusteet, 55 kauppaa)
+- [x] Laajennus päivittäistavaroihin, ruokakauppoihin (yksikköhinnat `€/kg`, `€/l`) sekä huonekaluihin ja kodin tuotteisiin (pöydät, tuolit, kalusteet, 58 kauppaa)
 - [x] Automaattinen GitHub-päivitystarkistus (`@updateURL` + sisäänrakennettu `🚀 Uusi päivitys saatavilla!` -banneri suoraan paneelissa)
+- [x] Vinted.fi-integraatio: Suora tuki Vinted-tuotesivuilla + reaaliaikaiset Vinted-käytetyt listauksissa ja suodatus
 
 ---
 

@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         HintaTutka
 // @namespace    https://github.com/FIMARx/hintatutka
-// @version      6.5
-// @description  Suomen älykkäin hintatutka: Elektroniikka, huonekalut, ruoka & Tori.fi — hintakäyrät, yksikköhinnat (€/kg, €/l), klubitarjoukset & suora Prisma/K-Rauta/Clas Ohlson/Puuilo/Motonet/Tokmanni-haku 57 sivustolla
+// @version      6.6
+// @description  Suomen älykkäin hintatutka: Elektroniikka, huonekalut, ruoka, Tori.fi & Vinted — hintakäyrät, yksikköhinnat (€/kg, €/l), klubitarjoukset & suora Prisma/K-Rauta/Clas Ohlson/Puuilo/Motonet/Tokmanni-haku 58 sivustolla
 // @author       FIMARx
 // @homepageURL  https://github.com/FIMARx/hintatutka
 // @supportURL   https://github.com/FIMARx/hintatutka/issues
@@ -44,6 +44,8 @@
 // @match        https://*.dustin.fi/*
 // @match        https://*.amazon.de/*
 // @match        https://*.tori.fi/*
+// @match        https://*.vinted.fi/*
+// @match        https://vinted.fi/*
 // @match        https://*.s-kaupat.fi/*
 // @match        https://*.k-ruoka.fi/*
 // @match        https://*.fiksuruoka.fi/*
@@ -70,6 +72,8 @@
 // @connect      hinta.fi
 // @connect      www.tori.fi
 // @connect      tori.fi
+// @connect      www.vinted.fi
+// @connect      vinted.fi
 // @connect      www.prisma.fi
 // @connect      prisma.fi
 // @connect      www.k-rauta.fi
@@ -100,7 +104,7 @@
     // =========================================================================
     // CONFIGURATION & THRESHOLDS
     // =========================================================================
-    const SCRIPT_VERSION = '6.5';
+    const SCRIPT_VERSION = '6.6';
     const GITHUB_RAW_SCRIPT_URL = 'https://raw.githubusercontent.com/FIMARx/hintatutka/main/HintaTutka.user.js';
     const GITHUB_API_CONTENTS_URL = 'https://api.github.com/repos/FIMARx/hintatutka/contents/HintaTutka.user.js';
     const GITHUB_REPO_URL = 'https://github.com/FIMARx/hintatutka';
@@ -113,8 +117,8 @@
         usedOkDiscountPct: 5.0,
         cacheTtlMs: 15 * 60 * 1000,
         updateCheckTtlMs: 60 * 1000,
-        storageKeyUpdateCheck: 'ufhpc_github_update_v65',
-        storageKeyObservedOffers: 'ufhpc_observed_offers_v65',
+        storageKeyUpdateCheck: 'ufhpc_github_update_v66',
+        storageKeyObservedOffers: 'ufhpc_observed_offers_v66',
         storageKeyCollapsed: 'ufhpc_sidebar_collapsed_v55',
         storageKeyExpanded: 'ufhpc_sidebar_expanded_v55',
         storageKeyLang: 'ufhpc_sidebar_lang_v55',
@@ -122,16 +126,18 @@
         storageKeyIncShip: 'ufhpc_filter_ship_v55',
         storageKeyInStock: 'ufhpc_filter_stock_v55',
         storageKeyToriDiili: 'ufhpc_filter_toridiili_v55',
+        storageKeyVintedOnly: 'ufhpc_filter_vinted_v66',
         storageKeyChartTab: 'ufhpc_chart_tab_v55',
         maxStoresShown: 8,
         maxToriShown: 4
     };
 
     // =========================================================================
-    // SUPPORTED STORES REGISTRY (57 SITES: TECH, GROCERIES, FURNITURE, DIY & TORI)
+    // SUPPORTED STORES REGISTRY (58 SITES: TECH, GROCERIES, FURNITURE, DIY & SECOND-HAND)
     // =========================================================================
     const STORES = [
         { match: 'tori.fi', name: 'Tori.fi (Käytetty)', isUsedSite: true, selectors: ['main .h2', '[data-testid="object-title"] ~ div .h2', 'div.h2'] },
+        { match: 'vinted.fi', name: 'Vinted (Käytetty)', isUsedSite: true, selectors: ['[data-testid="item-price"] p', '[data-testid="item-price"]', '[data-testid="item-sidebar-price-container"]', 'p.web_ui__Text__subtitle', 'h1 ~ div span'] },
         { match: 'hinta.fi', name: 'Hinta.fi', selectors: ['.hv-price-min', '[itemprop="lowPrice"]', '[itemprop="price"]'] },
         { match: 'verkkokauppa.com', name: 'Verkkokauppa.com', selectors: ['[data-price="current"]', 'ins[data-price]', '[class*="Price-sc"] ins', '[class*="ProductPrice"] [data-price]'] },
         { match: 'gigantti.fi', name: 'Gigantti', selectors: ['[data-testid="price-container"] span', '[class*="price-box"] [class*="price"]', '.product-price-container'] },
@@ -214,7 +220,7 @@
             checking: 'Tarkistetaan...',
             headerTag: 'Hinta-analyysi',
             fetchingBadge: 'HAETAAN HINTOJA...',
-            fetchingSub: (price) => `Verrataan hintaa (${price}) Hinta.fi- ja Tori.fi-tietokantoihin.`,
+            fetchingSub: (price) => `Verrataan hintaa (${price}) Hinta.fi-, Tori.fi- ja Vinted-tietokantoihin.`,
             cheapestBadge: 'Halvin hinta!',
             handleCheapest: 'HALVIN',
             thisStore: 'Tämä sivu',
@@ -231,14 +237,14 @@
             searchBtn: 'Hae',
             variantLabel: 'Vaihda osumaa:',
             chartTabNew: '📈 Uutena',
-            chartTabTori: '♻️ Tori.fi',
+            chartTabTori: '♻️ Käytettynä',
             chartTitle: 'Hintahistoria',
             chartAtl: (price, store, date) => `Alin koskaan: ${price}${store ? ` (${store}, ${date})` : ''}`,
-            toriChartTitle: (n) => `Tori.fi hintajakauma (${n} ilm.)`,
+            toriChartTitle: (n) => `Käytettyjen hintajakauma (${n} kpl)`,
             toriChartStats: (min, avg, med) => `Halvin: ${min} • Keskiarvo: ${avg} • Mediaani: ${med}`,
-            toriChartClickHint: 'Klikkaa pistettä avataksesi Tori-ilmoituksen',
-            toriTitle: (n) => `Käytetyt • Tori.fi (${n})`,
-            toriEmpty: 'Ei vastaavia käytettyjä ilmoituksia Torissa juuri nyt.',
+            toriChartClickHint: 'Klikkaa pistettä avataksesi ilmoituksen (Tori / Vinted)',
+            toriTitle: (n) => `Käytetyt (${n})`,
+            toriEmpty: 'Ei vastaavia käytettyjä ilmoituksia Torissa tai Vintedissä juuri nyt.',
             toriSavings: (pct) => `-${pct}% vs. uusi`,
             toriCompany: 'Yritys',
             compareBtn: '⚔️ Vertaa',
@@ -248,8 +254,8 @@
             compareActionBtn: 'Vertaa',
             compareLoading: 'Haetaan vertailutuotetta...',
             compareNewLowest: 'Uutena halvin',
-            compareToriLowest: 'Torissa halvin',
-            compareToriMedian: 'Torissa mediaani',
+            compareToriLowest: 'Käytettynä halvin',
+            compareToriMedian: 'Käytettynä mediaani',
             clubBadgeLabel: (clubName) => `${clubName || 'KLUBI'}-TARJOUS`,
             clubCheapestSub: (normPrice, nonClubLow, nonClubStore) =>
                 `Halvin vain jäsenille! Normaalihinta ${normPrice}${nonClubLow ? ` • Ilman klubia halvin: ${nonClubLow} (${nonClubStore})` : ''}`,
@@ -285,7 +291,7 @@
             checking: 'Checking...',
             headerTag: 'Price Analyzer',
             fetchingBadge: 'CHECKING MARKET...',
-            fetchingSub: (price) => `Comparing price (${price}) against Hinta.fi & Tori.fi.`,
+            fetchingSub: (price) => `Comparing price (${price}) against Hinta.fi, Tori.fi & Vinted.`,
             cheapestBadge: 'Best price!',
             handleCheapest: 'CHEAPEST',
             thisStore: 'This Page',
@@ -302,14 +308,14 @@
             searchBtn: 'Search',
             variantLabel: 'Switch match:',
             chartTabNew: '📈 New History',
-            chartTabTori: '♻️ Tori Used',
+            chartTabTori: '♻️ Used Market',
             chartTitle: 'Price History',
             chartAtl: (price, store, date) => `All-time low: ${price}${store ? ` (${store}, ${date})` : ''}`,
-            toriChartTitle: (n) => `Tori.fi Used Prices (${n} ads)`,
+            toriChartTitle: (n) => `Used Market Prices (${n} listings)`,
             toriChartStats: (min, avg, med) => `Min: ${min} • Avg: ${avg} • Median: ${med}`,
-            toriChartClickHint: 'Click any point to open that Tori.fi listing',
-            toriTitle: (n) => `Used • Tori.fi (${n})`,
-            toriEmpty: 'No matching used listings found on Tori.fi right now.',
+            toriChartClickHint: 'Click any point to open that listing (Tori / Vinted)',
+            toriTitle: (n) => `Used (${n})`,
+            toriEmpty: 'No matching used listings found on Tori.fi or Vinted right now.',
             toriSavings: (pct) => `-${pct}% vs. new`,
             toriCompany: 'Refurb/Shop',
             compareBtn: '⚔️ Compare',
@@ -319,8 +325,8 @@
             compareActionBtn: 'Compare',
             compareLoading: 'Fetching comparison product...',
             compareNewLowest: 'Lowest New',
-            compareToriLowest: 'Lowest Used (Tori)',
-            compareToriMedian: 'Median Used (Tori)',
+            compareToriLowest: 'Lowest Used',
+            compareToriMedian: 'Median Used',
             clubBadgeLabel: (clubName) => `${clubName || 'CLUB'} SPECIAL DEAL`,
             clubCheapestSub: (normPrice, nonClubLow, nonClubStore) =>
                 `Cheapest for members only! Regular ${normPrice}${nonClubLow ? ` • Best non-club: ${nonClubLow} (${nonClubStore})` : ''}`,
@@ -415,11 +421,11 @@
     // =========================================================================
     function getCached(key) {
         try {
-            const raw = sessionStorage.getItem(`ufhpc_v65_${key}`);
+            const raw = sessionStorage.getItem(`ufhpc_v66_${key}`);
             if (!raw) return null;
             const parsed = JSON.parse(raw);
             if (Date.now() - parsed.ts > CONFIG.cacheTtlMs) {
-                sessionStorage.removeItem(`ufhpc_v65_${key}`);
+                sessionStorage.removeItem(`ufhpc_v66_${key}`);
                 return null;
             }
             return parsed.data;
@@ -430,7 +436,7 @@
 
     function setCached(key, data) {
         try {
-            sessionStorage.setItem(`ufhpc_v65_${key}`, JSON.stringify({ ts: Date.now(), data }));
+            sessionStorage.setItem(`ufhpc_v66_${key}`, JSON.stringify({ ts: Date.now(), data }));
         } catch (_) {
             // Ignore storage quota errors
         }
@@ -530,7 +536,7 @@
     function cleanTitle(str) {
         if (!str) return '';
         return normalizeSwappedModelOrder(str)
-            .replace(/[-|•–].*?(Verkkokauppa|Gigantti|Power|Proshop|Jimm's|Datatronic|Multitronic|Tietokonekauppa|Data-Systems|Komponenttikauppa|Cruzbroker|MaxGaming|VPD|Puolenkuun|Veikon|Euronics|Kärkkäinen|Prisma|Telia|Elisa|DNA|HobbyHall|Bigbox|Kasuplan|Mikromafia|TeraStore|DigiDreamer|MEGASTORE|e-ville|SatShop|Dustin|Amazon|Tori|S-kaupat|K-Ruoka|Fiksuruoka|Matsmart|Ruohonjuuri|Tokmanni|Puuilo|IKEA|JYSK|Sotka|Asko|Masku|Isku|Veke|Finnish Design Shop|K-Rauta|Bauhaus|Motonet|Biltema|Clas Ohlson|Rusta|Stockmann).*$/i, '')
+            .replace(/[-|•–].*?(Verkkokauppa|Gigantti|Power|Proshop|Jimm's|Datatronic|Multitronic|Tietokonekauppa|Data-Systems|Komponenttikauppa|Cruzbroker|MaxGaming|VPD|Puolenkuun|Veikon|Euronics|Kärkkäinen|Prisma|Telia|Elisa|DNA|HobbyHall|Bigbox|Kasuplan|Mikromafia|TeraStore|DigiDreamer|MEGASTORE|e-ville|SatShop|Dustin|Amazon|Tori|Vinted|S-kaupat|K-Ruoka|Fiksuruoka|Matsmart|Ruohonjuuri|Tokmanni|Puuilo|IKEA|JYSK|Sotka|Asko|Masku|Isku|Veke|Finnish Design Shop|K-Rauta|Bauhaus|Motonet|Biltema|Clas Ohlson|Rusta|Stockmann).*$/i, '')
             .replace(/^(Myydään|M:|ALE)\s+/i, '')
             .replace(/\s+/g, ' ')
             .trim();
@@ -833,6 +839,9 @@
         if (host.includes('tori.fi')) {
             return !/\/recommerce\/forsale\/item\/\d+/i.test(p);
         }
+        if (host.includes('vinted.fi')) {
+            return !/\/items\/\d+/i.test(p);
+        }
         if (host.includes('hinta.fi')) {
             return !/^\/\d+\b/.test(p);
         }
@@ -906,7 +915,7 @@
             }
         }
 
-        const hasProductUrlPattern = /\/(product|products|tuote|tuotteet|produkt|produkter|dp|gp\/product|p|recommerce\/forsale\/item)\b/i.test(location.pathname) ||
+        const hasProductUrlPattern = /\/(product|products|tuote|tuotteet|produkt|produkter|dp|gp\/product|p|recommerce\/forsale\/item|items)\b/i.test(location.pathname) ||
             /\/Product\/Show\//i.test(location.pathname) ||
             /\.html$/i.test(location.pathname);
         const hasProductMeta = Boolean(
@@ -1549,6 +1558,148 @@
         }
 
         return { query: queries[0] || '', items: [], stats: null };
+    }
+
+    async function fetchVintedUsedListings(productInfo, marketProduct, customQuery = null) {
+        const builtQueries = buildToriSearchQueries(
+            customQuery ? { name: customQuery } : productInfo,
+            marketProduct
+        );
+        const queries = [];
+        for (const q of [...builtQueries, ...(customQuery ? [customQuery] : [])]) {
+            const cleanQ = (q || '').trim();
+            if (cleanQ && !queries.some(x => x.toLowerCase() === cleanQ.toLowerCase())) {
+                queries.push(cleanQ);
+            }
+        }
+
+        if (queries.length === 0) return { query: '', items: [] };
+
+        const referenceNewPrice = marketProduct?.lowestPrice || (!productInfo?.isUsedSite ? productInfo?.currentPrice : null);
+        const targetTitle = (marketProduct?.title || productInfo?.name || customQuery || '').toLowerCase();
+        const targetIsAccessory = /suojakuori|kuoret|kotelo|panssarilasi|suojalasi|laturi|kaapeli|adapteri|ranneke|laukku|akku|propelli|ohjain|suodin|suodinsarja|case|cover|charger|cable|strap|battery|controller|filter/i.test(targetTitle);
+        const accessoryRx = /\b(case|cover|guard|propeller|propellers|śmigła|futerał|osłona|ochrona|etui|szkło|pudełko|kartong|krepšys|tašė|bateria|battery|akumulator|akku|ramie|arm|charger|cable|holder|mount|teline|suoja|suodinsarja|filtry|filtrai|filter|filters)\b/i;
+
+        for (const q of queries.slice(0, 2)) {
+            const cacheKey = `vinted_${q.toLowerCase()}_${(marketProduct?.title || '').toLowerCase().slice(0, 20)}`;
+            const cached = getCached(cacheKey);
+            if (cached) return cached;
+
+            const searchUrl = `https://www.vinted.fi/catalog?search_text=${encodeURIComponent(q)}`;
+            try {
+                const { text: html } = await gmFetch(searchUrl);
+                const items = [];
+                const seenIds = new Set();
+                const itemRegex = /<a[^>]+href="(\/items\/(\d+)[^"]*)"[^>]+title="([^"]+)"/g;
+                let m;
+
+                while ((m = itemRegex.exec(html)) !== null) {
+                    const href = m[1];
+                    const id = m[2];
+                    const rawTitle = m[3];
+                    if (seenIds.has(id)) continue;
+                    seenIds.add(id);
+
+                    const parts = rawTitle.split(',').map(s => s.trim());
+                    const title = parts[0] || '';
+                    if (!title) continue;
+
+                    let brand = '';
+                    let condition = '';
+                    const priceMatches = [...rawTitle.matchAll(/([0-9]+(?:[.,][0-9]{2})?)\s*€/g)].map(x => parseFloat(x[1].replace(',', '.')));
+                    const price = priceMatches[0] || null;
+                    if (!price || price <= 0) continue;
+
+                    for (const p of parts) {
+                        if (/^Tuotemerkki:\s*(.+)$/i.test(p)) {
+                            brand = p.replace(/^Tuotemerkki:\s*/i, '').trim();
+                        } else if (/^Kunto:\s*(.+)$/i.test(p)) {
+                            condition = p.replace(/^Kunto:\s*/i, '').trim();
+                        }
+                    }
+
+                    if (!targetIsAccessory && accessoryRx.test(title)) continue;
+
+                    if (referenceNewPrice && referenceNewPrice > 30) {
+                        const ratio = price / referenceNewPrice;
+                        const isFurn = productInfo?.category === 'furniture' || detectProductCategory(targetTitle) === 'furniture';
+                        const minRatio = isFurn ? 0.08 : 0.32;
+                        const maxRatio = isFurn ? 1.35 : 1.30;
+                        if (ratio < minRatio || ratio > maxRatio) continue;
+                    }
+
+                    if (!doesToriHeadingMatchQuery(title, q, targetTitle, false)) {
+                        continue;
+                    }
+
+                    const imgBlock = html.slice(Math.max(0, m.index - 500), m.index);
+                    const imgMatch = imgBlock.match(/<img[^>]+src="([^"]+)"/i);
+                    const imageUrl = imgMatch ? imgMatch[1] : null;
+
+                    items.push({
+                        id: `vinted_${id}`,
+                        source: 'vinted',
+                        title,
+                        brand,
+                        condition,
+                        price,
+                        location: 'Vinted',
+                        url: `https://www.vinted.fi${href.split('?')[0]}`,
+                        imageUrl,
+                        hasToriDiili: false,
+                        hasVintedProtection: true,
+                        isCompany: false,
+                        timestamp: Date.now(),
+                        dateStr: condition || 'Vinted'
+                    });
+                }
+
+                items.sort((a, b) => a.price - b.price);
+                const res = { query: q, items };
+                setCached(cacheKey, res);
+                if (items.length > 0) return res;
+            } catch (_) {
+                // Ignore Vinted fetch error
+            }
+        }
+        return { query: queries[0] || '', items: [] };
+    }
+
+    async function fetchUsedMarketListings(productInfo, marketProduct, customQuery = null) {
+        const [toriData, vintedData] = await Promise.all([
+            fetchToriUsedListings(productInfo, marketProduct, customQuery).catch(() => ({ query: '', items: [], stats: null })),
+            fetchVintedUsedListings(productInfo, marketProduct, customQuery).catch(() => ({ query: '', items: [] }))
+        ]);
+
+        const toriItems = toriData?.items || [];
+        const vintedItems = vintedData?.items || [];
+        const combinedItems = [...toriItems, ...vintedItems].sort((a, b) => a.price - b.price);
+
+        let stats = null;
+        if (combinedItems.length > 0) {
+            const prices = combinedItems.map(i => i.price);
+            const minPrice = prices[0];
+            const maxPrice = prices[prices.length - 1];
+            const avgPrice = prices.reduce((s, v) => s + v, 0) / prices.length;
+            const mid = Math.floor(prices.length / 2);
+            const medianPrice = prices.length % 2 !== 0
+                ? prices[mid]
+                : (prices[mid - 1] + prices[mid]) / 2;
+            stats = { minPrice, maxPrice, avgPrice, medianPrice };
+        } else {
+            stats = toriData?.stats || null;
+        }
+
+        const primaryQuery = toriData?.query || vintedData?.query || customQuery || extractConciseModelQuery(productInfo?.name) || '';
+        return {
+            query: primaryQuery,
+            items: combinedItems,
+            stats,
+            toriCount: toriItems.length,
+            vintedCount: vintedItems.length,
+            toriQuery: toriData?.query || primaryQuery,
+            vintedQuery: vintedData?.query || primaryQuery
+        };
     }
 
     const STOP_WORDS_FOR_MATCHING = new Set([
@@ -2775,7 +2926,7 @@
             }
         }
 
-        const toriData = await fetchToriUsedListings(
+        const toriData = await fetchUsedMarketListings(
             customQuery ? { name: customQuery, isUsedSite: true, category: effectiveCategory } : productInfo,
             marketResult?.product,
             customQuery
@@ -3293,7 +3444,7 @@
                         <polygon points="${areaPoints}" fill="url(#ufhpc-tori-grad-${prefix})"/>
                         <polyline points="${linePoints}" fill="none" stroke="#fb7185" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         ${coords.map(c => `
-                            <circle cx="${c.x}" cy="${c.y}" r="2.8" fill="${c.item.hasToriDiili ? '#fda4af' : '#fb7185'}" stroke="#0f1118" stroke-width="1.2"/>
+                            <circle cx="${c.x}" cy="${c.y}" r="2.8" fill="${c.item.source === 'vinted' ? '#2dd4bf' : (c.item.hasToriDiili ? '#fda4af' : '#fb7185')}" stroke="#0f1118" stroke-width="1.2"/>
                         `).join('')}
                         <line id="ufhpc-hover-line-${prefix}" x1="0" y1="${padTop}" x2="0" y2="${padTop + plotH}"
                               stroke="rgba(255,255,255,0.45)" stroke-width="1" stroke-dasharray="2,2" visibility="hidden"/>
@@ -3914,6 +4065,11 @@
                 color: #fb7185;
                 border-color: rgba(244, 63, 94, 0.45);
             }
+            .ufhpc-pill-btn.is-active-vinted {
+                background: rgba(9, 177, 186, 0.18);
+                color: #2dd4bf;
+                border-color: rgba(9, 177, 186, 0.45);
+            }
 
             /* Store Comparison Rows */
             .ufhpc-stores-list {
@@ -4041,6 +4197,14 @@
                 border-color: rgba(244, 63, 94, 0.32);
                 transform: translateX(-2px);
             }
+            .ufhpc-tori-row.is-vinted-row {
+                background: rgba(9, 177, 186, 0.045);
+                border-color: rgba(9, 177, 186, 0.18);
+            }
+            .ufhpc-tori-row.is-vinted-row:hover {
+                background: rgba(9, 177, 186, 0.12);
+                border-color: rgba(9, 177, 186, 0.35);
+            }
             .ufhpc-tori-thumb {
                 width: 30px;
                 height: 30px;
@@ -4099,6 +4263,16 @@
                 background: rgba(59, 130, 246, 0.2);
                 color: #93c5fd;
                 border-color: rgba(59, 130, 246, 0.35);
+            }
+            .ufhpc-tori-tag.vinted {
+                background: rgba(9, 177, 186, 0.2);
+                color: #2dd4bf;
+                border-color: rgba(9, 177, 186, 0.38);
+            }
+            .ufhpc-tori-tag.vinted-shield {
+                background: rgba(9, 177, 186, 0.14);
+                color: #5eead4;
+                border-color: rgba(9, 177, 186, 0.3);
             }
             .ufhpc-tori-price {
                 font-size: 12.5px;
@@ -4280,6 +4454,15 @@
             .ufhpc-btn-tori:hover {
                 background: rgba(244, 63, 94, 0.24);
             }
+            .ufhpc-btn-vinted {
+                background: rgba(9, 177, 186, 0.14);
+                color: #2dd4bf;
+                border: 1px solid rgba(9, 177, 186, 0.38);
+            }
+            .ufhpc-btn-vinted:hover {
+                background: rgba(9, 177, 186, 0.25);
+                color: #5eead4;
+            }
 
             .ufhpc-empty {
                 font-size: 11px;
@@ -4310,20 +4493,24 @@
             const shortLocation = locParts.length > 1
                 ? locParts[locParts.length - 1].trim()
                 : item.location;
+            const isVinted = item.source === 'vinted';
             return `
-                <a class="ufhpc-tori-row" href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(item.title)} — ${escapeHtml(item.location)}">
+                <a class="ufhpc-tori-row ${isVinted ? 'is-vinted-row' : ''}" href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(item.title)} — ${escapeHtml(item.location)}">
                     ${item.imageUrl ? `<img class="ufhpc-tori-thumb" src="${escapeHtml(item.imageUrl)}" alt="" loading="lazy" />` : ''}
                     <div class="ufhpc-tori-info">
                         <div class="ufhpc-tori-heading">${escapeHtml(item.title)}</div>
                         <div class="ufhpc-tori-meta">
-                            <span class="ufhpc-tori-loc">📍 ${escapeHtml(shortLocation)}</span>
+                            ${isVinted
+                                ? `<span class="ufhpc-tori-tag vinted">Vinted</span>`
+                                : `<span class="ufhpc-tori-loc">📍 ${escapeHtml(shortLocation)}</span>`}
                             ${item.dateStr ? `<span class="ufhpc-tori-date">• ${escapeHtml(item.dateStr)}</span>` : ''}
                             ${item.hasToriDiili ? `<span class="ufhpc-tori-tag">ToriDiili</span>` : ''}
+                            ${(isVinted && item.hasVintedProtection) ? `<span class="ufhpc-tori-tag vinted-shield" title="Vinted Ostajan turva">🛡️ Vinted</span>` : ''}
                             ${item.isCompany ? `<span class="ufhpc-tori-tag company">${escapeHtml(t.toriCompany)}</span>` : ''}
                         </div>
                     </div>
                     <div class="ufhpc-store-right">
-                        <span class="ufhpc-tori-price">${formatEur(item.price, 0)}</span>
+                        <span class="ufhpc-tori-price" ${isVinted ? 'style="color:#5eead4;"' : ''}>${formatEur(item.price, 0)}</span>
                         ${savingsPct && savingsPct > 0 ? `<span class="ufhpc-store-ship">${escapeHtml(t.toriSavings(savingsPct))}</span>` : ''}
                     </div>
                 </a>
@@ -4343,6 +4530,7 @@
             this.includeShipping = localStorage.getItem(CONFIG.storageKeyIncShip) === '1';
             this.inStockOnly = localStorage.getItem(CONFIG.storageKeyInStock) === '1';
             this.toriDiiliOnly = localStorage.getItem(CONFIG.storageKeyToriDiili) === '1';
+            this.vintedOnly = localStorage.getItem(CONFIG.storageKeyVintedOnly) === '1';
             this.chartTab = localStorage.getItem(CONFIG.storageKeyChartTab) || (detectCurrentStore().isUsedSite ? 'tori' : 'new');
             this.lastProductInfo = null;
             this.lastComparison = null;
@@ -4434,7 +4622,7 @@
             try {
                 const newProd = await fetchProductByUrl(targetUrl);
                 if (newProd?.title) this.compareQuery = newProd.title;
-                const newTori = await fetchToriUsedListings(
+                const newTori = await fetchUsedMarketListings(
                     { name: newProd?.title || targetName, isUsedSite: true },
                     newProd,
                     newProd?.title || targetName
@@ -4458,7 +4646,7 @@
             this.renderLoading(productInfo);
             try {
                 const newProd = await fetchProductByUrl(targetUrl);
-                const newTori = await fetchToriUsedListings(productInfo, newProd, newProd?.title || targetName);
+                const newTori = await fetchUsedMarketListings(productInfo, newProd, newProd?.title || targetName);
                 this.lastComparison = {
                     ...(this.lastComparison || {}),
                     matchedQuery: { type: 'Select', value: newProd?.title || targetName || '' },
@@ -4545,8 +4733,8 @@
                     </div>
                     <div class="ufhpc-actions">
                         <a class="ufhpc-btn ufhpc-btn-hinta" href="https://hinta.fi/haku?q=${fallbackQuery}" target="_blank" rel="noopener">Hinta.fi ↗</a>
-                        <a class="ufhpc-btn ufhpc-btn-hintaopas" href="https://hintaopas.fi/search?search=${fallbackQuery}" target="_blank" rel="noopener">Hintaopas ↗</a>
-                        <a class="ufhpc-btn ufhpc-btn-tori" href="https://www.tori.fi/recommerce/forsale/search?q=${toriQuery}" target="_blank" rel="noopener">Tori.fi ↗</a>
+                        <a class="ufhpc-btn ufhpc-btn-tori" href="https://www.tori.fi/recommerce/forsale/search?q=${toriQuery}" target="_blank" rel="noopener">Tori ↗</a>
+                        <a class="ufhpc-btn ufhpc-btn-vinted" href="https://www.vinted.fi/catalog?search_text=${toriQuery}" target="_blank" rel="noopener">Vinted ↗</a>
                     </div>
                 </div>
             `;
@@ -4816,6 +5004,10 @@
                 const diiliItems = filteredTori.filter(item => item.hasToriDiili);
                 if (diiliItems.length > 0) filteredTori = diiliItems;
             }
+            if (this.vintedOnly) {
+                const vintedItems = filteredTori.filter(item => item.source === 'vinted');
+                if (vintedItems.length > 0) filteredTori = vintedItems;
+            }
 
             let toriHtml = '';
             if (toriData.items && toriData.items.length > 0) {
@@ -4824,8 +5016,11 @@
                     <div class="ufhpc-section-bar">
                         <span class="ufhpc-section-title">♻️ ${escapeHtml(t.toriTitle(filteredTori.length))}</span>
                         <div class="ufhpc-filters">
-                            <button type="button" class="ufhpc-pill-btn ${this.toriDiiliOnly ? 'is-active-tori' : ''}" id="ufhpc-btn-toridiili" title="Filter by ToriDiili buyer protection & shipping">
+                            <button type="button" class="ufhpc-pill-btn ${this.toriDiiliOnly ? 'is-active-tori' : ''}" id="ufhpc-btn-toridiili" title="Näytä vain ToriDiili-kohteet">
                                 🛡️ ToriDiili
+                            </button>
+                            <button type="button" class="ufhpc-pill-btn ${this.vintedOnly ? 'is-active-vinted' : ''}" id="ufhpc-btn-vintedfilter" title="Näytä vain Vinted-kohteet">
+                                🏷️ Vinted
                             </button>
                         </div>
                     </div>
@@ -4857,7 +5052,7 @@
                 : (unitInfo
                     ? `⚖️ ${unitInfo.formatted}${unitInfo.quantityStr ? ` (${unitInfo.quantityStr})` : ''}`
                     : (cheapestToriPrice
-                        ? `Tori.fi alk. ${formatEur(cheapestToriPrice, 0)}`
+                        ? `Käytetty alk. ${formatEur(cheapestToriPrice, 0)}`
                         : storeName));
             const thisStoreLabel = productInfo.clubOffer
                 ? `${t.thisStore} (👑 ${productInfo.clubOffer.clubLabel})`
@@ -4877,7 +5072,11 @@
                 ? low30dSub
                 : (unitInfo
                     ? (unitInfo.quantityStr ? `Pakkauskoko: ${unitInfo.quantityStr}` : storeName)
-                    : (toriData.stats ? `Mediaani Torissa: ${formatEur(toriData.stats.medianPrice, 0)}` : low30dSub));
+                    : (toriData.stats ? `Käytetty mediaani: ${formatEur(toriData.stats.medianPrice, 0)}` : low30dSub));
+
+            const toriCount = toriData.toriCount ?? (toriData.items?.filter(x => x.source !== 'vinted').length || 0);
+            const vintedCount = toriData.vintedCount ?? (toriData.items?.filter(x => x.source === 'vinted').length || 0);
+            const vintedSearchUrl = `https://www.vinted.fi/catalog?search_text=${encodeURIComponent(toriData.vintedQuery || toriData.query || extractConciseModelQuery(productInfo.name) || searchTermRaw)}`;
 
             const actionBtnsHtml = productInfo.category === 'grocery' ? `
                 <a class="ufhpc-btn ufhpc-btn-hinta" href="https://www.s-kaupat.fi/haku?q=${encodedSearch}" target="_blank" rel="noopener noreferrer">
@@ -4893,21 +5092,21 @@
                 <a class="ufhpc-btn ufhpc-btn-hinta" href="https://www.ikea.com/fi/fi/search/?q=${encodedSearch}" target="_blank" rel="noopener noreferrer">
                     IKEA ↗
                 </a>
-                <a class="ufhpc-btn ufhpc-btn-hintaopas" href="https://hintaopas.fi/search?search=${encodedSearch}" target="_blank" rel="noopener noreferrer">
-                    Hintaopas ↗
-                </a>
                 <a class="ufhpc-btn ufhpc-btn-tori" href="${escapeHtml(toriSearchUrl)}" target="_blank" rel="noopener noreferrer">
-                    Tori (${toriData.items?.length || 0}) ↗
+                    Tori (${toriCount}) ↗
+                </a>
+                <a class="ufhpc-btn ufhpc-btn-vinted" href="${escapeHtml(vintedSearchUrl)}" target="_blank" rel="noopener noreferrer">
+                    Vinted (${vintedCount}) ↗
                 </a>
             ` : `
                 <a class="ufhpc-btn ufhpc-btn-hinta" href="${escapeHtml(hintaUrl)}" target="_blank" rel="noopener noreferrer">
                     Hinta.fi ↗
                 </a>
-                <a class="ufhpc-btn ufhpc-btn-hintaopas" href="https://hintaopas.fi/search?search=${encodedSearch}" target="_blank" rel="noopener noreferrer">
-                    Hintaopas ↗
-                </a>
                 <a class="ufhpc-btn ufhpc-btn-tori" href="${escapeHtml(toriSearchUrl)}" target="_blank" rel="noopener noreferrer">
-                    Tori (${toriData.items?.length || 0}) ↗
+                    Tori (${toriCount}) ↗
+                </a>
+                <a class="ufhpc-btn ufhpc-btn-vinted" href="${escapeHtml(vintedSearchUrl)}" target="_blank" rel="noopener noreferrer">
+                    Vinted (${vintedCount}) ↗
                 </a>
             `);
 
@@ -5291,7 +5490,20 @@
             if (toriDiiliBtn) {
                 toriDiiliBtn.addEventListener('click', () => {
                     this.toriDiiliOnly = !this.toriDiiliOnly;
+                    if (this.toriDiiliOnly) this.vintedOnly = false;
                     localStorage.setItem(CONFIG.storageKeyToriDiili, this.toriDiiliOnly ? '1' : '0');
+                    localStorage.setItem(CONFIG.storageKeyVintedOnly, '0');
+                    this.refreshView();
+                });
+            }
+
+            const vintedFilterBtn = this.shadow.getElementById('ufhpc-btn-vintedfilter');
+            if (vintedFilterBtn) {
+                vintedFilterBtn.addEventListener('click', () => {
+                    this.vintedOnly = !this.vintedOnly;
+                    if (this.vintedOnly) this.toriDiiliOnly = false;
+                    localStorage.setItem(CONFIG.storageKeyVintedOnly, this.vintedOnly ? '1' : '0');
+                    localStorage.setItem(CONFIG.storageKeyToriDiili, '0');
                     this.refreshView();
                 });
             }
