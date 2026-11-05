@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HintaTutka
 // @namespace    https://github.com/FIMARx/hintatutka
-// @version      6.2
+// @version      6.3
 // @description  Suomen älykkäin hintatutka: Elektroniikka, huonekalut, ruoka & Tori.fi — hintakäyrät, yksikköhinnat (€/kg, €/l), klubitarjoukset & mallivertailu 55 kaupassa
 // @author       FIMARx
 // @homepageURL  https://github.com/FIMARx/hintatutka
@@ -71,6 +71,7 @@
 // @connect      ruohonjuuri.fi
 // @connect      www.ruohonjuuri.fi
 // @connect      raw.githubusercontent.com
+// @connect      api.github.com
 // @grant        GM_xmlhttpRequest
 // @run-at       document-idle
 // ==/UserScript==
@@ -81,8 +82,9 @@
     // =========================================================================
     // CONFIGURATION & THRESHOLDS
     // =========================================================================
-    const SCRIPT_VERSION = '6.2';
+    const SCRIPT_VERSION = '6.3';
     const GITHUB_RAW_SCRIPT_URL = 'https://raw.githubusercontent.com/FIMARx/hintatutka/main/HintaTutka.user.js';
+    const GITHUB_API_CONTENTS_URL = 'https://api.github.com/repos/FIMARx/hintatutka/contents/HintaTutka.user.js';
     const GITHUB_REPO_URL = 'https://github.com/FIMARx/hintatutka';
 
     const CONFIG = {
@@ -92,8 +94,8 @@
         usedCheapDiscountPct: 18.0,
         usedOkDiscountPct: 5.0,
         cacheTtlMs: 15 * 60 * 1000,
-        updateCheckTtlMs: 2 * 60 * 60 * 1000,
-        storageKeyUpdateCheck: 'ufhpc_github_update_v62',
+        updateCheckTtlMs: 60 * 1000,
+        storageKeyUpdateCheck: 'ufhpc_github_update_v63',
         storageKeyCollapsed: 'ufhpc_sidebar_collapsed_v55',
         storageKeyExpanded: 'ufhpc_sidebar_expanded_v55',
         storageKeyLang: 'ufhpc_sidebar_lang_v55',
@@ -633,7 +635,9 @@
     }
 
     function extractConciseModelQuery(name) {
-        const simplified = simplifyProductNameForSearch(name);
+        const simplified = simplifyProductNameForSearch(name)
+            .replace(/\b(\d+)\s*Gt\b/gi, '$1GB')
+            .replace(/\b(\d+)\s*Tt\b/gi, '$1TB');
         if (!simplified) return '';
         const cat = detectProductCategory(name);
         const words = simplified
@@ -647,9 +651,9 @@
                     // For groceries, keep brand, product name, and weight/volume (e.g. "Juhla Mokka 500 g")
                     return !/^(laktoositon|gluteeniton|luomu|suomalainen|kotimainen|uutuus|tarjous|erä)$/i.test(w);
                 }
-                return !/^(DDR\d|GDDR\dX?|PCIe|AM4|AM5|LGA\d+|ATX|mATX|ITX|Wi-?Fi|Bluetooth|5G|4G|LTE|RGB|ARGB|Black|White|Silver|Gold|Blue|Green|Pink|Purple|Gray|Grey|Musta|Valkoinen|Hopea|Sininen|Vihreä|Harmaa|kultainen|mustatitaani|luonnontitaani|valkotitaani|tammi|koivu|mänty|valkolakattu|petsattu|Edition|Series|Gaming|OC|Takuu|Takuulla|Kuitti|Uudenveroinen|Hyväkuntoinen|Drone|Drooni|\d+kg|\d+kpl)$/i.test(w);
+                return !/^(GDDR\dX?|PCIe|AM4|AM5|LGA\d+|ATX|mATX|ITX|Wi-?Fi|Bluetooth|5G|4G|LTE|RGB|ARGB|Black|White|Silver|Gold|Blue|Green|Pink|Purple|Gray|Grey|Musta|Valkoinen|Hopea|Sininen|Vihreä|Harmaa|kultainen|mustatitaani|luonnontitaani|valkotitaani|tammi|koivu|mänty|valkolakattu|petsattu|Edition|Series|Gaming|OC|Takuu|Takuulla|Kuitti|Uudenveroinen|Hyväkuntoinen|Drone|Drooni|\d+kg|\d+kpl)$/i.test(w);
             });
-        return words.slice(0, 5).join(' ').trim();
+        return words.slice(0, 6).join(' ').trim();
     }
 
     // Generates smart sibling/previous-gen model suggestions for Side-by-Side Compare (e.g. "DJI Mini 5 Pro" -> "DJI Mini 4 Pro", or furniture/grocery alternatives)
@@ -735,10 +739,19 @@
         const candidates = [];
         const add = (str) => {
             if (!str) return;
-            const cleaned = normalizeSwappedModelOrder(str)
+            const isRam = /\bDDR[345]\b/i.test(str);
+            let cleaned = normalizeSwappedModelOrder(str)
+                .replace(/\b(\d+)\s*Gt\b/gi, '$1GB')
+                .replace(/\b(\d+)\s*Tt\b/gi, '$1TB')
                 .replace(/\([^)]*\)/g, ' ')
-                .replace(/\b\d{2,3}\s*[xX×]\s*\d{2,3}(?:\s*[xX×]\s*\d{2,3})?\s*(?:cm|mm)?\b/gi, ' ')
-                .replace(/\b\d+\s*(?:GB|Gt|TB|Tt|MHz|GHz|W|mm|cm|inch|tuumaa)\b/gi, ' ')
+                .replace(/\b\d{2,3}\s*[xX×]\s*\d{2,3}(?:\s*[xX×]\s*\d{2,3})?\s*(?:cm|mm)?\b/gi, ' ');
+            if (isRam) {
+                cleaned = cleaned.replace(/\b\d+\s*(?:MHz|MT\/s|GHz|W|mm|cm|inch|tuumaa)\b/gi, ' ')
+                    .replace(/\bCL\d+\b/gi, ' ');
+            } else {
+                cleaned = cleaned.replace(/\b\d+\s*(?:GB|Gt|TB|Tt|MHz|MT\/s|GHz|W|mm|cm|inch|tuumaa)\b/gi, ' ');
+            }
+            cleaned = cleaned
                 .replace(/\b(?:musta|valkoinen|hopea|harmaa|sininen|vihreä|punainen|kulta|titaani|mustatitaani|luonnontitaani|tammi|koivu|mänty|black|white|silver|grey|gray|space gray|midnight|starlight|natural titanium|blue|oc|edition|gaming|wifi|5g|4g|dual sim|takuu|takuulla|kuitti|drone|drooni)\b/gi, ' ')
                 .replace(/[,/|-]+/g, ' ')
                 .replace(/\s+/g, ' ')
@@ -923,19 +936,36 @@
 
         const isPrivateLabelStore = /^(ikea\.com|jysk\.fi|sotka\.fi|asko\.fi|masku\.com|isku\.fi|veke\.fi|ruohonjuuri\.fi|s-kaupat\.fi|k-ruoka\.fi|fiksuruoka\.fi|matsmart\.fi)$/i.test(currentStore.match);
 
-        if (info.ean && !isPrivateLabelStore) addQuery('EAN', info.ean);
+        if (!info.mpn && !isPrivateLabelStore) {
+            const bodyText = (document.querySelector('main') || document.body)?.innerText || '';
+            const mpnMatch = bodyText.match(/(?:Valmistajan\s+tuotekoodi|Valmistajan\s+koodi|Tuotekoodi|Manufacturer\s+Part\s+Number|MPN)\s*[:\n\t]+\s*([A-Z0-9][A-Z0-9._/-]{4,24})/i);
+            if (mpnMatch && mpnMatch[1] && /[A-Z]/i.test(mpnMatch[1]) && /\d/.test(mpnMatch[1])) {
+                info.mpn = mpnMatch[1].trim();
+            }
+        }
+
+        if (info.ean && !isPrivateLabelStore) {
+            addQuery('EAN', info.ean);
+            if (/^0\d{12}$/.test(info.ean)) {
+                addQuery('EAN', info.ean.slice(1));
+            }
+        }
         if (info.mpn && !isPrivateLabelStore) addQuery('MPN', info.mpn);
         if (info.name) {
-            const modelQueries = buildToriSearchQueries(info, null);
-            for (const mq of modelQueries) {
-                addQuery('Model', mq);
-            }
             const simplified = simplifyProductNameForSearch(info.name);
-            addQuery('Model', simplified);
+            const simplifiedGb = simplified
+                .replace(/\b(\d+)\s*Gt\b/gi, '$1GB')
+                .replace(/\b(\d+)\s*Tt\b/gi, '$1TB');
+            addQuery('Model', simplifiedGb);
             const concise = extractConciseModelQuery(info.name);
             if (concise && concise.split(/\s+/).length >= 2) {
                 addQuery('Model', concise);
             }
+            const modelQueries = buildToriSearchQueries(info, null);
+            for (const mq of modelQueries) {
+                addQuery('Model', mq);
+            }
+            addQuery('Model', simplified);
             addQuery('Title', info.name);
         }
 
@@ -1173,6 +1203,7 @@
     // LIVE GITHUB UPDATE CHECKER (NOTIFIES USERS WHEN NEW VERSION IS PUSHED)
     // =========================================================================
     let latestUpdateVersion = null;
+    let updateToastDismissed = false;
 
     function isNewerVersion(remoteVer, localVer) {
         if (!remoteVer || !localVer) return false;
@@ -1188,6 +1219,21 @@
         return false;
     }
 
+    async function fetchRemoteScriptVersion() {
+        // 1. Try GitHub Contents API first (0-second CDN lag after git push)
+        try {
+            const { text } = await gmFetch(`${GITHUB_API_CONTENTS_URL}?_t=${Date.now()}`, 'application/vnd.github.v3.raw');
+            const m = (text || '').slice(0, 1200).match(/@version\s+([0-9]+(?:\.[0-9]+)*)/i);
+            if (m && m[1]) return m[1].trim();
+        } catch (_) {
+            // Fallback to raw.githubusercontent.com
+        }
+        // 2. Fallback to raw.githubusercontent.com with cache-buster
+        const { text } = await gmFetch(`${GITHUB_RAW_SCRIPT_URL}?_t=${Date.now()}`, 'text/plain');
+        const m = (text || '').slice(0, 1200).match(/@version\s+([0-9]+(?:\.[0-9]+)*)/i);
+        return (m && m[1]) ? m[1].trim() : null;
+    }
+
     async function checkForGithubUpdate(force = false) {
         try {
             if (!force) {
@@ -1197,19 +1243,16 @@
                     if (Date.now() - parsed.ts < CONFIG.updateCheckTtlMs) {
                         if (isNewerVersion(parsed.remoteVersion, SCRIPT_VERSION)) {
                             latestUpdateVersion = parsed.remoteVersion;
+                        } else {
+                            latestUpdateVersion = null;
                         }
                         return latestUpdateVersion;
                     }
                 }
             }
 
-            const checkUrl = `${GITHUB_RAW_SCRIPT_URL}?_t=${Math.floor(Date.now() / 60000)}`;
-            const { text } = await gmFetch(checkUrl, 'text/plain');
-            // Match @version from the UserScript metadata block in the first 1000 chars
-            const headerSlice = (text || '').slice(0, 1200);
-            const m = headerSlice.match(/@version\s+([0-9]+(?:\.[0-9]+)*)/i);
-            if (m && m[1]) {
-                const remoteVersion = m[1].trim();
+            const remoteVersion = await fetchRemoteScriptVersion();
+            if (remoteVersion) {
                 localStorage.setItem(CONFIG.storageKeyUpdateCheck, JSON.stringify({
                     ts: Date.now(),
                     remoteVersion
@@ -1230,11 +1273,17 @@
     function doesToriHeadingMatchQuery(heading, query, targetTitle, allowExtraTierModifiers = false) {
         const normHeading = normalizeSwappedModelOrder(heading)
             .toLowerCase()
+            .replace(/\b(\d+)\s*gt\b/gi, '$1gb')
+            .replace(/\b(\d+)\s*tt\b/gi, '$1tb')
+            .replace(/\b(\d+)\s*gb\b/gi, '$1gb')
             .replace(/[-_/,()+:;|[\]]+/g, ' ')
             .replace(/\s+/g, ' ')
             .trim();
         const normQuery = normalizeSwappedModelOrder(query)
             .toLowerCase()
+            .replace(/\b(\d+)\s*gt\b/gi, '$1gb')
+            .replace(/\b(\d+)\s*tt\b/gi, '$1tb')
+            .replace(/\b(\d+)\s*gb\b/gi, '$1gb')
             .replace(/[-_/,()+:;|[\]]+/g, ' ')
             .replace(/\s+/g, ' ')
             .trim();
@@ -1295,7 +1344,7 @@
             }
         }
 
-        const tierModifiers = ['pro', 'max', 'ultra', 'plus', 'mini', 'air', 'ti', 'super', 'xtx', 'xt', 'x3d', 'oled', 'fe', 'lite'];
+        const tierModifiers = ['pro', 'max', 'ultra', 'plus', 'mini', 'air', 'ti', 'super', 'xtx', 'xt', 'x3d', 'oled', 'fe', 'lite', 'ddr4', 'ddr5'];
         const refString = `${normQuery} ${normalizeSwappedModelOrder(targetTitle || '').toLowerCase()}`;
         for (const mod of tierModifiers) {
             const modRx = new RegExp(`(?<![a-z0-9])${mod}(?![a-z0-9])`, 'i');
@@ -2719,11 +2768,12 @@
             .ufhpc-brand-top {
                 display: flex;
                 align-items: center;
-                gap: 6px;
+                flex-wrap: wrap;
+                gap: 5px;
                 font-size: 10px;
                 font-weight: 700;
                 text-transform: uppercase;
-                letter-spacing: 0.09em;
+                letter-spacing: 0.08em;
                 color: #9ca3af;
             }
             .ufhpc-product-title {
@@ -2790,38 +2840,158 @@
                 background: rgba(99, 102, 241, 0.28);
                 color: #ffffff;
             }
+            @keyframes ufhpc-update-pulse {
+                0%, 100% { box-shadow: 0 0 10px rgba(16, 185, 129, 0.35); }
+                50% { box-shadow: 0 0 22px rgba(16, 185, 129, 0.75); }
+            }
             .ufhpc-ver-link {
+                display: inline-flex;
+                align-items: center;
+                gap: 3px;
+                white-space: nowrap;
+                flex-shrink: 0;
                 color: #818cf8;
                 text-decoration: none;
-                padding: 1px 5px;
+                padding: 2px 6px;
                 border-radius: 5px;
                 background: rgba(99, 102, 241, 0.14);
                 border: 1px solid rgba(99, 102, 241, 0.3);
                 transition: all 0.15s ease;
+                cursor: pointer;
+                font-size: 9.5px;
+                font-weight: 800;
+                letter-spacing: 0.04em;
             }
             .ufhpc-ver-link:hover {
                 background: rgba(99, 102, 241, 0.3);
                 color: #ffffff;
+            }
+            .ufhpc-ver-link.has-update {
+                background: rgba(16, 185, 129, 0.25);
+                border-color: #34d399;
+                color: #6ee7b7;
+                animation: ufhpc-update-pulse 2s infinite;
+            }
+            .ufhpc-ver-link.is-up-to-date {
+                background: rgba(16, 185, 129, 0.2);
+                border-color: rgba(52, 211, 153, 0.5);
+                color: #34d399;
+            }
+            .ufhpc-handle-update-badge {
+                position: absolute;
+                top: 4px;
+                right: 4px;
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                background: #10b981;
+                border: 2px solid #0f1118;
+                box-shadow: 0 0 10px #10b981;
+                animation: ufhpc-update-pulse 1.6s infinite;
             }
             .ufhpc-update-banner {
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
                 gap: 8px;
-                padding: 8px 11px;
+                padding: 9px 12px;
                 border-radius: 10px;
-                background: linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(59, 130, 246, 0.22));
-                border: 1px solid rgba(52, 211, 153, 0.55);
-                box-shadow: 0 0 16px rgba(16, 185, 129, 0.25);
+                background: linear-gradient(135deg, rgba(16, 185, 129, 0.26), rgba(59, 130, 246, 0.24));
+                border: 1px solid #34d399;
+                box-shadow: 0 0 18px rgba(16, 185, 129, 0.35);
                 color: #ecfdf5;
-                font-size: 11px;
+                font-size: 11.5px;
                 font-weight: 700;
                 text-decoration: none;
                 transition: all 0.15s ease;
+                animation: ufhpc-update-pulse 2.2s infinite;
             }
             .ufhpc-update-banner:hover {
-                border-color: #34d399;
-                background: linear-gradient(135deg, rgba(16, 185, 129, 0.32), rgba(59, 130, 246, 0.32));
+                border-color: #6ee7b7;
+                background: linear-gradient(135deg, rgba(16, 185, 129, 0.38), rgba(59, 130, 246, 0.36));
+                transform: translateY(-1px);
+            }
+            .ufhpc-update-banner-cta {
+                background: #10b981;
+                color: #06281e;
+                padding: 3px 8px;
+                border-radius: 6px;
+                font-size: 10.5px;
+                font-weight: 800;
+                white-space: nowrap;
+            }
+            .ufhpc-update-toast {
+                position: fixed;
+                top: 18px;
+                right: 18px;
+                z-index: 2147483647;
+                width: 330px;
+                max-width: calc(100vw - 36px);
+                background: rgba(14, 17, 26, 0.97);
+                backdrop-filter: blur(18px);
+                border: 1.5px solid #10b981;
+                border-radius: 13px;
+                box-shadow: 0 14px 40px rgba(0, 0, 0, 0.7), 0 0 24px rgba(16, 185, 129, 0.35);
+                padding: 12px 14px;
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                color: #f9fafb;
+                animation: ufhpc-update-pulse 2.4s infinite;
+            }
+            .ufhpc-update-toast-top {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+            }
+            .ufhpc-update-toast-title {
+                font-size: 12px;
+                font-weight: 800;
+                color: #34d399;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+            .ufhpc-update-toast-close {
+                background: transparent;
+                border: none;
+                color: #9ca3af;
+                cursor: pointer;
+                font-size: 13px;
+                padding: 2px 5px;
+                border-radius: 5px;
+            }
+            .ufhpc-update-toast-close:hover {
+                color: #ffffff;
+                background: rgba(255, 255, 255, 0.1);
+            }
+            .ufhpc-update-toast-sub {
+                font-size: 11px;
+                color: #d1d5db;
+                line-height: 1.35;
+            }
+            .ufhpc-update-toast-actions {
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+                gap: 8px;
+            }
+            .ufhpc-update-toast-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+                background: linear-gradient(135deg, #10b981, #059669);
+                color: #ffffff;
+                text-decoration: none;
+                font-size: 11px;
+                font-weight: 800;
+                padding: 6px 12px;
+                border-radius: 8px;
+                box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
+                transition: transform 0.15s ease;
+            }
+            .ufhpc-update-toast-btn:hover {
                 transform: translateY(-1px);
             }
 
@@ -4043,14 +4213,35 @@
 
             const updateBannerHtml = latestUpdateVersion ? `
                 <a class="ufhpc-update-banner" href="${GITHUB_RAW_SCRIPT_URL}" target="_blank" rel="noopener noreferrer" title="Click to install the latest HintaTutka update from GitHub">
-                    <span>🚀 ${this.lang === 'en' ? `New update v${escapeHtml(latestUpdateVersion)} available!` : `Uusi päivitys v${escapeHtml(latestUpdateVersion)} saatavilla!`}</span>
-                    <span>${this.lang === 'en' ? 'Update ↗' : 'Päivitä ↗'}</span>
+                    <span>🚀 ${this.lang === 'en' ? `New update available! (v${SCRIPT_VERSION} → v${escapeHtml(latestUpdateVersion)})` : `Uusi päivitys saatavilla! (v${SCRIPT_VERSION} → v${escapeHtml(latestUpdateVersion)})`}</span>
+                    <span class="ufhpc-update-banner-cta">${this.lang === 'en' ? 'Update now ↗' : 'Päivitä nyt ↗'}</span>
                 </a>
             ` : '';
 
+            const updateToastHtml = (latestUpdateVersion && !updateToastDismissed) ? `
+                <div class="ufhpc-update-toast" id="ufhpc-update-toast">
+                    <div class="ufhpc-update-toast-top">
+                        <span class="ufhpc-update-toast-title">🔔 ${this.lang === 'en' ? `HintaTutka Update (v${escapeHtml(latestUpdateVersion)})` : `HintaTutka-päivitys saatavilla (v${escapeHtml(latestUpdateVersion)})`}</span>
+                        <button type="button" class="ufhpc-update-toast-close" id="ufhpc-update-toast-close" title="Sulje ilmoitus">✕</button>
+                    </div>
+                    <div class="ufhpc-update-toast-sub">
+                        ${this.lang === 'en'
+                            ? `A newer version (v${escapeHtml(latestUpdateVersion)}) has been pushed to GitHub. Click below to update via Tampermonkey in 1 click.`
+                            : `Uusi versio (v${SCRIPT_VERSION} → v${escapeHtml(latestUpdateVersion)}) on julkaistu GitHubissa! Päivitä skripti yhdellä klikkauksella:`}
+                    </div>
+                    <div class="ufhpc-update-toast-actions">
+                        <a class="ufhpc-update-toast-btn" href="${GITHUB_RAW_SCRIPT_URL}" target="_blank" rel="noopener noreferrer">
+                            🚀 ${this.lang === 'en' ? 'Install Update ↗' : 'Asenna päivitys ↗'}
+                        </a>
+                    </div>
+                </div>
+            ` : '';
+
             this.wrapperEl.innerHTML = `
+                ${updateToastHtml}
                 <div class="ufhpc-handle" id="ufhpc-toggle-handle" title="Click to toggle • Drag vertically to reposition">
                     <div class="ufhpc-handle-bar"></div>
+                    ${latestUpdateVersion ? '<div class="ufhpc-handle-update-badge" title="Uusi päivitys saatavilla!"></div>' : ''}
                     <div class="ufhpc-handle-icon">${theme.icon}</div>
                     <div class="ufhpc-handle-text">${escapeHtml(handleLabel)}</div>
                     <div class="ufhpc-handle-chevron">❮</div>
@@ -4062,7 +4253,7 @@
                             <div class="ufhpc-brand-top">
                                 <span>⚡ ${escapeHtml(storeName)}</span>
                                 ${comparison?.matchedQuery ? `<span>• ${escapeHtml(comparison.matchedQuery.type)}</span>` : ''}
-                                <a class="ufhpc-ver-link" href="${GITHUB_RAW_SCRIPT_URL}" target="_blank" rel="noopener noreferrer" title="HintaTutka v${SCRIPT_VERSION} (GitHub: FIMARx/hintatutka) — Klikkaa tarkistaaksesi / asentaaksesi päivityksen">v${SCRIPT_VERSION} ↻</a>
+                                <a class="ufhpc-ver-link ${latestUpdateVersion ? 'has-update' : ''}" id="ufhpc-version-check-btn" href="${GITHUB_RAW_SCRIPT_URL}" target="_blank" rel="noopener noreferrer" title="HintaTutka v${SCRIPT_VERSION} (GitHub: FIMARx/hintatutka) — Klikkaa tarkistaaksesi päivitykset">${latestUpdateVersion ? `🚀 v${SCRIPT_VERSION} → v${escapeHtml(latestUpdateVersion)}` : `v${SCRIPT_VERSION} ↻`}</a>
                             </div>
                             <div class="ufhpc-product-title" title="${escapeHtml(marketProd?.title || productInfo.name)}">
                                 ${escapeHtml(marketProd?.title || productInfo.name || 'Product')}
@@ -4340,6 +4531,42 @@
             if (closeBtn) closeBtn.addEventListener('click', () => this.toggleCollapse());
             if (expandBtn) expandBtn.addEventListener('click', () => this.toggleExpandCompare());
             if (langBtn) langBtn.addEventListener('click', () => this.toggleLanguage());
+
+            const toastCloseBtn = this.shadow.getElementById('ufhpc-update-toast-close');
+            if (toastCloseBtn) {
+                toastCloseBtn.addEventListener('click', () => {
+                    updateToastDismissed = true;
+                    const toastEl = this.shadow.getElementById('ufhpc-update-toast');
+                    if (toastEl) toastEl.remove();
+                });
+            }
+
+            const versionCheckBtn = this.shadow.getElementById('ufhpc-version-check-btn');
+            if (versionCheckBtn) {
+                versionCheckBtn.addEventListener('click', async (e) => {
+                    if (latestUpdateVersion) {
+                        // Already detected an update: let the link open GITHUB_RAW_SCRIPT_URL directly
+                        return;
+                    }
+                    e.preventDefault();
+                    versionCheckBtn.textContent = this.lang === 'en' ? '⏳ Checking...' : '⏳ Tarkistetaan...';
+                    const newVer = await checkForGithubUpdate(true);
+                    if (newVer) {
+                        updateToastDismissed = false;
+                        this.refreshView();
+                        window.open(GITHUB_RAW_SCRIPT_URL, '_blank', 'noopener,noreferrer');
+                    } else {
+                        versionCheckBtn.classList.add('is-up-to-date');
+                        versionCheckBtn.textContent = this.lang === 'en' ? `✓ Latest (v${SCRIPT_VERSION})` : `✓ Uusin (v${SCRIPT_VERSION})`;
+                        setTimeout(() => {
+                            if (versionCheckBtn.isConnected) {
+                                versionCheckBtn.classList.remove('is-up-to-date');
+                                versionCheckBtn.textContent = `v${SCRIPT_VERSION} ↻`;
+                            }
+                        }, 3000);
+                    }
+                });
+            }
 
             if (shipBtn) {
                 shipBtn.addEventListener('click', () => {
