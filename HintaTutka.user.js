@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HintaTutka
 // @namespace    https://github.com/FIMARx/hintatutka
-// @version      6.0
+// @version      6.1
 // @description  Suomen älykkäin hintatutka: Elektroniikka, huonekalut, ruoka & Tori.fi — hintakäyrät, yksikköhinnat (€/kg, €/l), klubitarjoukset & mallivertailu 55 kaupassa
 // @author       FIMARx
 // @homepageURL  https://github.com/FIMARx/hintatutka
@@ -70,6 +70,7 @@
 // @connect      sik.search.blue.cdtapps.com
 // @connect      ruohonjuuri.fi
 // @connect      www.ruohonjuuri.fi
+// @connect      raw.githubusercontent.com
 // @grant        GM_xmlhttpRequest
 // @run-at       document-idle
 // ==/UserScript==
@@ -80,6 +81,10 @@
     // =========================================================================
     // CONFIGURATION & THRESHOLDS
     // =========================================================================
+    const SCRIPT_VERSION = '6.1';
+    const GITHUB_RAW_SCRIPT_URL = 'https://raw.githubusercontent.com/FIMARx/hintatutka/main/HintaTutka.user.js';
+    const GITHUB_REPO_URL = 'https://github.com/FIMARx/hintatutka';
+
     const CONFIG = {
         cheapMaxPct: 2.5,
         cheapMaxEur: 3.0,
@@ -87,6 +92,8 @@
         usedCheapDiscountPct: 18.0,
         usedOkDiscountPct: 5.0,
         cacheTtlMs: 15 * 60 * 1000,
+        updateCheckTtlMs: 2 * 60 * 60 * 1000,
+        storageKeyUpdateCheck: 'ufhpc_github_update_v61',
         storageKeyCollapsed: 'ufhpc_sidebar_collapsed_v55',
         storageKeyExpanded: 'ufhpc_sidebar_expanded_v55',
         storageKeyLang: 'ufhpc_sidebar_lang_v55',
@@ -1147,6 +1154,64 @@
                 ontimeout: () => reject(new Error('Timeout'))
             });
         });
+    }
+
+    // =========================================================================
+    // LIVE GITHUB UPDATE CHECKER (NOTIFIES USERS WHEN NEW VERSION IS PUSHED)
+    // =========================================================================
+    let latestUpdateVersion = null;
+
+    function isNewerVersion(remoteVer, localVer) {
+        if (!remoteVer || !localVer) return false;
+        const rParts = String(remoteVer).trim().split('.').map(n => parseInt(n, 10) || 0);
+        const lParts = String(localVer).trim().split('.').map(n => parseInt(n, 10) || 0);
+        const len = Math.max(rParts.length, lParts.length);
+        for (let i = 0; i < len; i++) {
+            const r = rParts[i] || 0;
+            const l = lParts[i] || 0;
+            if (r > l) return true;
+            if (r < l) return false;
+        }
+        return false;
+    }
+
+    async function checkForGithubUpdate(force = false) {
+        try {
+            if (!force) {
+                const cachedRaw = localStorage.getItem(CONFIG.storageKeyUpdateCheck);
+                if (cachedRaw) {
+                    const parsed = JSON.parse(cachedRaw);
+                    if (Date.now() - parsed.ts < CONFIG.updateCheckTtlMs) {
+                        if (isNewerVersion(parsed.remoteVersion, SCRIPT_VERSION)) {
+                            latestUpdateVersion = parsed.remoteVersion;
+                        }
+                        return latestUpdateVersion;
+                    }
+                }
+            }
+
+            const checkUrl = `${GITHUB_RAW_SCRIPT_URL}?_t=${Math.floor(Date.now() / 60000)}`;
+            const { text } = await gmFetch(checkUrl, 'text/plain');
+            // Match @version from the UserScript metadata block in the first 1000 chars
+            const headerSlice = (text || '').slice(0, 1200);
+            const m = headerSlice.match(/@version\s+([0-9]+(?:\.[0-9]+)*)/i);
+            if (m && m[1]) {
+                const remoteVersion = m[1].trim();
+                localStorage.setItem(CONFIG.storageKeyUpdateCheck, JSON.stringify({
+                    ts: Date.now(),
+                    remoteVersion
+                }));
+                if (isNewerVersion(remoteVersion, SCRIPT_VERSION)) {
+                    latestUpdateVersion = remoteVersion;
+                    return remoteVersion;
+                } else {
+                    latestUpdateVersion = null;
+                }
+            }
+        } catch (_) {
+            // Ignore network errors during background update check
+        }
+        return null;
     }
 
     function doesToriHeadingMatchQuery(heading, query, targetTitle, allowExtraTierModifiers = false) {
@@ -2656,6 +2721,40 @@
                 background: rgba(99, 102, 241, 0.28);
                 color: #ffffff;
             }
+            .ufhpc-ver-link {
+                color: #818cf8;
+                text-decoration: none;
+                padding: 1px 5px;
+                border-radius: 5px;
+                background: rgba(99, 102, 241, 0.14);
+                border: 1px solid rgba(99, 102, 241, 0.3);
+                transition: all 0.15s ease;
+            }
+            .ufhpc-ver-link:hover {
+                background: rgba(99, 102, 241, 0.3);
+                color: #ffffff;
+            }
+            .ufhpc-update-banner {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+                padding: 8px 11px;
+                border-radius: 10px;
+                background: linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(59, 130, 246, 0.22));
+                border: 1px solid rgba(52, 211, 153, 0.55);
+                box-shadow: 0 0 16px rgba(16, 185, 129, 0.25);
+                color: #ecfdf5;
+                font-size: 11px;
+                font-weight: 700;
+                text-decoration: none;
+                transition: all 0.15s ease;
+            }
+            .ufhpc-update-banner:hover {
+                border-color: #34d399;
+                background: linear-gradient(135deg, rgba(16, 185, 129, 0.32), rgba(59, 130, 246, 0.32));
+                transform: translateY(-1px);
+            }
 
             /* Verdict Banner */
             .ufhpc-verdict-card {
@@ -3873,6 +3972,13 @@
                 ? this.buildComparisonColumnHtml(t, theme, lowestPrice, toriData)
                 : '';
 
+            const updateBannerHtml = latestUpdateVersion ? `
+                <a class="ufhpc-update-banner" href="${GITHUB_RAW_SCRIPT_URL}" target="_blank" rel="noopener noreferrer" title="Click to install the latest HintaTutka update from GitHub">
+                    <span>🚀 ${this.lang === 'en' ? `New update v${escapeHtml(latestUpdateVersion)} available!` : `Uusi päivitys v${escapeHtml(latestUpdateVersion)} saatavilla!`}</span>
+                    <span>${this.lang === 'en' ? 'Update ↗' : 'Päivitä ↗'}</span>
+                </a>
+            ` : '';
+
             this.wrapperEl.innerHTML = `
                 <div class="ufhpc-handle" id="ufhpc-toggle-handle" title="Click to toggle • Drag vertically to reposition">
                     <div class="ufhpc-handle-bar"></div>
@@ -3881,11 +3987,13 @@
                     <div class="ufhpc-handle-chevron">❮</div>
                 </div>
                 <div class="ufhpc-panel ${this.isExpanded ? 'is-expanded' : ''}">
+                    ${updateBannerHtml}
                     <div class="ufhpc-header">
                         <div class="ufhpc-brand">
                             <div class="ufhpc-brand-top">
                                 <span>⚡ ${escapeHtml(storeName)}</span>
                                 ${comparison?.matchedQuery ? `<span>• ${escapeHtml(comparison.matchedQuery.type)}</span>` : ''}
+                                <a class="ufhpc-ver-link" href="${GITHUB_RAW_SCRIPT_URL}" target="_blank" rel="noopener noreferrer" title="HintaTutka v${SCRIPT_VERSION} (GitHub: FIMARx/hintatutka) — Klikkaa tarkistaaksesi / asentaaksesi päivityksen">v${SCRIPT_VERSION} ↻</a>
                             </div>
                             <div class="ufhpc-product-title" title="${escapeHtml(marketProd?.title || productInfo.name)}">
                                 ${escapeHtml(marketProd?.title || productInfo.name || 'Product')}
@@ -4416,6 +4524,13 @@
         sidebar.lastProductInfo = productInfo;
         sidebar.lastComparison = comparison;
         sidebar.refreshView();
+
+        // Non-blocking background check against GitHub raw URL so any pushed update notifies users
+        checkForGithubUpdate().then((newVer) => {
+            if (newVer && runId === activeRunId) {
+                sidebar.refreshView();
+            }
+        });
 
         // If user had Expanded Compare Mode open, auto-populate sibling comparison
         if (sidebar.isExpanded && !sidebar.compareComparison) {
