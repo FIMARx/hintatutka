@@ -5,7 +5,7 @@
 **Suomen älykkäin reaaliaikainen hintatutka: Elektroniikka, Huonekalut, Ruoka & Tori.fi**  
 *The ultimate real-time price comparison, unit-price analyzer (`€/kg`, `€/l`), price history chart & Tori.fi used market overlay for 55 Finnish & EU online stores.*
 
-[![Version](https://img.shields.io/badge/version-6.1-10b981?style=for-the-badge)](https://github.com/FIMARx/hintatutka)
+[![Version](https://img.shields.io/badge/version-6.2-10b981?style=for-the-badge)](https://github.com/FIMARx/hintatutka)
 [![Author](https://img.shields.io/badge/author-FIMARx-6366f1?style=for-the-badge)](https://github.com/FIMARx)
 [![Install](https://img.shields.io/badge/Install-HintaTutka.user.js-f43f5e?style=for-the-badge&logo=tampermonkey)](https://raw.githubusercontent.com/FIMARx/hintatutka/main/HintaTutka.user.js)
 [![Stores](https://img.shields.io/badge/stores-55%20supported-f59e0b?style=for-the-badge)](#)

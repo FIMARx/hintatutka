@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HintaTutka
 // @namespace    https://github.com/FIMARx/hintatutka
-// @version      6.1
+// @version      6.2
 // @description  Suomen älykkäin hintatutka: Elektroniikka, huonekalut, ruoka & Tori.fi — hintakäyrät, yksikköhinnat (€/kg, €/l), klubitarjoukset & mallivertailu 55 kaupassa
 // @author       FIMARx
 // @homepageURL  https://github.com/FIMARx/hintatutka
@@ -81,7 +81,7 @@
     // =========================================================================
     // CONFIGURATION & THRESHOLDS
     // =========================================================================
-    const SCRIPT_VERSION = '6.1';
+    const SCRIPT_VERSION = '6.2';
     const GITHUB_RAW_SCRIPT_URL = 'https://raw.githubusercontent.com/FIMARx/hintatutka/main/HintaTutka.user.js';
     const GITHUB_REPO_URL = 'https://github.com/FIMARx/hintatutka';
 
@@ -93,7 +93,7 @@
         usedOkDiscountPct: 5.0,
         cacheTtlMs: 15 * 60 * 1000,
         updateCheckTtlMs: 2 * 60 * 60 * 1000,
-        storageKeyUpdateCheck: 'ufhpc_github_update_v61',
+        storageKeyUpdateCheck: 'ufhpc_github_update_v62',
         storageKeyCollapsed: 'ufhpc_sidebar_collapsed_v55',
         storageKeyExpanded: 'ufhpc_sidebar_expanded_v55',
         storageKeyLang: 'ufhpc_sidebar_lang_v55',
@@ -148,7 +148,7 @@
         { match: 'k-ruoka.fi', name: 'K-Ruoka', categoryHint: 'grocery', selectors: ['[data-testid="product-unit-price"]', '[data-testid*="price"]', '[class*="price-value"]', '[class*="ProductPrice"]'] },
         { match: 'fiksuruoka.fi', name: 'Fiksuruoka', categoryHint: 'grocery', selectors: ['.product__price', '.price-item--sale', '.price-item--regular', '[itemprop="price"]'] },
         { match: 'matsmart.fi', name: 'Matsmart', categoryHint: 'grocery', selectors: ['[data-testid*="price"]', '.product-price', '[itemprop="price"]'] },
-        { match: 'ruohonjuuri.fi', name: 'Ruohonjuuri', categoryHint: 'grocery', selectors: ['.product__price', '.price-item--regular', '[itemprop="price"]'] },
+        { match: 'ruohonjuuri.fi', name: 'Ruohonjuuri', selectors: ['.product__price', '.price-item--regular', '[itemprop="price"]'] },
         { match: 'tokmanni.fi', name: 'Tokmanni', selectors: ['[data-price-type="finalPrice"]', '.price-box .price', '[itemprop="price"]'] },
         { match: 'puuilo.fi', name: 'Puuilo', selectors: ['[data-price-type="finalPrice"]', '.price-box .price', '[itemprop="price"]'] },
         // Furniture, Tables, Home & DIY Stores
@@ -392,11 +392,11 @@
     // =========================================================================
     function getCached(key) {
         try {
-            const raw = sessionStorage.getItem(`ufhpc_v57_${key}`);
+            const raw = sessionStorage.getItem(`ufhpc_v62_${key}`);
             if (!raw) return null;
             const parsed = JSON.parse(raw);
             if (Date.now() - parsed.ts > CONFIG.cacheTtlMs) {
-                sessionStorage.removeItem(`ufhpc_v57_${key}`);
+                sessionStorage.removeItem(`ufhpc_v62_${key}`);
                 return null;
             }
             return parsed.data;
@@ -407,7 +407,7 @@
 
     function setCached(key, data) {
         try {
-            sessionStorage.setItem(`ufhpc_v57_${key}`, JSON.stringify({ ts: Date.now(), data }));
+            sessionStorage.setItem(`ufhpc_v62_${key}`, JSON.stringify({ ts: Date.now(), data }));
         } catch (_) {
             // Ignore storage quota errors
         }
@@ -510,21 +510,32 @@
     }
 
     function detectProductCategory(title, store = detectCurrentStore()) {
+        const norm = (title || '').toLowerCase();
+
+        // 1. Explicitly check for Home Appliances, Electronics, PC Hardware & Gym/Tools FIRST
+        // so "pyykinpesukone ... 8kg" on Prisma is NEVER misclassified as a grocery item!
+        if (/\b(pyykinpesukone|pesukone|kuivausrumpu|kuivaava|astianpesukone|jääkaappi|pakastin|kylmiö|liesi|uuni|keittotaso|induktiokeittotaso|mikroaaltouuni|airfryer|kahvinkeitin|vedenkeitin|leivänpaahdin|imuri|robotti-imuri|varsi-imuri|televisio|älytelevisio|näyttö|pelinäyttö|kannettava|tietokone|pelikone|puhelin|älypuhelin|tabletti|älykello|urheilukello|kuulokkeet|kaiutin|soundbar|kamera|järjestelmäkamera|drone|drooni|tulostin|reititin|näytönohjain|prosessori|emolevy|keskusmuisti|virtalähde|kovalevy|ssd|pelikonsoli|käsipaino|kahvakuula|levypaino)\b/i.test(norm)) {
+            return 'electronics';
+        }
+
         if (store?.categoryHint === 'grocery') return 'grocery';
         if (store?.categoryHint === 'furniture') return 'furniture';
 
-        const norm = (title || '').toLowerCase();
         if (/\b(ruokapöytä|työpöytä|sohvapöytä|sivupöytä|yöpöytä|sähköpöytä|kirjoituspöytä|pöytäryhmä|pöytä|ruokatuoli|työtuoli|nojatuoli|baarijakkara|jakkara|sohva|kulmasohva|vuodesohva|divaanisohva|sänky|jenkkisänky|runkopatja|patja|petauspatja|vaatekaappi|senkki|lipasto|vitriini|kirjahylly|hyllykkö|tv-taso|nukkamatto|villamatto|kattovalaisin|pöytävalaisin|lattiavalaisin|puutarhapöytä|parvekeryhmä|artek|ikea\s+\w+|jysk)\b/i.test(norm)) {
             return 'furniture';
         }
-        if (/\b(\d+(?:[.,]\d+)?\s*(?:g|kg|ml|cl|dl|l)\b|kahvi|suodatinkahvi|pikakahvi|maito|kaurajuoma|juusto|leipä|voi|margariini|jogurtti|rahka|kana|broileri|jauheliha|lohi|makkara|suklaa|karkki|makeispussi|sipsit|virvoitusjuoma|energiajuoma|kivennäisvesi|mehu|pasta|makaroni|riisi|kaurahiutale|puuro|mysli|oliiviöljy|ketsuppi|proteiinijauhe|heraproteiini|kreatiini|vitamiini|ravintolisä|juhla\s*mokka|kultakatriina|fazer|valio|arla|atria|snellman|hk\s|paulig)\b/i.test(norm)) {
+
+        // Only classify as grocery on general stores (like Prisma/Tokmanni/Ruohonjuuri) if an explicit food/drink/supplement word is present!
+        if (/\b(kahvi|suodatinkahvi|pikakahvi|papukahvi|tee|maito|kaurajuoma|mantelijuoma|juusto|leipä|voi|margariini|jogurtti|rahka|kana|broileri|jauheliha|lohi|makkara|nakki|leikkele|suklaa|karkki|makeispussi|lakritsi|salmiakki|sipsit|perunalastut|pähkinä|virvoitusjuoma|energiajuoma|kivennäisvesi|lähdevesi|mehu|smoothie|pasta|makaroni|spagetti|nuudeli|riisi|kaurahiutale|puuro|mysli|granola|oliiviöljy|ruokaöljy|ketsuppi|sinappi|majoneesi|proteiinijauhe|heraproteiini|proteiinipatukka|kreatiini|monivitamiini|juhla\s*mokka|kulta\s*katriina|paulig|fazer|valio|arla|atria|snellman)\b/i.test(norm)) {
             return 'grocery';
         }
         return 'electronics';
     }
 
-    // Extracts or calculates Unit Price (€/kg or €/l) for groceries, foods, beverages & supplements
-    function extractUnitPriceInfo(title, currentPrice) {
+    // Extracts or calculates Unit Price (€/kg or €/l) ONLY for groceries, foods, beverages & supplements
+    function extractUnitPriceInfo(title, currentPrice, category = 'electronics') {
+        if (category !== 'grocery') return null;
+
         // 1. Check if the store DOM explicitly displays a unit price (e.g. "11,90 €/kg" or "3,50 €/l")
         const rootArea = document.querySelector('main') || document.body;
         const unitRegex = /(\d{1,4}(?:[.,]\d{1,2})?)\s*€\s*\/\s*(kg|l|kpl)\b/i;
@@ -573,7 +584,6 @@
             if (singleMatch) {
                 const amount = parseFloat(singleMatch[1]);
                 const unit = singleMatch[2].toLowerCase();
-                // Avoid matching random tech specs like "500 g" on heavy furniture/laptops if > 25 kg
                 if (amount > 0) {
                     quantityStr = `${singleMatch[1].replace('.', ',')} ${unit}`;
                     if (unit === 'kg' && amount <= 25) totalKg = amount;
@@ -611,8 +621,9 @@
     function simplifyProductNameForSearch(name) {
         if (!name) return '';
         return normalizeSwappedModelOrder(name)
-            .replace(/\s+-\s*[^\s]*(näytönohjain|prosessori|suoritin|emolevy|muisti|keskusmuisti|kovalevy|kiintolevy|ssd|virtalähde|kotelo|jäähdytin|prosessorijäähdytin|pelinäyttö|näyttö|pelituoli|pelihiiri|hiiri|pelinäppäimistö|näppäimistö|pelikuulokkeet|kuulokkeet|kannettava|pelikannettava|puhelin|älypuhelin|tabletti|reititin|verkkokortti|äänikortti|webkamera|mikrofoni|kaiuttimet|televisio|älykello|urheilukello|pelikonsoli|drone|drooni|nelikopteri|kuvauskopteri).*$/i, '')
-            .replace(/,\s*[^,]*(näytönohjain|prosessori|suoritin|emolevy|keskusmuisti|ssd-levy|virtalähde|kotelo|pelinäyttö|älypuhelin|puhelin|kannettava|pelikannettava|drone|drooni).*$/i, '')
+            .replace(/\s+-\s*[^\s]*(näytönohjain|prosessori|suoritin|emolevy|muisti|keskusmuisti|kovalevy|kiintolevy|ssd|virtalähde|kotelo|jäähdytin|prosessorijäähdytin|pelinäyttö|näyttö|pelituoli|pelihiiri|hiiri|pelinäppäimistö|näppäimistö|pelikuulokkeet|kuulokkeet|kannettava|pelikannettava|puhelin|älypuhelin|tabletti|reititin|verkkokortti|äänikortti|webkamera|mikrofoni|kaiuttimet|televisio|älykello|urheilukello|pelikonsoli|drone|drooni|nelikopteri|kuvauskopteri|pyykinpesukone|pesukone|kuivausrumpu|astianpesukone|jääkaappi|pakastin).*$/i, '')
+            .replace(/,\s*[^,]*(näytönohjain|prosessori|suoritin|emolevy|keskusmuisti|ssd-levy|virtalähde|kotelo|pelinäyttö|älypuhelin|puhelin|kannettava|pelikannettava|drone|drooni|pyykinpesukone|pesukone|kuivausrumpu|astianpesukone).*$/i, '')
+            .replace(/\b(edestä\s+täytettävä|päältä\s+täytettävä|kuivaava\s+pyykinpesukone|pyykinpesukone|pesukone|kuivausrumpu|astianpesukone|jääkaappipakastin)\b/gi, ' ')
             .replace(/\b(Graphics Card|Video Card|Processor|CPU|Motherboard|Mainboard|Gaming Monitor|Monitor|Internal SSD|Solid State Drive|Hard Drive|Power Supply|PSU|PC Case|Computer Case|Chassis|Liquid Cooler|CPU Cooler|Gaming Mouse|Wireless Mouse|Gaming Keyboard|Mechanical Keyboard|Gaming Headset|Headphones|Gaming Chair|Gaming Laptop|Laptop|Notebook|Smartphone|Mobile Phone|Tablet|Router|Smartwatch|Quadcopter|Drone|Drooni|Kuvauskopteri|Nelikopteri)\b/gi, '')
             .replace(/\b(Grafikkort|Processor|Moderkort|Bildskärm|Gamingskärm|Nätaggregat|Chassi|Datorchassi|Processorkylare|Gamingmus|Tangentbord|Hörlurar|Bärbar dator|Mobiltelefon|Surfplatta|Smartklocka|Drönare)\b/gi, '')
             .replace(/\((?:Boxed|Tray|WOF|Bulk|Retail)\)/gi, '')
@@ -636,7 +647,7 @@
                     // For groceries, keep brand, product name, and weight/volume (e.g. "Juhla Mokka 500 g")
                     return !/^(laktoositon|gluteeniton|luomu|suomalainen|kotimainen|uutuus|tarjous|erä)$/i.test(w);
                 }
-                return !/^(DDR\d|GDDR\dX?|PCIe|AM4|AM5|LGA\d+|ATX|mATX|ITX|Wi-?Fi|Bluetooth|5G|4G|LTE|RGB|ARGB|Black|White|Silver|Gold|Blue|Green|Pink|Purple|Gray|Grey|Musta|Valkoinen|Hopea|Sininen|Vihreä|Harmaa|kultainen|mustatitaani|luonnontitaani|valkotitaani|tammi|koivu|mänty|valkolakattu|petsattu|Edition|Series|Gaming|OC|Takuu|Takuulla|Kuitti|Uudenveroinen|Hyväkuntoinen|Drone|Drooni)$/i.test(w);
+                return !/^(DDR\d|GDDR\dX?|PCIe|AM4|AM5|LGA\d+|ATX|mATX|ITX|Wi-?Fi|Bluetooth|5G|4G|LTE|RGB|ARGB|Black|White|Silver|Gold|Blue|Green|Pink|Purple|Gray|Grey|Musta|Valkoinen|Hopea|Sininen|Vihreä|Harmaa|kultainen|mustatitaani|luonnontitaani|valkotitaani|tammi|koivu|mänty|valkolakattu|petsattu|Edition|Series|Gaming|OC|Takuu|Takuulla|Kuitti|Uudenveroinen|Hyväkuntoinen|Drone|Drooni|\d+kg|\d+kpl)$/i.test(w);
             });
         return words.slice(0, 5).join(' ').trim();
     }
@@ -898,7 +909,7 @@
         }
 
         const category = detectProductCategory(info.name, currentStore);
-        const unitPriceInfo = extractUnitPriceInfo(info.name, currentPrice);
+        const unitPriceInfo = extractUnitPriceInfo(info.name, currentPrice, category);
 
         const queries = [];
         const seen = new Set();
@@ -910,8 +921,10 @@
             }
         };
 
-        if (info.ean) addQuery('EAN', info.ean);
-        if (info.mpn) addQuery('MPN', info.mpn);
+        const isPrivateLabelStore = /^(ikea\.com|jysk\.fi|sotka\.fi|asko\.fi|masku\.com|isku\.fi|veke\.fi|ruohonjuuri\.fi|s-kaupat\.fi|k-ruoka\.fi|fiksuruoka\.fi|matsmart\.fi)$/i.test(currentStore.match);
+
+        if (info.ean && !isPrivateLabelStore) addQuery('EAN', info.ean);
+        if (info.mpn && !isPrivateLabelStore) addQuery('MPN', info.mpn);
         if (info.name) {
             const modelQueries = buildToriSearchQueries(info, null);
             for (const mq of modelQueries) {
@@ -1435,6 +1448,44 @@
         return { query: queries[0] || '', items: [], stats: null };
     }
 
+    const STOP_WORDS_FOR_MATCHING = new Set([
+        'the', 'and', 'for', 'with', 'pro', 'max', 'plus', 'mini', 'air', 'new', 'uusi',
+        'valkoinen', 'musta', 'harmaa', 'hopea', 'sininen', 'vihreä', 'punainen', 'kulta', 'beige', 'ruskea',
+        'white', 'black', 'grey', 'gray', 'silver', 'blue', 'green', 'red', 'gold',
+        'edestä', 'päältä', 'täytettävä', 'kpl', 'pkt', 'sarja', 'malli', 'edition', 'series'
+    ]);
+
+    function extractMeaningfulTokens(str) {
+        if (!str) return [];
+        return normalizeSwappedModelOrder(str)
+            .toLowerCase()
+            .replace(/\b\d+(?:[.,]\d+)?\s*(?:kg|g|l|dl|cl|ml|cm|mm|m|kpl|w|hz)\b/gi, ' ')
+            .split(/[\s/\-,()+:;|[\]]+/)
+            .filter(t => (t.length >= 2 || /^\d+$/.test(t)) && !STOP_WORDS_FOR_MATCHING.has(t));
+    }
+
+    function doesItemMatchQueryWords(itemTitle, queryStr) {
+        const qTokens = extractMeaningfulTokens(queryStr);
+        if (qTokens.length === 0) return false;
+        const normTitle = normalizeSwappedModelOrder(itemTitle || '').toLowerCase();
+
+        let matched = 0;
+        let firstTokenMatched = false;
+        for (let i = 0; i < qTokens.length; i++) {
+            const token = qTokens[i];
+            const esc = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            if (new RegExp(`(?<![a-z0-9äöå])${esc}(?![a-z0-9äöå])`, 'i').test(normTitle)) {
+                matched++;
+                if (i === 0) firstTokenMatched = true;
+            }
+        }
+
+        if (matched === 0) return false;
+        if (qTokens.length === 1) return matched === 1;
+        if (qTokens.length === 2) return matched === 2;
+        return firstTokenMatched && (matched / qTokens.length) >= 0.6;
+    }
+
     function scoreSearchCandidate(candidate, targetName, currentPrice) {
         let score = 0;
 
@@ -1445,6 +1496,26 @@
             if (normCand === normTarget) {
                 score += 120;
             } else {
+                const meaningfulTokens = extractMeaningfulTokens(normTarget);
+                let meaningfulMatched = 0;
+                for (const token of meaningfulTokens) {
+                    const esc = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    if (new RegExp(`(?<![a-z0-9äöå])${esc}(?![a-z0-9äöå])`, 'i').test(normCand)) {
+                        meaningfulMatched++;
+                    }
+                }
+
+                // CRITICAL GUARD: Never allow a candidate with ZERO meaningful words in common
+                // or less than 35% token overlap to match (even if the price happens to be similar)!
+                if (meaningfulTokens.length > 0) {
+                    if (meaningfulMatched === 0) {
+                        return -999;
+                    }
+                    if (meaningfulTokens.length >= 2 && (meaningfulMatched / meaningfulTokens.length) < 0.35) {
+                        return -999;
+                    }
+                }
+
                 // Huge bonus if candidate starts with the user's query (e.g. "DJI Mini 4 Pro" starts with "DJI Mini 4", unlike "DJI RS 4 Mini")
                 if (normCand.startsWith(normTarget)) {
                     score += 65;
@@ -1553,7 +1624,7 @@
         return { directProductDoc: null, candidates };
     }
 
-    // Live IKEA Finland Public Search API Fetcher (for tables, desks, chairs, sofas, beds, shelves)
+    // Live IKEA Finland Public Search API Fetcher (strictly verified against query tokens!)
     async function fetchIkeaFinlandProducts(queryStr) {
         const q = (queryStr || '').trim();
         if (q.length < 2) return [];
@@ -1572,6 +1643,9 @@
                 const price = p?.salesPrice?.numeral;
                 if (!p || !Number.isFinite(price) || price <= 0) continue;
                 const fullTitle = `${p.name || ''} ${p.typeName || ''}${p.itemMeasureReferenceText ? `, ${p.itemMeasureReferenceText}` : ''}`.replace(/\s+/g, ' ').trim();
+                // Reject IKEA fallback results (like "PATRULL Pistorasian suojus") that don't actually match the query words!
+                if (!doesItemMatchQueryWords(fullTitle, q)) continue;
+
                 const pipUrl = p.pipUrl || `https://www.ikea.com/fi/fi/search/?q=${encodeURIComponent(q)}`;
                 const itemObj = {
                     id: p.id || pipUrl,
@@ -1594,7 +1668,7 @@
         }
     }
 
-    // Live Ruohonjuuri Public Shopify Suggest API Fetcher (for organic foods, coffee, drinks, supplements)
+    // Live Ruohonjuuri Public Shopify Suggest API Fetcher (strictly verified against query tokens!)
     async function fetchRuohonjuuriProducts(queryStr) {
         const q = (queryStr || '').trim();
         if (q.length < 2) return [];
@@ -1611,10 +1685,14 @@
             for (const p of rawProducts) {
                 const price = parsePriceNumber(String(p.price || ''));
                 if (!p.title || !price) continue;
+                const cleanPTitle = p.title.trim();
+                // Reject Ruohonjuuri fallback suggestions that don't match the query words!
+                if (!doesItemMatchQueryWords(cleanPTitle, q)) continue;
+
                 const prodUrl = p.url?.startsWith('http') ? p.url : `https://www.ruohonjuuri.fi${p.url || ''}`;
                 const itemObj = {
                     id: String(p.id || prodUrl),
-                    name: p.title.trim(),
+                    name: cleanPTitle,
                     category: 'Ruohonjuuri • Ruoka & Luomu',
                     url: prodUrl,
                     lowestPrice: price,
@@ -1656,7 +1734,7 @@
                 const parsed = parseHintaSearchHtml(hintaRes.text, q, null);
                 if (parsed.directProductDoc) {
                     const prod = parseHintaProductDoc(parsed.directProductDoc, hintaRes.finalUrl);
-                    if (prod && prod.title) {
+                    if (prod && prod.title && doesItemMatchQueryWords(prod.title, q)) {
                         results.push({
                             name: prod.title,
                             category: '',
@@ -1666,7 +1744,7 @@
                         });
                     }
                 } else if (parsed.candidates.length > 0) {
-                    results.push(...parsed.candidates.slice(0, 6));
+                    results.push(...parsed.candidates.filter(c => c.score > 10).slice(0, 6));
                 }
             }
 
@@ -1675,12 +1753,6 @@
             }
             if (rjRes.length > 0) {
                 results.push(...rjRes.slice(0, 4));
-            }
-
-            // Fallback if Hinta.fi returned 0 results and we didn't query IKEA yet
-            if (results.length === 0 && cat === 'electronics') {
-                const fallbackIkea = await fetchIkeaFinlandProducts(q);
-                results.push(...fallbackIkea.slice(0, 4));
             }
 
             results = results.slice(0, 7);
@@ -1896,19 +1968,21 @@
 
                 if (parsed.directProductDoc) {
                     const data = parseHintaProductDoc(parsed.directProductDoc, finalUrl);
-                    data.history = await fetchProductHistory(finalUrl);
-                    marketResult = {
-                        matchedQuery: q,
-                        product: data,
-                        alternatives: []
-                    };
-                    setCached(cacheKey, marketResult);
-                    break;
+                    if (q.type === 'EAN' || customQuery || doesItemMatchQueryWords(data.title, targetNameForScoring)) {
+                        data.history = await fetchProductHistory(finalUrl);
+                        marketResult = {
+                            matchedQuery: q,
+                            product: data,
+                            alternatives: []
+                        };
+                        setCached(cacheKey, marketResult);
+                        break;
+                    }
                 }
 
                 const validCandidates = customQuery
-                    ? parsed.candidates
-                    : parsed.candidates.filter(c => c.score > -20);
+                    ? parsed.candidates.filter(c => c.score > -100)
+                    : parsed.candidates.filter(c => c.score > 15);
 
                 if (validCandidates.length > 0) {
                     const best = validCandidates[0];
@@ -1926,15 +2000,23 @@
             }
         }
 
-        // Supplement or fallback with live IKEA Finland (Furniture) or Ruohonjuuri (Groceries/Organic) APIs
+        // Only use live IKEA Finland (Furniture) or Ruohonjuuri (Groceries/Organic) APIs as a strict fallback when Hinta.fi has no match,
+        // and NEVER inject external search items into an existing Hinta.fi product's offers array.
         const primaryQuery = customQuery || extractConciseModelQuery(productInfo.name) || queriesToTry[0]?.value || '';
-        if (primaryQuery && (!marketResult || effectiveCategory === 'furniture' || effectiveCategory === 'grocery')) {
+        const host = location.hostname.toLowerCase();
+        if (!marketResult && primaryQuery && (effectiveCategory === 'furniture' || effectiveCategory === 'grocery')) {
             try {
                 const [ikeaItems, rjItems] = await Promise.all([
-                    (effectiveCategory === 'furniture' || !marketResult) ? fetchIkeaFinlandProducts(primaryQuery) : Promise.resolve([]),
-                    effectiveCategory === 'grocery' ? fetchRuohonjuuriProducts(primaryQuery) : Promise.resolve([])
+                    (effectiveCategory === 'furniture' && !host.includes('ikea.com'))
+                        ? fetchIkeaFinlandProducts(primaryQuery)
+                        : Promise.resolve([]),
+                    (effectiveCategory === 'grocery' && !host.includes('ruohonjuuri.fi'))
+                        ? fetchRuohonjuuriProducts(primaryQuery)
+                        : Promise.resolve([])
                 ]);
-                const extraItems = [...ikeaItems, ...rjItems];
+                const extraItems = [...ikeaItems, ...rjItems].filter(item =>
+                    doesItemMatchQueryWords(item.name, targetNameForScoring)
+                );
                 if (extraItems.length > 0) {
                     const extraOffers = extraItems.map(item => ({
                         store: `${item.storeName}: ${item.name.slice(0, 34)}`,
@@ -1946,33 +2028,20 @@
                         stockLabel: item.name
                     }));
 
-                    if (!marketResult) {
-                        const bestExtra = extraItems[0];
-                        marketResult = {
-                            matchedQuery: { type: effectiveCategory === 'furniture' ? 'IKEA' : 'Grocery', value: primaryQuery },
-                            product: {
-                                title: bestExtra.name,
-                                url: bestExtra.url,
-                                lowestPrice: Math.min(...extraOffers.map(o => o.price)),
-                                lowestDelivered: Math.min(...extraOffers.map(o => o.price)),
-                                low30d: null,
-                                offers: extraOffers,
-                                history: null
-                            },
-                            alternatives: extraItems.slice(0, 6)
-                        };
-                    } else if (marketResult.product) {
-                        const existingUrls = new Set(marketResult.product.offers.map(o => o.url));
-                        for (const eo of extraOffers) {
-                            if (!existingUrls.has(eo.url)) {
-                                marketResult.product.offers.push(eo);
-                            }
-                        }
-                        marketResult.product.offers.sort((a, b) => a.price - b.price);
-                        if (marketResult.product.offers.length > 0) {
-                            marketResult.product.lowestPrice = marketResult.product.offers[0].price;
-                        }
-                    }
+                    const bestExtra = extraItems[0];
+                    marketResult = {
+                        matchedQuery: { type: effectiveCategory === 'furniture' ? 'IKEA' : 'Grocery', value: primaryQuery },
+                        product: {
+                            title: bestExtra.name,
+                            url: bestExtra.url,
+                            lowestPrice: Math.min(...extraOffers.map(o => o.price)),
+                            lowestDelivered: Math.min(...extraOffers.map(o => o.price)),
+                            low30d: null,
+                            offers: extraOffers,
+                            history: null
+                        },
+                        alternatives: extraItems.slice(0, 6)
+                    };
                 }
             } catch (_) {
                 // Ignore supplementary API errors
