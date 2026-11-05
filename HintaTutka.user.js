@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         HintaTutka
 // @namespace    https://github.com/FIMARx/hintatutka
-// @version      7.1
-// @description  Suomen älykkäin hintatutka: Elektroniikka, huonekalut, ruoka, Tori.fi, Vinted & Huuto.net — hintakäyrät, yksikköhinnat (€/kg, €/l), hintavahti, tinkausapuri, S-bonus, kunnostetut & suora haku 77 sivustolla
+// @version      7.2
+// @description  Suomen älykkäin hintatutka: Elektroniikka, huonekalut, ruoka, urheilu, Tori.fi, Vinted & Huuto.net — hintakäyrät, yksikköhinnat (€/kg, €/l), hintavahti, tinkausapuri, S-bonus, kunnostetut & suora haku 81 sivustolla
 // @author       FIMARx
 // @homepageURL  https://github.com/FIMARx/hintatutka
 // @supportURL   https://github.com/FIMARx/hintatutka/issues
@@ -10,6 +10,8 @@
 // @updateURL    https://raw.githubusercontent.com/FIMARx/hintatutka/main/HintaTutka.user.js
 // @match        https://*.hinta.fi/*
 // @match        https://hinta.fi/*
+// @match        https://*.hintaseuranta.fi/*
+// @match        https://hintaseuranta.fi/*
 // @match        https://*.verkkokauppa.com/*
 // @match        https://*.gigantti.fi/*
 // @match        https://*.power.fi/*
@@ -55,6 +57,12 @@
 // @match        https://*.xxl.fi/*
 // @match        https://*.varuste.net/*
 // @match        https://*.intersport.fi/*
+// @match        https://*.budgetsport.fi/*
+// @match        https://budgetsport.fi/*
+// @match        https://*.haglofs.com/*
+// @match        https://haglofs.com/*
+// @match        https://*.partioaitta.fi/*
+// @match        https://partioaitta.fi/*
 // @match        https://*.scandinavianoutdoor.fi/*
 // @match        https://*.stadium.fi/*
 // @match        https://*.ya.fi/*
@@ -91,6 +99,14 @@
 // @match        https://*.rusta.com/*
 // @match        https://*.stockmann.com/*
 // @connect      hinta.fi
+// @connect      hintaseuranta.fi
+// @connect      www.hintaseuranta.fi
+// @connect      budgetsport.fi
+// @connect      www.budgetsport.fi
+// @connect      haglofs.com
+// @connect      www.haglofs.com
+// @connect      partioaitta.fi
+// @connect      www.partioaitta.fi
 // @connect      www.tori.fi
 // @connect      tori.fi
 // @connect      www.vinted.fi
@@ -128,7 +144,7 @@
     // =========================================================================
     // CONFIGURATION & THRESHOLDS
     // =========================================================================
-    const SCRIPT_VERSION = '7.1';
+    const SCRIPT_VERSION = '7.2';
     const GITHUB_RAW_SCRIPT_URL = 'https://raw.githubusercontent.com/FIMARx/hintatutka/main/HintaTutka.user.js';
     const GITHUB_API_CONTENTS_URL = 'https://api.github.com/repos/FIMARx/hintatutka/contents/HintaTutka.user.js';
     const GITHUB_REPO_URL = 'https://github.com/FIMARx/hintatutka';
@@ -204,11 +220,15 @@
         { match: 'dustin', name: 'Dustin', selectors: ['[data-testid*="price"]', '.c-price', '[itemprop="price"]'] },
         { match: 'amazon.de', name: 'Amazon.de', selectors: ['#corePriceDisplay_desktop_feature_div .a-price .a-offscreen', '#corePrice_feature_div .a-price .a-offscreen', '.a-price.aok-align-center .a-offscreen'] },
         // Sports & Outdoor Equipment
-        { match: 'xxl.fi', name: 'XXL', selectors: ['[data-testid*="price" i]', '.price-item', '.product-price', '[itemprop="price"]'] },
-        { match: 'varuste.net', name: 'Varuste.net', selectors: ['.item_price', '.price', '[itemprop="price"]'] },
-        { match: 'intersport.fi', name: 'Intersport', selectors: ['[data-testid*="price" i]', '.product-price', '[itemprop="price"]'] },
-        { match: 'scandinavianoutdoor.fi', name: 'Scandinavian Outdoor', selectors: ['.product-price', '.price', '[itemprop="price"]'] },
-        { match: 'stadium.fi', name: 'Stadium', selectors: ['.product-price', '.price', '[itemprop="price"]'] },
+        { match: 'xxl.fi', name: 'XXL', categoryHint: 'sports', selectors: ['[data-testid*="price" i]', '.price-item', '.product-price', '[itemprop="price"]'] },
+        { match: 'varuste.net', name: 'Varuste.net', categoryHint: 'sports', selectors: ['.item_price', '.price', '[itemprop="price"]'] },
+        { match: 'intersport.fi', name: 'Intersport', categoryHint: 'sports', selectors: ['[data-testid*="price" i]', '.product-price', '[itemprop="price"]'] },
+        { match: 'budgetsport.fi', name: 'Budget Sport', categoryHint: 'sports', selectors: ['[data-testid*="price" i]', '.product-price', '.price-current', '.current-price', '.price', '[itemprop="price"]'] },
+        { match: 'scandinavianoutdoor.fi', name: 'Scandinavian Outdoor', categoryHint: 'sports', selectors: ['.product-price', '.price', '[itemprop="price"]'] },
+        { match: 'stadium.fi', name: 'Stadium', categoryHint: 'sports', selectors: ['.product-price', '.price', '[itemprop="price"]'] },
+        { match: 'partioaitta.fi', name: 'Partioaitta', categoryHint: 'sports', selectors: ['.product-price', '.price', '[itemprop="price"]'] },
+        { match: 'haglofs.com', name: 'Haglöfs', categoryHint: 'sports', selectors: ['[data-testid*="price" i]', '.product-price', '.sales .value', '.price .value', '[itemprop="price"]'] },
+        { match: 'hintaseuranta.fi', name: 'Hintaseuranta', selectors: ['.price', '.cheapest-price', '[itemprop="price"]', '.product-details-price'] },
         // Pharmacies, Health & Beauty
         { match: 'ya.fi', name: 'Yliopiston Apteekki', categoryHint: 'grocery', selectors: ['.product-price', '.price', '[itemprop="price"]'] },
         { match: 'lyko.com', name: 'Lyko', selectors: ['[data-test*="price" i]', '.product-price', '[itemprop="price"]'] },
@@ -627,7 +647,7 @@
     function cleanTitle(str) {
         if (!str) return '';
         return normalizeSwappedModelOrder(str)
-            .replace(/[-|•–].*?(Verkkokauppa|Gigantti|Power|Proshop|Jimm's|Datatronic|Multitronic|Tietokonekauppa|Data-Systems|Komponenttikauppa|Cruzbroker|MaxGaming|VPD|Puolenkuun|Veikon|Euronics|Kärkkäinen|Prisma|Telia|Elisa|DNA|HobbyHall|Bigbox|Kasuplan|Mikromafia|TeraStore|DigiDreamer|MEGASTORE|e-ville|SatShop|Dustin|Amazon|Tori|Vinted|Huuto|Swappie|Taitonetti|Fonum|XXL|Varuste|Intersport|Scandinavian Outdoor|Stadium|Yliopiston Apteekki|Lyko|Kicks|Musti ja Mirri|Zooplus|Peten Koiratarvike|Adlibris|Suomalainen|Taloon|Netrauta|S-kaupat|K-Ruoka|Fiksuruoka|Matsmart|Ruohonjuuri|Tokmanni|Puuilo|IKEA|JYSK|Sotka|Asko|Masku|Isku|Veke|Finnish Design Shop|K-Rauta|Bauhaus|Motonet|Biltema|Clas Ohlson|Rusta|Stockmann).*$/i, '')
+            .replace(/[-|•–].*?(Verkkokauppa|Gigantti|Power|Proshop|Jimm's|Datatronic|Multitronic|Tietokonekauppa|Data-Systems|Komponenttikauppa|Cruzbroker|MaxGaming|VPD|Puolenkuun|Veikon|Euronics|Kärkkäinen|Prisma|Telia|Elisa|DNA|HobbyHall|Bigbox|Kasuplan|Mikromafia|TeraStore|DigiDreamer|MEGASTORE|e-ville|SatShop|Dustin|Amazon|Tori|Vinted|Huuto|Swappie|Taitonetti|Fonum|XXL|Varuste|Intersport|Budget Sport|Scandinavian Outdoor|Stadium|Partioaitta|Haglöfs|Hintaseuranta|Yliopiston Apteekki|Lyko|Kicks|Musti ja Mirri|Zooplus|Peten Koiratarvike|Adlibris|Suomalainen|Taloon|Netrauta|S-kaupat|K-Ruoka|Fiksuruoka|Matsmart|Ruohonjuuri|Tokmanni|Puuilo|IKEA|JYSK|Sotka|Asko|Masku|Isku|Veke|Finnish Design Shop|K-Rauta|Bauhaus|Motonet|Biltema|Clas Ohlson|Rusta|Stockmann).*$/i, '')
             .replace(/^(Myydään|M:|ALE)\s+/i, '')
             .replace(/\s+/g, ' ')
             .trim();
@@ -644,6 +664,11 @@
 
         if (store?.categoryHint === 'grocery') return 'grocery';
         if (store?.categoryHint === 'furniture') return 'furniture';
+        if (store?.categoryHint === 'sports') return 'sports';
+
+        if (/\b(pipo|lippis|hattu|päähine|takki|kuoritakki|untuvatakki|toppatakki|hiihtotakki|juoksutakki|housut|kuorihousut|toppahousut|trikoot|kengät|juoksukengät|vaelluskengät|maastokengät|lenkkarit|sukset|sauvat|monot|rinkka|reppu|makuupussi|teltta|retkikeitin|sukellusmaski|pyörä|polkupyörä|kypärä|hanskat|rukkaset|lapaset|sormikkaat|beanie|jacket|shoes|boots)\b/i.test(norm)) {
+            return 'sports';
+        }
 
         if (/\b(ruokapöytä|työpöytä|sohvapöytä|sivupöytä|yöpöytä|sähköpöytä|kirjoituspöytä|pöytäryhmä|pöytä|ruokatuoli|työtuoli|nojatuoli|baarijakkara|jakkara|sohva|kulmasohva|vuodesohva|divaanisohva|sänky|jenkkisänky|runkopatja|patja|petauspatja|vaatekaappi|senkki|lipasto|vitriini|kirjahylly|hyllykkö|tv-taso|nukkamatto|villamatto|kattovalaisin|pöytävalaisin|lattiavalaisin|puutarhapöytä|parvekeryhmä|artek|ikea\s+\w+|jysk)\b/i.test(norm)) {
             return 'furniture';
@@ -939,6 +964,9 @@
         if (host.includes('hinta.fi')) {
             return !/^\/\d+\b/.test(p);
         }
+        if (host.includes('hintaseuranta.fi')) {
+            return !/\/tuote\//i.test(p);
+        }
 
         if (p === '/' || /^\/(fi|en|sv)\/?$/.test(p)) return true;
         if (/\/(cart|ostoskori|varukorg|checkout|kassa|search|haku|sok|login|account|asiakastili|customer|wishlist|vertailu|compare)\b/.test(p)) {
@@ -955,6 +983,7 @@
             ean: null,
             mpn: null,
             sku: null,
+            brand: null,
             name: null,
             schemaPrice: null,
             hasProductSchema: false,
@@ -989,6 +1018,12 @@
                         if (item.sku && String(item.sku).trim().length >= 4) {
                             info.sku = String(item.sku).trim();
                         }
+                        if (item.brand) {
+                            const b = typeof item.brand === 'string' ? item.brand : item.brand?.name;
+                            if (b && String(b).trim().length >= 2) {
+                                info.brand = String(b).trim();
+                            }
+                        }
                         if (item.name && !info.name) {
                             info.name = cleanTitle(String(item.name));
                         }
@@ -1019,6 +1054,30 @@
             info.schemaPrice = null;
         }
 
+        if (!info.brand) {
+            const brandMeta = document.querySelector('meta[property="product:brand"], meta[property="og:brand"], meta[name="brand"]');
+            if (brandMeta && brandMeta.content) {
+                info.brand = brandMeta.content.trim();
+            }
+        }
+        if (!info.brand) {
+            // Check brand element near or above H1 (e.g. XXL, Intersport, Scandinavian Outdoor, Stadium, Zalando, Kärkkäinen)
+            const brandEl = document.querySelector(
+                '[data-testid*="brand" i], [class*="brand" i], a[href*="/b/"], a[href*="/brand/"], a[href*="/tuotemerkit/"], .product-brand, .pdp-brand, [itemprop="brand"]'
+            );
+            if (brandEl) {
+                const bText = (brandEl.getAttribute('title') || brandEl.innerText || brandEl.textContent || '').trim();
+                if (bText && bText.length >= 2 && bText.length <= 40 && !/\n/.test(bText)) {
+                    info.brand = bText;
+                } else {
+                    const imgAlt = brandEl.querySelector('img[alt]')?.getAttribute('alt')?.trim();
+                    if (imgAlt && imgAlt.length >= 2 && imgAlt.length <= 40) {
+                        info.brand = imgAlt;
+                    }
+                }
+            }
+        }
+
         const hasProductUrlPattern = /\/(product|products|tuote|tuotteet|produkt|produkter|dp|gp\/product|p|recommerce\/forsale\/item|items|kohteet|varuste|mallit|item)\b/i.test(location.pathname) ||
             /\/Product\/Show\//i.test(location.pathname) ||
             /\.html$/i.test(location.pathname);
@@ -1030,16 +1089,40 @@
             return null;
         }
 
+        const ikeaH1 = document.querySelector('.pip-header-section h1, [data-testid="pip-product-information-section"] h1');
+        const h1 = ikeaH1 || document.querySelector('h1[data-testid="object-title"], h1');
+        const rawH1 = h1 ? h1.innerText.replace(/\s+/g, ' ').trim() : '';
+        const ogTitle = document.querySelector('meta[property="og:title"]')?.content?.trim() || '';
+        const docTitle = document.title ? document.title.replace(/\s+/g, ' ').trim() : '';
+
         if (!info.name) {
-            // Special handling for IKEA where h1 has brand series name and description span
-            const ikeaH1 = document.querySelector('.pip-header-section h1, [data-testid="pip-product-information-section"] h1');
-            const h1 = ikeaH1 || document.querySelector('h1[data-testid="object-title"], h1');
-            if (h1 && h1.innerText.trim()) {
-                info.name = cleanTitle(h1.innerText.replace(/\s+/g, ' ').trim());
-            } else {
-                const ogTitle = document.querySelector('meta[property="og:title"]');
-                if (ogTitle && ogTitle.content) {
-                    info.name = cleanTitle(ogTitle.content);
+            if (rawH1) {
+                info.name = cleanTitle(rawH1);
+            } else if (ogTitle) {
+                info.name = cleanTitle(ogTitle);
+            } else if (docTitle) {
+                info.name = cleanTitle(docTitle);
+            }
+        }
+
+        // If brand was found (e.g. "Haglöfs"), ensure it is prepended to info.name if missing from title!
+        if (info.brand && info.name) {
+            const lowerBrand = info.brand.toLowerCase();
+            if (!info.name.toLowerCase().includes(lowerBrand)) {
+                info.name = `${info.brand} ${info.name}`;
+            }
+        } else if (info.name && rawH1) {
+            // Reconcile missing brand from docTitle / ogTitle prefix (e.g. XXL: "Haglöfs Aze Beanie, pipo - Musta | XXL")
+            const fullTitle = cleanTitle(ogTitle || docTitle);
+            const cleanH1 = cleanTitle(rawH1);
+            const lowerFull = fullTitle.toLowerCase();
+            const lowerH1 = cleanH1.toLowerCase();
+            const idx = lowerFull.indexOf(lowerH1);
+            if (idx > 0) {
+                const prefixBrand = fullTitle.slice(0, idx).trim();
+                if (prefixBrand && prefixBrand.length >= 2 && prefixBrand.length <= 30 && !/\b(verkkokauppa|xxl|k-rauta|prisma|tuote)\b/i.test(prefixBrand)) {
+                    info.brand = prefixBrand;
+                    info.name = `${prefixBrand} ${cleanH1}`;
                 }
             }
         }
@@ -4710,6 +4793,33 @@
             .ufhpc-btn-hintaopas:hover {
                 background: rgba(59, 130, 246, 0.24);
             }
+            .ufhpc-btn-hintaseuranta {
+                background: rgba(14, 165, 233, 0.14);
+                color: #38bdf8;
+                border: 1px solid rgba(14, 165, 233, 0.35);
+            }
+            .ufhpc-btn-hintaseuranta:hover {
+                background: rgba(14, 165, 233, 0.25);
+                color: #7dd3fc;
+            }
+            .ufhpc-btn-intersport {
+                background: rgba(37, 99, 235, 0.15);
+                color: #60a5fa;
+                border: 1px solid rgba(37, 99, 235, 0.38);
+            }
+            .ufhpc-btn-intersport:hover {
+                background: rgba(37, 99, 235, 0.28);
+                color: #93c5fd;
+            }
+            .ufhpc-btn-budgetsport {
+                background: rgba(234, 88, 12, 0.15);
+                color: #fb923c;
+                border: 1px solid rgba(234, 88, 12, 0.38);
+            }
+            .ufhpc-btn-budgetsport:hover {
+                background: rgba(234, 88, 12, 0.28);
+                color: #fdba74;
+            }
             .ufhpc-btn-tori {
                 background: rgba(244, 63, 94, 0.14);
                 color: #fb7185;
@@ -5281,6 +5391,8 @@
                     </div>
                     <div class="ufhpc-actions">
                         <a class="ufhpc-btn ufhpc-btn-hinta" href="https://hinta.fi/haku?q=${fallbackQuery}" target="_blank" rel="noopener">Hinta.fi ↗</a>
+                        <a class="ufhpc-btn ufhpc-btn-hintaseuranta" href="https://hintaseuranta.fi/haku?q=${fallbackQuery}" target="_blank" rel="noopener">Hintaseuranta ↗</a>
+                        <a class="ufhpc-btn ufhpc-btn-hintaopas" href="https://hintaopas.fi/search?search=${fallbackQuery}" target="_blank" rel="noopener">Hintaopas ↗</a>
                         <a class="ufhpc-btn ufhpc-btn-tori" href="https://www.tori.fi/recommerce/forsale/search?q=${toriQuery}" target="_blank" rel="noopener">Tori ↗</a>
                         <a class="ufhpc-btn ufhpc-btn-vinted" href="https://www.vinted.fi/catalog?search_text=${toriQuery}" target="_blank" rel="noopener">Vinted ↗</a>
                         <a class="ufhpc-btn ufhpc-btn-huuto" href="https://www.huuto.net/haku?words=${toriQuery}" target="_blank" rel="noopener">Huuto ↗</a>
@@ -5653,6 +5765,37 @@
                 <a class="ufhpc-btn ufhpc-btn-hinta" href="https://www.ikea.com/fi/fi/search/?q=${encodedSearch}" target="_blank" rel="noopener noreferrer">
                     IKEA ↗
                 </a>
+                <a class="ufhpc-btn ufhpc-btn-hintaseuranta" href="https://hintaseuranta.fi/haku?q=${encodedSearch}" target="_blank" rel="noopener noreferrer">
+                    Hintaseuranta ↗
+                </a>
+                <a class="ufhpc-btn ufhpc-btn-hintaopas" href="https://hintaopas.fi/search?search=${encodedSearch}" target="_blank" rel="noopener noreferrer">
+                    Hintaopas ↗
+                </a>
+                <a class="ufhpc-btn ufhpc-btn-tori" href="${escapeHtml(toriSearchUrl)}" target="_blank" rel="noopener noreferrer">
+                    Tori (${toriCount}) ↗
+                </a>
+                <a class="ufhpc-btn ufhpc-btn-vinted" href="${escapeHtml(vintedSearchUrl)}" target="_blank" rel="noopener noreferrer">
+                    Vinted (${vintedCount}) ↗
+                </a>
+                <a class="ufhpc-btn ufhpc-btn-huuto" href="${escapeHtml(huutoSearchUrl)}" target="_blank" rel="noopener noreferrer">
+                    Huuto (${huutoCount}) ↗
+                </a>
+            ` : (productInfo.category === 'sports' ? `
+                <a class="ufhpc-btn ufhpc-btn-hintaseuranta" href="https://hintaseuranta.fi/haku?q=${encodedSearch}" target="_blank" rel="noopener noreferrer">
+                    Hintaseuranta ↗
+                </a>
+                <a class="ufhpc-btn ufhpc-btn-hintaopas" href="https://hintaopas.fi/search?search=${encodedSearch}" target="_blank" rel="noopener noreferrer">
+                    Hintaopas ↗
+                </a>
+                <a class="ufhpc-btn ufhpc-btn-intersport" href="https://www.intersport.fi/fi/haku/?q=${encodedSearch}" target="_blank" rel="noopener noreferrer">
+                    Intersport ↗
+                </a>
+                <a class="ufhpc-btn ufhpc-btn-budgetsport" href="https://www.budgetsport.fi/haku/?q=${encodedSearch}" target="_blank" rel="noopener noreferrer">
+                    Budget Sport ↗
+                </a>
+                <a class="ufhpc-btn ufhpc-btn-hinta" href="${escapeHtml(hintaUrl)}" target="_blank" rel="noopener noreferrer">
+                    Hinta.fi ↗
+                </a>
                 <a class="ufhpc-btn ufhpc-btn-tori" href="${escapeHtml(toriSearchUrl)}" target="_blank" rel="noopener noreferrer">
                     Tori (${toriCount}) ↗
                 </a>
@@ -5666,6 +5809,12 @@
                 <a class="ufhpc-btn ufhpc-btn-hinta" href="${escapeHtml(hintaUrl)}" target="_blank" rel="noopener noreferrer">
                     Hinta.fi ↗
                 </a>
+                <a class="ufhpc-btn ufhpc-btn-hintaseuranta" href="https://hintaseuranta.fi/haku?q=${encodedSearch}" target="_blank" rel="noopener noreferrer">
+                    Hintaseuranta ↗
+                </a>
+                <a class="ufhpc-btn ufhpc-btn-hintaopas" href="https://hintaopas.fi/search?search=${encodedSearch}" target="_blank" rel="noopener noreferrer">
+                    Hintaopas ↗
+                </a>
                 <a class="ufhpc-btn ufhpc-btn-tori" href="${escapeHtml(toriSearchUrl)}" target="_blank" rel="noopener noreferrer">
                     Tori (${toriCount}) ↗
                 </a>
@@ -5675,7 +5824,7 @@
                 <a class="ufhpc-btn ufhpc-btn-huuto" href="${escapeHtml(huutoSearchUrl)}" target="_blank" rel="noopener noreferrer">
                     Huuto (${huutoCount}) ↗
                 </a>
-            `);
+            `));
 
             // Bargaining Advisor on Used Item Pages
             let bargainHtml = '';

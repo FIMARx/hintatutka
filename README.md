@@ -3,12 +3,12 @@
 # ⚡ HintaTutka
 
 **Suomen älykkäin reaaliaikainen hintatutka: Elektroniikka, Huonekalut, Ruoka, Urheilu, Apteekit, Tori.fi, Vinted & Huuto.net**  
-*The ultimate real-time price comparison, unit-price analyzer (`€/kg`, `€/l`), price watchlist, bargaining advisor, S-Bonus calculator & second-hand overlay for 77 Finnish & EU online stores.*
+*The ultimate real-time price comparison, unit-price analyzer (`€/kg`, `€/l`), price watchlist, bargaining advisor, S-Bonus calculator & second-hand overlay for 81 Finnish & EU online stores.*
 
-[![Version](https://img.shields.io/badge/version-7.1-10b981?style=for-the-badge)](https://github.com/FIMARx/hintatutka)
+[![Version](https://img.shields.io/badge/version-7.2-10b981?style=for-the-badge)](https://github.com/FIMARx/hintatutka)
 [![Author](https://img.shields.io/badge/author-FIMARx-6366f1?style=for-the-badge)](https://github.com/FIMARx)
 [![Install](https://img.shields.io/badge/Install-HintaTutka.user.js-f43f5e?style=for-the-badge&logo=tampermonkey)](https://raw.githubusercontent.com/FIMARx/hintatutka/main/HintaTutka.user.js)
-[![Stores](https://img.shields.io/badge/stores-77%20supported-f59e0b?style=for-the-badge)](#)
+[![Stores](https://img.shields.io/badge/stores-81%20supported-f59e0b?style=for-the-badge)](#)
 [![Languages](https://img.shields.io/badge/FI%20%7C%20EN-supported-3b82f6?style=for-the-badge)](#)
 
 </div>
@@ -17,7 +17,7 @@
 
 ## 🚀 Mikä on HintaTutka? / What is HintaTutka?
 
-**HintaTutka** on Tampermonkey / Violentmonkey -lisäosa, joka tuo tyylikkään, lasimorfisen hintatutka-sivupaneelin suoraan **77 suomalaisen ja eurooppalaisen verkkokaupan** tuotesivuille.
+**HintaTutka** on Tampermonkey / Violentmonkey -lisäosa, joka tuo tyylikkään, lasimorfisen hintatutka-sivupaneelin suoraan **81 suomalaisen ja eurooppalaisen verkkokaupan** tuotesivuille.
 
 Se kertoo välittömästi yhdellä silmäyksellä:
 1. **Onko kaupan hinta oikeasti edullinen vai ylihintainen?** (🟢 Vihreä = Halvin, 🟡 Keltainen = OK, 🔴 Punainen = Kallis).
@@ -70,7 +70,7 @@ Se kertoo välittömästi yhdellä silmäyksellä:
 
 ---
 
-## 🏪 Tuetut kaupat / Supported Stores (77)
+## 🏪 Tuetut kaupat / Supported Stores (81)
 
 HintaTutka toimii automaattisesti kaikilla kielipoluilla (`/fi/`, `/en/`, `/sv/`) ja SPA-sivustoilla:
 
@@ -79,7 +79,8 @@ HintaTutka toimii automaattisesti kaikilla kielipoluilla (`/fi/`, `/en/`, `/sv/`
 | **Kodinkoneet & Elektroniikka** | Verkkokauppa.com, Gigantti, Power, Veikon Kone, Euronics, HobbyHall, Bigbox |
 | **PC-komponentit & Pelaaminen** | Jimm's, Proshop, Datatronic, Multitronic, Tietokonekauppa.fi, Data-Systems, Komponenttikauppa.fi, Cruzbroker, MaxGaming, VPD Pelikauppa, Puolenkuun Pelit, Kasuplan, Mikromafia, TeraStore, DigiDreamer, CS Megastore |
 | **Kunnostetut laitteet (Refurbished)** | **Swappie**, **Taitonetti**, **Fonum** |
-| **Urheilu & Ulkoilu** | **XXL**, **Varuste.net**, **Intersport**, **Scandinavian Outdoor**, **Stadium** |
+| **Urheilu & Ulkoilu** | **XXL**, **Intersport**, **Budget Sport**, **Varuste.net**, **Scandinavian Outdoor**, **Stadium**, **Partioaitta**, **Haglöfs** |
+| **Hintavertailupalvelut** | **Hinta.fi**, **Hintaseuranta.fi** |
 | **Apteekit & Kauneus** | **Yliopiston Apteekki (ya.fi)**, **Lyko**, **Kicks** |
 | **Lemmikkitarvikkeet & Ruoka** | **Musti ja Mirri**, **Zooplus**, **Peten Koiratarvike** |
 | **Kirjat & Toimisto** | **Adlibris**, **Suomalainen Kirjakauppa** |
@@ -105,7 +106,12 @@ HintaTutka toimii automaattisesti kaikilla kielipoluilla (`/fi/`, `/en/`, `/sv/`
 
 ## 🗺️ Kehityssuunnitelma & Versiohistoria / Roadmap & Changelog
 
-### 🚀 v7.1 Päivitys (Uusin / Latest)
+### 🚀 v7.2 Päivitys (Uusin / Latest)
+- 🏷️ **Automaattinen brändintunnistus & yhdistäminen (XXL, Intersport ym.)**: Korjattu tilanne, jossa XXL:n ja urheilukauppojen tuotteista puuttui brändinimi (esim. Haglöfs) H1-otsikon yläpuolella olevan logon vuoksi. Skripti tunnistaa nyt brändin Schema.orgista, metatiedoista tai otsikkolinkeistä ja liittää sen aina tuotenimeen, jolloin haut kilpailijoilla ja käytettyjen sivustoilla löytävät tarkan tuotteen välittömästi.
+- ⚡ **Hintaseuranta.fi & Hintaopas.fi -pikahaut**: Lisätty suorat pikahakupainikkeet Hintaseuranta.fi:hin ja Hintaopas.fi:hin, jotta erityisesti urheilu-, ulkoilu- ja vaatetuotteiden vertailu onnistuu yhdellä klikkauksella. Lisäksi Hintaseuranta.fi on lisätty suoraan tuettujen sivujen listalle.
+- 🏃 **Uudet tuetut kaupat (Yhteensä 81 kauppaa)**: Mukana nyt **Budget Sport**, **Haglöfs**, **Partioaitta** ja **Hintaseuranta.fi** suoralla hintatutkatuella ja pikapainikkeilla.
+
+### 🌟 v7.1
 - 💶 **Vinted-valuuttakorjaus**: Korjattu bugi, jossa Vintedin eri maiden myyjien paikallisvaluutat (PLN, SEK, DKK, CZK) näkyivät virheellisesti euroina. Skripti ohittaa nyt ulkomaan valuutan Schema-tiedot ja lukee aina suomalaiselle ostajalle lasketun tarkan EUR-hinnan suoraan sivulta.
 - 🎯 **Käytettyjen hintatuomio ilman kauppahintaa**: Kun tuotteelle ei löydy uutta kauppahintaa Hinta.fi:stä (esim. vaatteet, Zara, Shein, vintage), inline-hintatuomio vertaa hintaa käytettyjen markkinoiden **mediaaniin** eikä koskaan näytä rikkinäistä `Uutena kaupasta takuulla: — (Hinta.fi)`.
 - 👗 **Vaatteiden ja samankaltaisten kohteiden tuki**: Lisätty `-X% vs. tämä sivu` -säästövertailu toisiin käytettyihin sekä selkeä `Samankaltaiset & vastaavat` -merkintä, jotta ostaja löytää vaivattomasti samantyyppiset ja saman brändin käytetyt vaatteet.
