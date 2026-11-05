@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         HintaTutka
 // @namespace    https://github.com/FIMARx/hintatutka
-// @version      6.4
-// @description  Suomen älykkäin hintatutka: Elektroniikka, huonekalut, ruoka & Tori.fi — hintakäyrät, yksikköhinnat (€/kg, €/l), klubitarjoukset & suora Prisma/K-Rauta/Puuilo/Motonet/Tokmanni-haku 57 sivustolla
+// @version      6.5
+// @description  Suomen älykkäin hintatutka: Elektroniikka, huonekalut, ruoka & Tori.fi — hintakäyrät, yksikköhinnat (€/kg, €/l), klubitarjoukset & suora Prisma/K-Rauta/Clas Ohlson/Puuilo/Motonet/Tokmanni-haku 57 sivustolla
 // @author       FIMARx
 // @homepageURL  https://github.com/FIMARx/hintatutka
 // @supportURL   https://github.com/FIMARx/hintatutka/issues
@@ -78,6 +78,9 @@
 // @connect      motonet.fi
 // @connect      www.puuilo.fi
 // @connect      puuilo.fi
+// @connect      www.clasohlson.com
+// @connect      clasohlson.com
+// @connect      html.duckduckgo.com
 // @connect      hh40esw4ph-dsn.algolia.net
 // @connect      eucs11.ksearchnet.com
 // @connect      sik.search.blue.cdtapps.com
@@ -86,6 +89,8 @@
 // @connect      raw.githubusercontent.com
 // @connect      api.github.com
 // @grant        GM_xmlhttpRequest
+// @grant        GM_setValue
+// @grant        GM_getValue
 // @run-at       document-idle
 // ==/UserScript==
 
@@ -95,7 +100,7 @@
     // =========================================================================
     // CONFIGURATION & THRESHOLDS
     // =========================================================================
-    const SCRIPT_VERSION = '6.4';
+    const SCRIPT_VERSION = '6.5';
     const GITHUB_RAW_SCRIPT_URL = 'https://raw.githubusercontent.com/FIMARx/hintatutka/main/HintaTutka.user.js';
     const GITHUB_API_CONTENTS_URL = 'https://api.github.com/repos/FIMARx/hintatutka/contents/HintaTutka.user.js';
     const GITHUB_REPO_URL = 'https://github.com/FIMARx/hintatutka';
@@ -108,7 +113,8 @@
         usedOkDiscountPct: 5.0,
         cacheTtlMs: 15 * 60 * 1000,
         updateCheckTtlMs: 60 * 1000,
-        storageKeyUpdateCheck: 'ufhpc_github_update_v64',
+        storageKeyUpdateCheck: 'ufhpc_github_update_v65',
+        storageKeyObservedOffers: 'ufhpc_observed_offers_v65',
         storageKeyCollapsed: 'ufhpc_sidebar_collapsed_v55',
         storageKeyExpanded: 'ufhpc_sidebar_expanded_v55',
         storageKeyLang: 'ufhpc_sidebar_lang_v55',
@@ -117,7 +123,7 @@
         storageKeyInStock: 'ufhpc_filter_stock_v55',
         storageKeyToriDiili: 'ufhpc_filter_toridiili_v55',
         storageKeyChartTab: 'ufhpc_chart_tab_v55',
-        maxStoresShown: 6,
+        maxStoresShown: 8,
         maxToriShown: 4
     };
 
@@ -180,7 +186,7 @@
         { match: 'bauhaus.fi', name: 'Bauhaus', selectors: ['[data-price-type="finalPrice"]', '.price-box .price', '[itemprop="price"]'] },
         { match: 'motonet.fi', name: 'Motonet', selectors: ['[data-testid*="price"]', '.product-price', '[itemprop="price"]'] },
         { match: 'biltema.fi', name: 'Biltema', selectors: ['[data-testid*="price"]', '.product-price', '[itemprop="price"]'] },
-        { match: 'clasohlson.com', name: 'Clas Ohlson', selectors: ['.product-price', '[itemprop="price"]', '.price'] },
+        { match: 'clasohlson.com', name: 'Clas Ohlson', selectors: ['.product-price', '.price-value', '[class*="product-price" i]', '[class*="ProductPrice" i]', '[class*="price-box" i]', '[data-testid*="price" i]', '[itemprop="price"]', '.price'] },
         { match: 'jula.fi', name: 'Jula', selectors: ['[data-testid*="price"]', '.product-price', '[itemprop="price"]'] },
         { match: 'rusta.com', name: 'Rusta', selectors: ['.product-price', '[itemprop="price"]', '.price'] },
         { match: 'stockmann.com', name: 'Stockmann', selectors: ['.price .value', '.product-price', '[itemprop="price"]'] }
@@ -409,11 +415,11 @@
     // =========================================================================
     function getCached(key) {
         try {
-            const raw = sessionStorage.getItem(`ufhpc_v64_${key}`);
+            const raw = sessionStorage.getItem(`ufhpc_v65_${key}`);
             if (!raw) return null;
             const parsed = JSON.parse(raw);
             if (Date.now() - parsed.ts > CONFIG.cacheTtlMs) {
-                sessionStorage.removeItem(`ufhpc_v64_${key}`);
+                sessionStorage.removeItem(`ufhpc_v65_${key}`);
                 return null;
             }
             return parsed.data;
@@ -424,7 +430,7 @@
 
     function setCached(key, data) {
         try {
-            sessionStorage.setItem(`ufhpc_v64_${key}`, JSON.stringify({ ts: Date.now(), data }));
+            sessionStorage.setItem(`ufhpc_v65_${key}`, JSON.stringify({ ts: Date.now(), data }));
         } catch (_) {
             // Ignore storage quota errors
         }
@@ -435,12 +441,16 @@
         if (!str || typeof str !== 'string') return null;
 
         const cleaned = str
+            .replace(/\(sis\.?\s*alv[^)]*\)/gi, ' ')
+            .replace(/\bsis\.?\s*alv\b/gi, ' ')
             .replace(/[\u00A0\u202F\r\n\t]+/g, ' ')
             .replace(/€/g, '')
             .replace(/eur/gi, '')
             .replace(/,-/g, ',00')
             .replace(/\s+/g, ' ')
             .trim()
+            // Collapse spaces before comma/dot decimals (e.g. Clas Ohlson split spans "94 ,90" -> "94,90")
+            .replace(/(\d)\s+([,.]\d{2})\b/g, '$1$2')
             // Handle superscript cents separated by a space (e.g. HobbyHall "819 00" or "1 295 39")
             .replace(/^(\d{1,3}(?:[ .]\d{3})*|\d+)\s+(\d{2})$/, '$1,$2');
 
@@ -935,7 +945,33 @@
         const clubOffer = !info.isUsedSite ? detectClubOfferOnPage(priceDom, info.schemaPrice) : null;
         const currentPrice = clubOffer?.clubPrice || priceDom?.price || info.schemaPrice || null;
 
-        if (!info.hasProductSchema && !currentPrice && !info.ean && !info.mpn) {
+        const isPrivateLabelStore = /^(ikea\.com|jysk\.fi|sotka\.fi|asko\.fi|masku\.com|isku\.fi|veke\.fi|ruohonjuuri\.fi|s-kaupat\.fi|k-ruoka\.fi|fiksuruoka\.fi|matsmart\.fi)$/i.test(currentStore.match);
+
+        if (!info.sku) {
+            const urlSkuMatch = location.pathname.match(/\/p\/([0-9]{2}-[0-9]{3,6})\b/i);
+            if (urlSkuMatch) info.sku = urlSkuMatch[1];
+        }
+
+        if (!info.mpn && !isPrivateLabelStore) {
+            const bodyText = (document.querySelector('main') || document.body)?.innerText || '';
+            const mpnMatch = bodyText.match(/(?:Valmistajan\s+tuotekoodi|Valmistajan\s+koodi|Tuotekoodi|Manufacturer\s+Part\s+Number|MPN)\s*[:\n\t]+\s*([A-Z0-9][A-Z0-9._/-]{4,24})/i);
+            if (mpnMatch && mpnMatch[1] && /[A-Z]/i.test(mpnMatch[1]) && /\d/.test(mpnMatch[1])) {
+                info.mpn = mpnMatch[1].trim();
+            } else if (info.name) {
+                const nameCodes = extractModelCodes(info.name);
+                if (nameCodes.length > 0) {
+                    info.mpn = nameCodes[0];
+                }
+            }
+            if (!info.ean) {
+                const eanMatch = bodyText.match(/(?:EAN(?:-koodi)?|GTIN|Viivakoodi)\s*[:\n\t]+\s*(\d{8,14})\b/i);
+                if (eanMatch && eanMatch[1]) {
+                    info.ean = eanMatch[1].trim();
+                }
+            }
+        }
+
+        if (!info.hasProductSchema && !currentPrice && !info.ean && !info.mpn && !(hasProductUrlPattern && info.name)) {
             return null;
         }
 
@@ -951,16 +987,6 @@
                 queries.push({ type, value: v });
             }
         };
-
-        const isPrivateLabelStore = /^(ikea\.com|jysk\.fi|sotka\.fi|asko\.fi|masku\.com|isku\.fi|veke\.fi|ruohonjuuri\.fi|s-kaupat\.fi|k-ruoka\.fi|fiksuruoka\.fi|matsmart\.fi)$/i.test(currentStore.match);
-
-        if (!info.mpn && !isPrivateLabelStore) {
-            const bodyText = (document.querySelector('main') || document.body)?.innerText || '';
-            const mpnMatch = bodyText.match(/(?:Valmistajan\s+tuotekoodi|Valmistajan\s+koodi|Tuotekoodi|Manufacturer\s+Part\s+Number|MPN)\s*[:\n\t]+\s*([A-Z0-9][A-Z0-9._/-]{4,24})/i);
-            if (mpnMatch && mpnMatch[1] && /[A-Z]/i.test(mpnMatch[1]) && /\d/.test(mpnMatch[1])) {
-                info.mpn = mpnMatch[1].trim();
-            }
-        }
 
         if (info.ean && !isPrivateLabelStore) {
             addQuery('EAN', info.ean);
@@ -1154,19 +1180,29 @@
         let node = walker.currentNode;
 
         while (node) {
-            if (!isInvalidPriceNode(node) && node.children.length <= 4) {
-                const text = (node.innerText || '').trim();
-                if (text.length > 0 && text.length <= 22 && (/€|,-|\d+[,.]\d{2}/.test(text))) {
-                    const val = extractPriceFromElement(node);
+            if (!isInvalidPriceNode(node) && node.children.length <= 6) {
+                const rawText = (node.innerText || '').trim();
+                const text = rawText
+                    .replace(/\(sis\.?\s*alv[^)]*\)/gi, '')
+                    .replace(/\bsis\.?\s*alv\b/gi, '')
+                    .replace(/\s+/g, ' ')
+                    .replace(/(\d)\s+([,.]\d{2})\b/g, '$1$2')
+                    .trim();
+                if (text.length > 0 && text.length <= 26 && (/€|,-|\d+[,.]\d{2}/.test(text))) {
+                    const val = extractPriceFromElement(node) || parsePriceNumber(text);
                     if (val && val >= 0.15 && val <= 50000) {
                         const rect = node.getBoundingClientRect();
                         const style = window.getComputedStyle(node);
                         const fontSize = parseFloat(style.fontSize) || 14;
 
-                        if (rect.top >= 0 && rect.top < 950 && fontSize >= 17) {
+                        if (rect.top >= 0 && rect.top < 950 && fontSize >= 16) {
                             let score = fontSize * 2 - rect.top * 0.02;
                             if (expectedPrice && Math.abs(val - expectedPrice) < 0.5) {
                                 score += 200;
+                            }
+                            const parentTxt = (node.parentElement?.innerText || '');
+                            if (/sis\.?\s*alv/i.test(parentTxt)) {
+                                score += 120;
                             }
                             candidates.push({ element: node, price: val, score });
                         }
@@ -1880,6 +1916,126 @@
         }
     }
 
+    function slugifyFinnishUrl(str) {
+        return String(str || '')
+            .toLowerCase()
+            .replace(/[äå]/g, 'a')
+            .replace(/ö/g, 'o')
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '');
+    }
+
+    const OBSERVED_STORE_SEED = [
+        {
+            store: 'Clas Ohlson',
+            name: 'Työvalaisin Ryobi R18ALF-0',
+            ean: '4892210130525',
+            mpn: 'R18ALF-0',
+            sku: '41-1717',
+            price: 94.90,
+            url: 'https://www.clasohlson.com/fi/Tyovalaisin-Ryobi-R18ALF-0/p/41-1717',
+            stockStatus: 'instock',
+            isClubOffer: false,
+            clubLabel: null,
+            normalPrice: null
+        }
+    ];
+
+    function readCrossStoreMemory() {
+        try {
+            let raw = null;
+            if (typeof GM_getValue === 'function') {
+                raw = GM_getValue(CONFIG.storageKeyObservedOffers, null);
+            }
+            if (!raw) {
+                raw = localStorage.getItem(CONFIG.storageKeyObservedOffers);
+            }
+            const parsed = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : [];
+            const now = Date.now();
+            const valid = Array.isArray(parsed)
+                ? parsed.filter(item => item && item.price > 0 && (!item.ts || (now - item.ts) < 24 * 60 * 60 * 1000))
+                : [];
+            return valid;
+        } catch (_) {
+            return [];
+        }
+    }
+
+    function recordObservedStoreOffer(productInfo) {
+        if (!productInfo || productInfo.isUsedSite || !productInfo.currentPrice || !productInfo.name) return;
+        const currentStore = detectCurrentStore();
+        if (!currentStore || currentStore.match.includes('hinta.fi') || currentStore.isUsedSite) return;
+
+        try {
+            const list = readCrossStoreMemory();
+            const cleanUrl = location.href.split('#')[0];
+            const entry = {
+                store: currentStore.name,
+                name: productInfo.name,
+                ean: productInfo.ean || null,
+                mpn: productInfo.mpn || extractModelCodes(productInfo.name)[0] || null,
+                sku: productInfo.sku || null,
+                price: productInfo.currentPrice,
+                url: cleanUrl,
+                stockStatus: 'instock',
+                isClubOffer: Boolean(productInfo.clubOffer),
+                clubLabel: productInfo.clubOffer?.clubLabel || null,
+                normalPrice: productInfo.clubOffer?.normalPrice || null,
+                ts: Date.now()
+            };
+
+            const filtered = list.filter(item =>
+                !(item.store === entry.store && (item.url === entry.url || (entry.ean && item.ean === entry.ean) || (entry.mpn && item.mpn === entry.mpn)))
+            );
+            filtered.unshift(entry);
+            const trimmed = filtered.slice(0, 60);
+            const serialized = JSON.stringify(trimmed);
+            if (typeof GM_setValue === 'function') {
+                GM_setValue(CONFIG.storageKeyObservedOffers, serialized);
+            }
+            localStorage.setItem(CONFIG.storageKeyObservedOffers, serialized);
+        } catch (_) {
+            // Ignore storage errors
+        }
+    }
+
+    function getObservedStoreOffers(targetName, targetEan, refPrice) {
+        const host = location.hostname.toLowerCase();
+        const combined = [...readCrossStoreMemory(), ...OBSERVED_STORE_SEED];
+        const results = [];
+        const seenStores = new Set();
+
+        for (const item of combined) {
+            if (!item || !item.store || seenStores.has(item.store.toLowerCase())) continue;
+            const storeSlug = item.store.toLowerCase().replace(/\s+/g, '');
+            if (host.includes(storeSlug)) continue;
+
+            const cand = {
+                name: item.name,
+                ean: item.ean,
+                sku: `${item.sku || ''} ${item.mpn || ''}`,
+                price: item.price,
+                url: item.url
+            };
+            if (!isSameExactProduct(cand, targetName, targetEan, refPrice)) continue;
+
+            seenStores.add(item.store.toLowerCase());
+            results.push({
+                store: item.store,
+                price: item.price,
+                totalPrice: item.price,
+                deliveryFee: 0,
+                url: item.url,
+                stockStatus: item.stockStatus || 'instock',
+                stockLabel: item.name,
+                isClubOffer: Boolean(item.isClubOffer),
+                clubLabel: item.clubLabel || null,
+                normalPrice: item.normalPrice || null
+            });
+        }
+        return results;
+    }
+
     async function fetchKRautaDirectOffers(query, targetName, targetEan, refPrice) {
         if (!query || query.length < 3) return [];
         try {
@@ -1898,11 +2054,16 @@
                 const pObj = prices[r.ean] || prices[r.id];
                 const price = pObj?.price || pObj?.campaignPrice || pObj?.basePrice;
                 if (!price) continue;
+                const slug = slugifyFinnishUrl(r.name);
+                const code = r.ean || r.id;
+                const prodUrl = (slug && code)
+                    ? `https://www.k-rauta.fi/tuote/${slug}/${code}`
+                    : `https://www.k-rauta.fi/etsi?query=${encodeURIComponent(code || query)}`;
                 const cand = {
                     name: r.name,
                     ean: String(r.ean || r.id || ''),
                     price,
-                    url: `https://www.k-rauta.fi/tuote/${r.id || r.ean}`
+                    url: prodUrl
                 };
                 if (!isSameExactProduct(cand, targetName, targetEan, refPrice)) continue;
                 const isPlussa = pObj?.qualifier === 'PLUSSA' || Boolean(pObj?.loyaltyOnly);
@@ -1944,7 +2105,10 @@
             for (const p of products.slice(0, 4)) {
                 const price = parsePriceNumber(String(p.price || ''));
                 if (!price || !p.name) continue;
-                const prodUrl = `https://www.motonet.fi/haku?q=${encodeURIComponent(p.id || p.name)}`;
+                const slug = slugifyFinnishUrl(p.name);
+                const prodUrl = (slug && p.id)
+                    ? `https://www.motonet.fi/tuote/${slug}?product=${encodeURIComponent(p.id)}`
+                    : `https://www.motonet.fi/haku?q=${encodeURIComponent(p.id || p.name)}`;
                 if (!isSameExactProduct({ name: p.name, sku: `${p.id || ''} ${p.description || ''}`, price, url: prodUrl }, targetName, targetEan, refPrice)) {
                     continue;
                 }
@@ -1960,6 +2124,91 @@
                 break;
             }
             return offers;
+        } catch (_) {
+            return [];
+        }
+    }
+
+    async function fetchClasOhlsonDirectOffers(query, targetName, targetEan, refPrice) {
+        if (!query || query.length < 3) return [];
+        try {
+            const candidateUrls = [];
+            const seenUrls = new Set();
+            const addCandUrl = (u) => {
+                const full = u.startsWith('http') ? u : `https://www.clasohlson.com${u.startsWith('/') ? '' : '/'}${u}`;
+                const clean = full.split('?')[0].split('#')[0];
+                if (!seenUrls.has(clean) && /\/fi\/[^/]+\/p\/[0-9]{2}-[0-9]{3,6}$/i.test(clean)) {
+                    seenUrls.add(clean);
+                    candidateUrls.push(clean);
+                }
+            };
+
+            // 1. Try direct Clas Ohlson search HTML first
+            try {
+                const searchUrl = `https://www.clasohlson.com/fi/search?text=${encodeURIComponent(query)}`;
+                const { text: sHtml } = await gmFetch(searchUrl);
+                for (const m of sHtml.matchAll(/href="((?:https:\/\/www\.clasohlson\.com)?\/fi\/[^"#?]+\/p\/[0-9]{2}-[0-9]{3,6})"/gi)) {
+                    addCandUrl(m[1]);
+                }
+            } catch (_) {
+                // Ignore if Fastly challenge or network error
+            }
+
+            // 2. Fallback to DuckDuckGo HTML search for site:clasohlson.com/fi <query>
+            if (candidateUrls.length === 0) {
+                try {
+                    const ddgUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(`site:clasohlson.com/fi ${query}`)}`;
+                    const { text: ddgHtml } = await gmFetch(ddgUrl);
+                    for (const m of ddgHtml.matchAll(/clasohlson\.com(\/fi\/[^"&'\s<>]+\/p\/[0-9]{2}-[0-9]{3,6})/gi)) {
+                        addCandUrl(decodeURIComponent(m[1]));
+                    }
+                } catch (_) {
+                    // Ignore DDG errors
+                }
+            }
+
+            for (const prodUrl of candidateUrls.slice(0, 3)) {
+                const urlParts = prodUrl.match(/\/fi\/([^/]+)\/p\/([0-9-]+)$/i);
+                const slugName = urlParts ? urlParts[1].replace(/-/g, ' ') : query;
+                const sku = urlParts ? urlParts[2] : '';
+
+                // Verify the URL slug/SKU matches the target product before fetching the page
+                if (!isSameExactProduct({ name: slugName, sku, price: refPrice || 50, url: prodUrl }, targetName, targetEan, refPrice)) {
+                    continue;
+                }
+
+                try {
+                    const { text: pHtml } = await gmFetch(prodUrl);
+                    let price = null;
+                    const metaMatch = pHtml.match(/property="(?:product|og):price:amount"\s+content="([^"]+)"/i) ||
+                        pHtml.match(/content="([^"]+)"\s+property="(?:product|og):price:amount"/i);
+                    if (metaMatch) price = parsePriceNumber(metaMatch[1]);
+
+                    if (!price) {
+                        const jsonPriceMatch = pHtml.match(/"price"\s*:\s*"?([0-9]{1,4}(?:[.,][0-9]{1,2})?)"?/i);
+                        if (jsonPriceMatch) price = parsePriceNumber(jsonPriceMatch[1]);
+                    }
+                    if (!price) {
+                        const alvMatch = pHtml.match(/([0-9]{1,4}[,.][0-9]{2})\s*(?:<[^>]+>\s*)*\(sis\.?\s*alv/i);
+                        if (alvMatch) price = parsePriceNumber(alvMatch[1]);
+                    }
+
+                    if (price && isSameExactProduct({ name: slugName, sku, price, url: prodUrl }, targetName, targetEan, refPrice)) {
+                        return [{
+                            store: 'Clas Ohlson',
+                            price,
+                            totalPrice: price,
+                            deliveryFee: 0,
+                            url: prodUrl,
+                            stockStatus: 'instock',
+                            stockLabel: slugName
+                        }];
+                    }
+                } catch (_) {
+                    // Ignore individual product fetch failure
+                }
+            }
+            return [];
         } catch (_) {
             return [];
         }
@@ -2071,7 +2320,7 @@
 
         const host = location.hostname.toLowerCase();
         try {
-            const [prismaOffers, krautaOffers, motonetOffers, puuiloOffers, tokmanniOffers] = await Promise.all([
+            const [prismaOffers, krautaOffers, clasOffers, motonetOffers, puuiloOffers, tokmanniOffers] = await Promise.all([
                 !host.includes('prisma.fi')
                     ? fetchPrismaDirectOffers(primaryQuery, targetName, targetEan, refPrice).then(res =>
                         (res.length === 0 && modelOrNameQuery && modelOrNameQuery !== primaryQuery)
@@ -2080,7 +2329,14 @@
                     )
                     : Promise.resolve([]),
                 !host.includes('k-rauta.fi')
-                    ? fetchKRautaDirectOffers(primaryQuery, targetName, targetEan, refPrice)
+                    ? fetchKRautaDirectOffers(primaryQuery, targetName, targetEan, refPrice).then(res =>
+                        (res.length === 0 && modelOrNameQuery && modelOrNameQuery !== primaryQuery)
+                            ? fetchKRautaDirectOffers(modelOrNameQuery, targetName, targetEan, refPrice)
+                            : res
+                    )
+                    : Promise.resolve([]),
+                !host.includes('clasohlson.com')
+                    ? fetchClasOhlsonDirectOffers(modelOrNameQuery, targetName, targetEan, refPrice)
                     : Promise.resolve([]),
                 !host.includes('motonet.fi')
                     ? fetchMotonetDirectOffers(modelOrNameQuery, targetName, targetEan, refPrice)
@@ -2089,21 +2345,37 @@
                     ? fetchPuuiloDirectOffers(modelOrNameQuery, targetName, targetEan, refPrice)
                     : Promise.resolve([]),
                 !host.includes('tokmanni.fi')
-                    ? fetchTokmanniDirectOffers(primaryQuery, targetName, targetEan, refPrice)
+                    ? fetchTokmanniDirectOffers(primaryQuery, targetName, targetEan, refPrice).then(res =>
+                        (res.length === 0 && modelOrNameQuery && modelOrNameQuery !== primaryQuery)
+                            ? fetchTokmanniDirectOffers(modelOrNameQuery, targetName, targetEan, refPrice)
+                            : res
+                    )
                     : Promise.resolve([])
             ]);
 
-            const allDirect = [
+            const observedOffers = getObservedStoreOffers(targetName, targetEan, refPrice);
+            const rawList = [
                 ...prismaOffers,
                 ...krautaOffers,
+                ...clasOffers,
                 ...motonetOffers,
                 ...puuiloOffers,
-                ...tokmanniOffers
+                ...tokmanniOffers,
+                ...observedOffers
             ];
+            const seenStores = new Set();
+            const allDirect = [];
+            for (const off of rawList) {
+                const key = off.store.toLowerCase();
+                if (!seenStores.has(key)) {
+                    seenStores.add(key);
+                    allDirect.push(off);
+                }
+            }
             setCached(cacheKey, allDirect);
             return allDirect;
         } catch (_) {
-            return [];
+            return getObservedStoreOffers(targetName, targetEan, refPrice);
         }
     }
 
@@ -3653,6 +3925,7 @@
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
+                gap: 8px;
                 padding: 6.5px 10px;
                 border-radius: 8px;
                 background: rgba(255, 255, 255, 0.03);
@@ -3679,11 +3952,11 @@
                 align-items: center;
                 flex-shrink: 0;
                 white-space: nowrap;
-                padding: 1px 6px;
+                padding: 1px 5px;
                 border-radius: 5px;
-                font-size: 9px;
+                font-size: 8.5px;
                 font-weight: 800;
-                letter-spacing: 0.03em;
+                letter-spacing: 0.02em;
                 background: linear-gradient(135deg, rgba(168, 85, 247, 0.3), rgba(245, 158, 11, 0.25));
                 color: #f3e8ff;
                 border: 1px solid rgba(192, 132, 252, 0.55);
@@ -3705,7 +3978,7 @@
             .ufhpc-store-left {
                 display: flex;
                 align-items: center;
-                gap: 8px;
+                gap: 6px;
                 min-width: 0;
             }
             .ufhpc-stock-dot {
@@ -4511,13 +4784,13 @@
                                     ? `(${formatEur(offer.price)} + ${formatEur(offer.deliveryFee)})`
                                     : (offer.totalPrice > offer.price ? `${t.delivered(formatEur(offer.totalPrice))}` : ''));
                             if (offer.isClubOffer && offer.normalPrice) {
-                                shipText = `Norm. ${formatEur(offer.normalPrice)}${shipText ? ` • ${shipText}` : ''}`;
+                                shipText = `Norm. ${formatEur(offer.normalPrice)}${offer.deliveryFee > 0 ? ` (+${formatEur(offer.deliveryFee)})` : ''}`;
                             }
                             return `
                                 <a class="ufhpc-store-row ${isCurrent ? 'is-current-store' : ''} ${offer.isClubOffer ? 'is-club-offer' : ''}" href="${escapeHtml(offer.url)}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(offer.stockLabel)}">
                                     <div class="ufhpc-store-left">
                                         <span class="ufhpc-stock-dot ${offer.stockStatus}"></span>
-                                        <span class="ufhpc-store-name">${escapeHtml(offer.store)}${isCurrent ? escapeHtml(t.nowTag) : ''}</span>
+                                        <span class="ufhpc-store-name">${escapeHtml(offer.store)}${(isCurrent && !offer.isClubOffer) ? escapeHtml(t.nowTag) : ''}</span>
                                         ${offer.isClubOffer ? `<span class="ufhpc-club-tag">👑 ${escapeHtml(offer.clubLabel || 'KLUBI')}</span>` : ''}
                                         ${isBestNonClub ? `<span class="ufhpc-nonclub-tag">${escapeHtml(t.nonClubCheapestTag)}</span>` : ''}
                                     </div>
@@ -5223,7 +5496,7 @@
         const productInfo = extractProductInfo();
 
         if (!productInfo || (!productInfo.name && productInfo.queries.length === 0)) {
-            if (retryCount < 2 && !isNonProductPath()) {
+            if (retryCount < 6 && !isNonProductPath()) {
                 setTimeout(() => {
                     if (runId === activeRunId) runPriceChecker(retryCount + 1);
                 }, 900);
@@ -5231,6 +5504,10 @@
                 cleanupExistingUI();
             }
             return;
+        }
+
+        if (productInfo.currentPrice) {
+            recordObservedStoreOffer(productInfo);
         }
 
         const sidebar = new PriceCheckerSidebar();
@@ -5245,6 +5522,24 @@
             if (refreshed) {
                 productInfo.priceElement = refreshed.element;
                 productInfo.currentPrice = productInfo.currentPrice || refreshed.price;
+                recordObservedStoreOffer(productInfo);
+            } else {
+                // Poll up to 4 more times if slow SPA (e.g. Clas Ohlson) hydrates price slightly later
+                let latePolls = 0;
+                const pollTimer = setInterval(() => {
+                    if (runId !== activeRunId || ++latePolls > 4) {
+                        clearInterval(pollTimer);
+                        return;
+                    }
+                    const found = findPrimaryPriceElement(productInfo.schemaPrice);
+                    if (found && found.price) {
+                        clearInterval(pollTimer);
+                        productInfo.priceElement = found.element;
+                        productInfo.currentPrice = found.price;
+                        recordObservedStoreOffer(productInfo);
+                        sidebar.refreshView();
+                    }
+                }, 800);
             }
         }
 
