@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HintaTutka
 // @namespace    https://github.com/FIMARx/hintatutka
-// @version      7.0
+// @version      7.1
 // @description  Suomen älykkäin hintatutka: Elektroniikka, huonekalut, ruoka, Tori.fi, Vinted & Huuto.net — hintakäyrät, yksikköhinnat (€/kg, €/l), hintavahti, tinkausapuri, S-bonus, kunnostetut & suora haku 77 sivustolla
 // @author       FIMARx
 // @homepageURL  https://github.com/FIMARx/hintatutka
@@ -128,7 +128,7 @@
     // =========================================================================
     // CONFIGURATION & THRESHOLDS
     // =========================================================================
-    const SCRIPT_VERSION = '7.0';
+    const SCRIPT_VERSION = '7.1';
     const GITHUB_RAW_SCRIPT_URL = 'https://raw.githubusercontent.com/FIMARx/hintatutka/main/HintaTutka.user.js';
     const GITHUB_API_CONTENTS_URL = 'https://api.github.com/repos/FIMARx/hintatutka/contents/HintaTutka.user.js';
     const GITHUB_REPO_URL = 'https://github.com/FIMARx/hintatutka';
@@ -323,6 +323,11 @@
             inlineUsedGood: (saveEur, savePct, newLow, store) => `HYVÄ LÖYTÖ! ${saveEur} (${savePct}%) halvempi kuin uusi (${newLow} @ ${store})`,
             inlineUsedOk: (saveEur, savePct, newLow, store) => `OK KÄYTETTY (${saveEur} / ${savePct}% vs. uusi ${newLow} @ ${store})`,
             inlineUsedBad: (newLow, store) => `KALLIS KÄYTETYKSI! Uutena kaupasta takuulla: ${newLow} (${store})`,
+            inlineUsedMedianGood: (diff, pct, med) => `HYVÄ KÄYTETYN HINTA! -${diff} (-${pct}%) alle mediaanin (${med})`,
+            inlineUsedMedianOk: (med) => `OK KÄYTETYN HINTA (~mediaani: ${med})`,
+            inlineUsedMedianBad: (diff, pct, med) => `KALLIS KÄYTETYKSI! +${diff} (+${pct}%) yli mediaanin (${med})`,
+            toriSavingsVsThis: (pct) => `-${pct}% vs. tämä`,
+            similarListingsHint: 'Samankaltaiset & vastaavat',
             watchlistBtn: '⭐ Hintavahti',
             watchlistAdded: '⭐ Tuote lisätty hintavahtiin!',
             watchlistRemoved: '✕ Tuote poistettu hintavahdista',
@@ -409,6 +414,11 @@
             inlineUsedGood: (saveEur, savePct, newLow, store) => `GREAT USED DEAL! ${saveEur} (${savePct}%) below new (${newLow} @ ${store})`,
             inlineUsedOk: (saveEur, savePct, newLow, store) => `OK USED PRICE (${saveEur} / ${savePct}% vs. new ${newLow} @ ${store})`,
             inlineUsedBad: (newLow, store) => `OVERPRICED USED! Brand new in store: ${newLow} (${store})`,
+            inlineUsedMedianGood: (diff, pct, med) => `GREAT SECOND-HAND PRICE! -${diff} (-${pct}%) below median (${med})`,
+            inlineUsedMedianOk: (med) => `FAIR SECOND-HAND PRICE (~median: ${med})`,
+            inlineUsedMedianBad: (diff, pct, med) => `OVERPRICED SECOND-HAND! +${diff} (+${pct}%) above median (${med})`,
+            toriSavingsVsThis: (pct) => `-${pct}% vs. this`,
+            similarListingsHint: 'Similar & matching',
             watchlistBtn: '⭐ Watchlist',
             watchlistAdded: '⭐ Added to Price Watchlist!',
             watchlistRemoved: '✕ Removed from Price Watchlist',
@@ -986,6 +996,10 @@
                         const offers = item.offers;
                         const offerList = Array.isArray(offers) ? offers : (offers ? [offers] : []);
                         for (const offer of offerList) {
+                            const currency = String(offer.priceCurrency || offer.currency || '').trim().toUpperCase();
+                            if (currency && !/^(EUR|€)$/i.test(currency)) {
+                                continue; // Reject foreign non-EUR schema currencies (PLN, SEK, DKK, CZK, etc.)
+                            }
                             const p = parsePriceNumber(String(offer.price ?? offer.lowPrice ?? ''));
                             if (p && p > 0) {
                                 info.schemaPrice = p;
@@ -997,6 +1011,12 @@
             } catch (_) {
                 // Ignore malformed JSON-LD blocks
             }
+        }
+
+        // On Vinted, sellers list in their original local currencies (PLN, SEK, DKK, etc.) while the page
+        // displays the buyer-facing converted EUR price in the DOM. Always extract EUR price directly from DOM on Vinted!
+        if (currentStore.match === 'vinted.fi') {
+            info.schemaPrice = null;
         }
 
         const hasProductUrlPattern = /\/(product|products|tuote|tuotteet|produkt|produkter|dp|gp\/product|p|recommerce\/forsale\/item|items|kohteet|varuste|mallit|item)\b/i.test(location.pathname) ||
@@ -1024,13 +1044,17 @@
             }
         }
 
-        if (!info.schemaPrice) {
-            const priceMeta = document.querySelector(
-                'meta[property="product:price:amount"], meta[property="og:price:amount"], [itemprop="price"][content]'
-            );
-            if (priceMeta) {
-                const val = parsePriceNumber(priceMeta.getAttribute('content') || '');
-                if (val) info.schemaPrice = val;
+        if (!info.schemaPrice && currentStore.match !== 'vinted.fi') {
+            const currencyMeta = document.querySelector('meta[property="product:price:currency"], meta[property="og:price:currency"]');
+            const metaCurr = currencyMeta?.getAttribute('content')?.trim().toUpperCase();
+            if (!metaCurr || /^(EUR|€)$/i.test(metaCurr)) {
+                const priceMeta = document.querySelector(
+                    'meta[property="product:price:amount"], meta[property="og:price:amount"], [itemprop="price"][content]'
+                );
+                if (priceMeta) {
+                    const val = parsePriceNumber(priceMeta.getAttribute('content') || '');
+                    if (val) info.schemaPrice = val;
+                }
             }
         }
 
@@ -1262,7 +1286,23 @@
                 if (!parsed) continue;
                 if (!expectedPrice || Math.abs(parsed - expectedPrice) < 1.0) {
                     const targetEl = node.classList.contains('a-offscreen') && node.parentElement ? node.parentElement : node;
-                    return { element: targetEl, price: expectedPrice || parsed };
+                    return { element: targetEl, price: parsed };
+                }
+            }
+        }
+
+        // If expectedPrice was supplied but didn't match any selector, check store-specific selectors
+        // without requiring equality with expectedPrice (prevents outdated or foreign schema prices overriding the real DOM price)
+        if (expectedPrice) {
+            for (const sel of currentStore.selectors) {
+                const nodes = document.querySelectorAll(sel);
+                for (const node of nodes) {
+                    if (isInvalidPriceNode(node)) continue;
+                    const parsed = extractPriceFromElement(node);
+                    if (parsed && parsed >= 0.15) {
+                        const targetEl = node.classList.contains('a-offscreen') && node.parentElement ? node.parentElement : node;
+                        return { element: targetEl, price: parsed };
+                    }
                 }
             }
         }
@@ -1309,7 +1349,7 @@
             candidates.sort((a, b) => b.score - a.score);
             return {
                 element: candidates[0].element,
-                price: expectedPrice || candidates[0].price
+                price: candidates[0].price
             };
         }
 
@@ -3219,12 +3259,14 @@
                     theme: {
                         ...baseTheme,
                         sublabel: lang === 'en'
-                            ? `Compared to Tori.fi median (${formatEur(toriStats.medianPrice, 0)})`
-                            : `Verrattuna Torin mediaalihintaan (${formatEur(toriStats.medianPrice, 0)})`
+                            ? `Compared to used median (${formatEur(toriStats.medianPrice, 0)})`
+                            : `Verrattuna käytettyjen mediaaniin (${formatEur(toriStats.medianPrice, 0)})`
                     },
                     diffEur,
                     diffPct,
-                    isUsedSite: true
+                    isUsedSite: true,
+                    comparedToMedian: true,
+                    medianPrice: toriStats.medianPrice
                 };
             }
             if (productInfo?.unitPriceInfo) {
@@ -3449,12 +3491,30 @@
 
         let badgeText = '';
         if (isUsedSite) {
-            if (theme.id === 'green') {
-                badgeText = `${theme.icon} ${t.inlineUsedGood(formatEur(diffEur), diffPct.toFixed(1), lowestFormatted, cheapestStore)}`;
-            } else if (theme.id === 'yellow') {
-                badgeText = `${theme.icon} ${t.inlineUsedOk(formatEur(diffEur), diffPct.toFixed(1), lowestFormatted, cheapestStore)}`;
+            if (verdict.comparedToMedian || !lowestPrice) {
+                const med = verdict.medianPrice;
+                if (med && typeof diffEur === 'number') {
+                    const medFormatted = formatEur(med, 0);
+                    const absDiffEur = formatEur(Math.abs(diffEur));
+                    const absDiffPct = Math.abs(diffPct).toFixed(1);
+                    if (theme.id === 'green') {
+                        badgeText = `${theme.icon} ${t.inlineUsedMedianGood(absDiffEur, absDiffPct, medFormatted)}`;
+                    } else if (theme.id === 'yellow') {
+                        badgeText = `${theme.icon} ${t.inlineUsedMedianOk(medFormatted)}`;
+                    } else {
+                        badgeText = `${theme.icon} ${t.inlineUsedMedianBad(absDiffEur, absDiffPct, medFormatted)}`;
+                    }
+                } else {
+                    return; // No reliable reference price available -> do not display misleading badge!
+                }
             } else {
-                badgeText = `${theme.icon} ${t.inlineUsedBad(lowestFormatted, cheapestStore)}`;
+                if (theme.id === 'green') {
+                    badgeText = `${theme.icon} ${t.inlineUsedGood(formatEur(diffEur), diffPct.toFixed(1), lowestFormatted, cheapestStore)}`;
+                } else if (theme.id === 'yellow') {
+                    badgeText = `${theme.icon} ${t.inlineUsedOk(formatEur(diffEur), diffPct.toFixed(1), lowestFormatted, cheapestStore)}`;
+                } else {
+                    badgeText = `${theme.icon} ${t.inlineUsedBad(lowestFormatted, cheapestStore)}`;
+                }
             }
         } else {
             if (theme.id === 'green') {
@@ -4889,7 +4949,7 @@
             .replace(/"/g, '&quot;');
     }
 
-    function renderToriRowsHtml(items, refPrice, t, maxCount) {
+    function renderToriRowsHtml(items, refPrice, t, maxCount, isUsedSite = false, hasNewRef = true) {
         return items.slice(0, maxCount).map((item) => {
             const savingsPct = refPrice && item.price < refPrice
                 ? Math.round(((refPrice - item.price) / refPrice) * 100)
@@ -4900,6 +4960,9 @@
                 : item.location;
             const isVinted = item.source === 'vinted';
             const isHuuto = item.source === 'huuto';
+            const savingsLabel = savingsPct && savingsPct > 0
+                ? (hasNewRef ? t.toriSavings(savingsPct) : (isUsedSite ? t.toriSavingsVsThis(savingsPct) : t.toriSavings(savingsPct)))
+                : null;
             return `
                 <a class="ufhpc-tori-row ${isVinted ? 'is-vinted-row' : (isHuuto ? 'is-huuto-row' : '')}" href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(item.title)} — ${escapeHtml(item.location)}">
                     ${item.imageUrl ? `<img class="ufhpc-tori-thumb" src="${escapeHtml(item.imageUrl)}" alt="" loading="lazy" />` : ''}
@@ -4919,7 +4982,7 @@
                     </div>
                     <div class="ufhpc-store-right">
                         <span class="ufhpc-tori-price" ${isVinted ? 'style="color:#5eead4;"' : (isHuuto ? 'style="color:#fbbf24;"' : '')}>${formatEur(item.price, 0)}</span>
-                        ${savingsPct && savingsPct > 0 ? `<span class="ufhpc-store-ship">${escapeHtml(t.toriSavings(savingsPct))}</span>` : ''}
+                        ${savingsLabel ? `<span class="ufhpc-store-ship">${escapeHtml(savingsLabel)}</span>` : ''}
                     </div>
                 </a>
             `;
@@ -5304,7 +5367,7 @@
                         <span class="ufhpc-section-title">♻️ ${escapeHtml(t.toriTitle(compTori.items.length))}</span>
                     </div>
                     <div class="ufhpc-stores-list">
-                        ${renderToriRowsHtml(compTori.items, compLowestNew, t, 4)}
+                        ${renderToriRowsHtml(compTori.items, compLowestNew, t, 4, false, Boolean(compLowestNew))}
                     </div>
                 ` : `
                     <div class="ufhpc-section-bar">
@@ -5506,10 +5569,12 @@
 
             let toriHtml = '';
             if (toriData.items && toriData.items.length > 0) {
+                const hasNewRef = Boolean(lowestPrice);
                 const refPrice = lowestPrice || productInfo.currentPrice;
+                const isClothingOrUsed = productInfo.isUsedSite || productInfo.category === 'clothing' || filteredTori.some(x => x.source === 'vinted');
                 toriHtml = `
                     <div class="ufhpc-section-bar">
-                        <span class="ufhpc-section-title">♻️ ${escapeHtml(t.toriTitle(filteredTori.length))}</span>
+                        <span class="ufhpc-section-title">♻️ ${escapeHtml(t.toriTitle(filteredTori.length))}${isClothingOrUsed ? ` <span style="font-size:10px;font-weight:normal;opacity:0.8;margin-left:4px;">(${escapeHtml(t.similarListingsHint)})</span>` : ''}</span>
                         <div class="ufhpc-filters">
                             <button type="button" class="ufhpc-pill-btn ${this.toriDiiliOnly ? 'is-active-tori' : ''}" id="ufhpc-btn-toridiili" title="Näytä vain ToriDiili-kohteet">
                                 🛡️ ToriDiili
@@ -5523,7 +5588,7 @@
                         </div>
                     </div>
                     <div class="ufhpc-stores-list">
-                        ${renderToriRowsHtml(filteredTori, refPrice, t, CONFIG.maxToriShown)}
+                        ${renderToriRowsHtml(filteredTori, refPrice, t, CONFIG.maxToriShown, productInfo.isUsedSite, hasNewRef)}
                     </div>
                 `;
             } else {
@@ -5560,7 +5625,7 @@
                 ? t.marketLowest
                 : (unitInfo
                     ? (this.lang === 'en' ? 'Unit Price' : 'Yksikköhinta')
-                    : (toriData.stats ? t.compareToriLowest : t.marketLowest));
+                    : (toriData.stats ? (productInfo.isUsedSite ? (this.lang === 'en' ? 'Used Lowest' : 'Käytettynä halvin') : t.compareToriLowest) : t.marketLowest));
             const rightMetricValue = lowestPrice
                 ? formatEur(lowestPrice)
                 : (unitInfo
@@ -5570,7 +5635,7 @@
                 ? low30dSub
                 : (unitInfo
                     ? (unitInfo.quantityStr ? `Pakkauskoko: ${unitInfo.quantityStr}` : storeName)
-                    : (toriData.stats ? `Käytetty mediaani: ${formatEur(toriData.stats.medianPrice, 0)}` : low30dSub));
+                    : (toriData.stats ? (this.lang === 'en' ? `Used median: ${formatEur(toriData.stats.medianPrice, 0)}` : `Käytettyjen mediaani: ${formatEur(toriData.stats.medianPrice, 0)}`) : low30dSub));
 
             const vintedSearchUrl = `https://www.vinted.fi/catalog?search_text=${encodeURIComponent(toriData.vintedQuery || toriData.query || extractConciseModelQuery(productInfo.name) || searchTermRaw)}`;
 

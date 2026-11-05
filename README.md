@@ -5,7 +5,7 @@
 **Suomen älykkäin reaaliaikainen hintatutka: Elektroniikka, Huonekalut, Ruoka, Urheilu, Apteekit, Tori.fi, Vinted & Huuto.net**  
 *The ultimate real-time price comparison, unit-price analyzer (`€/kg`, `€/l`), price watchlist, bargaining advisor, S-Bonus calculator & second-hand overlay for 77 Finnish & EU online stores.*
 
-[![Version](https://img.shields.io/badge/version-7.0-10b981?style=for-the-badge)](https://github.com/FIMARx/hintatutka)
+[![Version](https://img.shields.io/badge/version-7.1-10b981?style=for-the-badge)](https://github.com/FIMARx/hintatutka)
 [![Author](https://img.shields.io/badge/author-FIMARx-6366f1?style=for-the-badge)](https://github.com/FIMARx)
 [![Install](https://img.shields.io/badge/Install-HintaTutka.user.js-f43f5e?style=for-the-badge&logo=tampermonkey)](https://raw.githubusercontent.com/FIMARx/hintatutka/main/HintaTutka.user.js)
 [![Stores](https://img.shields.io/badge/stores-77%20supported-f59e0b?style=for-the-badge)](#)
@@ -103,8 +103,14 @@ HintaTutka toimii automaattisesti kaikilla kielipoluilla (`/fi/`, `/en/`, `/sv/`
 
 ---
 
-## 🗺️ Kehityssuunnitelma / Roadmap
+## 🗺️ Kehityssuunnitelma & Versiohistoria / Roadmap & Changelog
 
+### 🚀 v7.1 Päivitys (Uusin / Latest)
+- 💶 **Vinted-valuuttakorjaus**: Korjattu bugi, jossa Vintedin eri maiden myyjien paikallisvaluutat (PLN, SEK, DKK, CZK) näkyivät virheellisesti euroina. Skripti ohittaa nyt ulkomaan valuutan Schema-tiedot ja lukee aina suomalaiselle ostajalle lasketun tarkan EUR-hinnan suoraan sivulta.
+- 🎯 **Käytettyjen hintatuomio ilman kauppahintaa**: Kun tuotteelle ei löydy uutta kauppahintaa Hinta.fi:stä (esim. vaatteet, Zara, Shein, vintage), inline-hintatuomio vertaa hintaa käytettyjen markkinoiden **mediaaniin** eikä koskaan näytä rikkinäistä `Uutena kaupasta takuulla: — (Hinta.fi)`.
+- 👗 **Vaatteiden ja samankaltaisten kohteiden tuki**: Lisätty `-X% vs. tämä sivu` -säästövertailu toisiin käytettyihin sekä selkeä `Samankaltaiset & vastaavat` -merkintä, jotta ostaja löytää vaivattomasti samantyyppiset ja saman brändin käytetyt vaatteet.
+
+### 🌟 v7.0
 - [x] Reaaliaikainen Hinta.fi-hintavertailu & SVG-hintahistoriakäyrä
 - [x] Tori.fi-, Vinted- ja Huuto.net -käytettyjen markkinahaku, hintajakaumakäyrä & suora sivutuki
 - [x] 2-sarakkeinen mallivertailu (`⚔️ Vertaa`) & Live Autocomplete -hakuehdotukset
