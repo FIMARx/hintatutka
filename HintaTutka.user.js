@@ -1,13 +1,15 @@
 // ==UserScript==
 // @name         HintaTutka
 // @namespace    https://github.com/FIMARx/hintatutka
-// @version      6.3
-// @description  Suomen älykkäin hintatutka: Elektroniikka, huonekalut, ruoka & Tori.fi — hintakäyrät, yksikköhinnat (€/kg, €/l), klubitarjoukset & mallivertailu 55 kaupassa
+// @version      6.4
+// @description  Suomen älykkäin hintatutka: Elektroniikka, huonekalut, ruoka & Tori.fi — hintakäyrät, yksikköhinnat (€/kg, €/l), klubitarjoukset & suora Prisma/K-Rauta/Puuilo/Motonet/Tokmanni-haku 57 sivustolla
 // @author       FIMARx
 // @homepageURL  https://github.com/FIMARx/hintatutka
 // @supportURL   https://github.com/FIMARx/hintatutka/issues
 // @downloadURL  https://raw.githubusercontent.com/FIMARx/hintatutka/main/HintaTutka.user.js
 // @updateURL    https://raw.githubusercontent.com/FIMARx/hintatutka/main/HintaTutka.user.js
+// @match        https://*.hinta.fi/*
+// @match        https://hinta.fi/*
 // @match        https://*.verkkokauppa.com/*
 // @match        https://*.gigantti.fi/*
 // @match        https://*.power.fi/*
@@ -62,11 +64,22 @@
 // @match        https://*.motonet.fi/*
 // @match        https://*.biltema.fi/*
 // @match        https://*.clasohlson.com/*
+// @match        https://*.jula.fi/*
 // @match        https://*.rusta.com/*
 // @match        https://*.stockmann.com/*
 // @connect      hinta.fi
 // @connect      www.tori.fi
 // @connect      tori.fi
+// @connect      www.prisma.fi
+// @connect      prisma.fi
+// @connect      www.k-rauta.fi
+// @connect      k-rauta.fi
+// @connect      www.motonet.fi
+// @connect      motonet.fi
+// @connect      www.puuilo.fi
+// @connect      puuilo.fi
+// @connect      hh40esw4ph-dsn.algolia.net
+// @connect      eucs11.ksearchnet.com
 // @connect      sik.search.blue.cdtapps.com
 // @connect      ruohonjuuri.fi
 // @connect      www.ruohonjuuri.fi
@@ -82,7 +95,7 @@
     // =========================================================================
     // CONFIGURATION & THRESHOLDS
     // =========================================================================
-    const SCRIPT_VERSION = '6.3';
+    const SCRIPT_VERSION = '6.4';
     const GITHUB_RAW_SCRIPT_URL = 'https://raw.githubusercontent.com/FIMARx/hintatutka/main/HintaTutka.user.js';
     const GITHUB_API_CONTENTS_URL = 'https://api.github.com/repos/FIMARx/hintatutka/contents/HintaTutka.user.js';
     const GITHUB_REPO_URL = 'https://github.com/FIMARx/hintatutka';
@@ -95,7 +108,7 @@
         usedOkDiscountPct: 5.0,
         cacheTtlMs: 15 * 60 * 1000,
         updateCheckTtlMs: 60 * 1000,
-        storageKeyUpdateCheck: 'ufhpc_github_update_v63',
+        storageKeyUpdateCheck: 'ufhpc_github_update_v64',
         storageKeyCollapsed: 'ufhpc_sidebar_collapsed_v55',
         storageKeyExpanded: 'ufhpc_sidebar_expanded_v55',
         storageKeyLang: 'ufhpc_sidebar_lang_v55',
@@ -109,10 +122,11 @@
     };
 
     // =========================================================================
-    // SUPPORTED STORES REGISTRY (55 SITES: TECH, GROCERIES, FURNITURE & TORI)
+    // SUPPORTED STORES REGISTRY (57 SITES: TECH, GROCERIES, FURNITURE, DIY & TORI)
     // =========================================================================
     const STORES = [
         { match: 'tori.fi', name: 'Tori.fi (Käytetty)', isUsedSite: true, selectors: ['main .h2', '[data-testid="object-title"] ~ div .h2', 'div.h2'] },
+        { match: 'hinta.fi', name: 'Hinta.fi', selectors: ['.hv-price-min', '[itemprop="lowPrice"]', '[itemprop="price"]'] },
         { match: 'verkkokauppa.com', name: 'Verkkokauppa.com', selectors: ['[data-price="current"]', 'ins[data-price]', '[class*="Price-sc"] ins', '[class*="ProductPrice"] [data-price]'] },
         { match: 'gigantti.fi', name: 'Gigantti', selectors: ['[data-testid="price-container"] span', '[class*="price-box"] [class*="price"]', '.product-price-container'] },
         { match: 'power.fi', name: 'Power', selectors: ['pwr-price [class*="price"]', 'pwr-price', '.product-price'] },
@@ -167,6 +181,7 @@
         { match: 'motonet.fi', name: 'Motonet', selectors: ['[data-testid*="price"]', '.product-price', '[itemprop="price"]'] },
         { match: 'biltema.fi', name: 'Biltema', selectors: ['[data-testid*="price"]', '.product-price', '[itemprop="price"]'] },
         { match: 'clasohlson.com', name: 'Clas Ohlson', selectors: ['.product-price', '[itemprop="price"]', '.price'] },
+        { match: 'jula.fi', name: 'Jula', selectors: ['[data-testid*="price"]', '.product-price', '[itemprop="price"]'] },
         { match: 'rusta.com', name: 'Rusta', selectors: ['.product-price', '[itemprop="price"]', '.price'] },
         { match: 'stockmann.com', name: 'Stockmann', selectors: ['.price .value', '.product-price', '[itemprop="price"]'] }
     ];
@@ -394,11 +409,11 @@
     // =========================================================================
     function getCached(key) {
         try {
-            const raw = sessionStorage.getItem(`ufhpc_v62_${key}`);
+            const raw = sessionStorage.getItem(`ufhpc_v64_${key}`);
             if (!raw) return null;
             const parsed = JSON.parse(raw);
             if (Date.now() - parsed.ts > CONFIG.cacheTtlMs) {
-                sessionStorage.removeItem(`ufhpc_v62_${key}`);
+                sessionStorage.removeItem(`ufhpc_v64_${key}`);
                 return null;
             }
             return parsed.data;
@@ -409,7 +424,7 @@
 
     function setCached(key, data) {
         try {
-            sessionStorage.setItem(`ufhpc_v62_${key}`, JSON.stringify({ ts: Date.now(), data }));
+            sessionStorage.setItem(`ufhpc_v64_${key}`, JSON.stringify({ ts: Date.now(), data }));
         } catch (_) {
             // Ignore storage quota errors
         }
@@ -807,6 +822,9 @@
 
         if (host.includes('tori.fi')) {
             return !/\/recommerce\/forsale\/item\/\d+/i.test(p);
+        }
+        if (host.includes('hinta.fi')) {
+            return !/^\/\d+\b/.test(p);
         }
 
         if (p === '/' || /^\/(fi|en|sv)\/?$/.test(p)) return true;
@@ -1760,6 +1778,335 @@
         }
     }
 
+    // =========================================================================
+    // DIRECT FINNISH RETAILERS LIVE SEARCH (PRISMA, K-RAUTA, PUUILO, MOTONET, TOKMANNI)
+    // Covers stores that Hinta.fi does NOT index, with strict exact-product verification!
+    // =========================================================================
+    function extractModelCodes(str) {
+        if (!str) return [];
+        const matches = String(str).toUpperCase().match(/\b[A-Z]{1,6}\d{1,5}[A-Z0-9-]{2,15}\b/g) || [];
+        return matches.filter(m =>
+            !/^(18V|12V|20V|36V|40V|230V|20W|8KG|9KG|10KG|16GB|32GB|64GB|128GB|256GB|512GB|1TB|2TB|DDR4|DDR5|ONE|LED|USB|RGB|PRO|MAX)$/i.test(m) &&
+            /[A-Z]/.test(m) && /\d/.test(m) && m.length >= 5
+        );
+    }
+
+    function isSameExactProduct(candidate, targetName, targetEan, referencePrice) {
+        if (!candidate || !candidate.name || !candidate.price || candidate.price <= 0) return false;
+        const candTitle = candidate.name.toLowerCase();
+        const targTitle = (targetName || '').toLowerCase();
+
+        // Reject adapters/accessories if target is not an adapter/accessory
+        const adapterRx = /\b(adapteri|akkuadapteri|sovitin|varaterä|hiomapaperi|hioma-arkki|kärkisarja|suojakuori|kantolaukku|varaosat)\b/i;
+        if (!adapterRx.test(targTitle) && adapterRx.test(candTitle)) return false;
+
+        // Price sanity guard when referencePrice is known
+        if (referencePrice && referencePrice > 10) {
+            const ratio = candidate.price / referencePrice;
+            if (ratio < 0.38 || ratio > 2.5) return false;
+        }
+
+        // 1. Exact EAN match
+        if (targetEan && candidate.ean && String(candidate.ean).trim() === String(targetEan).trim()) {
+            return true;
+        }
+
+        // 2. If target has specific alphanumeric model codes (e.g. R18ALF-0, EW5F4248N1, EMS190DCL), require model code match
+        const targetCodes = extractModelCodes(targetName);
+        if (targetCodes.length > 0) {
+            const candUpper = `${candidate.name} ${candidate.sku || ''} ${candidate.url || ''}`.toUpperCase();
+            return targetCodes.some(code => {
+                const baseCode = code.replace(/-0$/, '');
+                return candUpper.includes(code) || (baseCode.length >= 6 && candUpper.includes(baseCode));
+            });
+        }
+
+        // 3. Otherwise require strong meaningful word overlap (>= 75%) + first brand/noun token match
+        if (!doesItemMatchQueryWords(candidate.name, targetName)) return false;
+        const tTokens = extractMeaningfulTokens(targetName);
+        const cTokens = new Set(extractMeaningfulTokens(candidate.name));
+        if (tTokens.length < 2) return false;
+        let matched = 0;
+        for (const t of tTokens) {
+            if (cTokens.has(t)) matched++;
+        }
+        return (matched / tTokens.length) >= 0.75;
+    }
+
+    async function fetchPrismaDirectOffers(query, targetName, targetEan, refPrice) {
+        if (!query || query.length < 3) return [];
+        try {
+            const url = `https://www.prisma.fi/haku?search=${encodeURIComponent(query)}`;
+            const { text: html } = await gmFetch(url);
+            const offers = [];
+            const seenIds = new Set();
+            const cardRx = /data-cnstrc-item-id="([^"]+)"\s+data-cnstrc-item-name="([^"]+)"([\s\S]*?)(?=data-cnstrc-item-id="|<\/ul>)/g;
+            let m;
+            while ((m = cardRx.exec(html)) !== null) {
+                const id = m[1];
+                if (seenIds.has(id)) continue;
+                seenIds.add(id);
+                const name = m[2];
+                const block = m[3];
+                const hrefMatch = block.match(/data-test-id="product-card-link"\s+href="([^"]+)"/);
+                const clubMatch = block.match(/Asiakasomistajahinta<\/span>(?:<!--[\s\S]*?-->|\s)*([0-9]+,[0-9]{2})/);
+                const normMatch = block.match(/Hinta ilman S-Etukorttia:<\/span>(?:<!--[\s\S]*?-->|\s)*([0-9]+,[0-9]{2})/);
+                const allPrices = [...block.matchAll(/([0-9]+,[0-9]{2})\s*(?:&nbsp;|\u00a0|\s)*€/g)].map(x => parseFloat(x[1].replace(',', '.')));
+                const clubPrice = clubMatch ? parseFloat(clubMatch[1].replace(',', '.')) : null;
+                const normalPrice = normMatch ? parseFloat(normMatch[1].replace(',', '.')) : null;
+                const price = clubPrice || allPrices[0] || null;
+                if (!price) continue;
+
+                const prodUrl = hrefMatch ? `https://www.prisma.fi${hrefMatch[1].split('?')[0]}` : url;
+                if (!isSameExactProduct({ name, price, url: prodUrl }, targetName, targetEan, refPrice)) continue;
+
+                offers.push({
+                    store: 'Prisma',
+                    price,
+                    totalPrice: price,
+                    deliveryFee: 0,
+                    url: prodUrl,
+                    stockStatus: 'instock',
+                    stockLabel: name,
+                    isClubOffer: Boolean(clubPrice),
+                    clubLabel: clubPrice ? 'Asiakasomistaja' : null,
+                    normalPrice: normalPrice || null
+                });
+                break;
+            }
+            return offers;
+        } catch (_) {
+            return [];
+        }
+    }
+
+    async function fetchKRautaDirectOffers(query, targetName, targetEan, refPrice) {
+        if (!query || query.length < 3) return [];
+        try {
+            const url = `https://www.k-rauta.fi/etsi?query=${encodeURIComponent(query)}`;
+            const { text: html } = await gmFetch(url);
+            const start = html.indexOf('window.__PRELOADED_STATE__ = ');
+            if (start === -1) return [];
+            const jsonStart = start + 'window.__PRELOADED_STATE__ = '.length;
+            const jsonEnd = html.indexOf('</script>', jsonStart);
+            const state = JSON.parse(html.slice(jsonStart, jsonEnd).trim().replace(/;$/, ''));
+            const results = state.search?.results || [];
+            const prices = state.prices?.ecom || {};
+            const offers = [];
+
+            for (const r of results.slice(0, 4)) {
+                const pObj = prices[r.ean] || prices[r.id];
+                const price = pObj?.price || pObj?.campaignPrice || pObj?.basePrice;
+                if (!price) continue;
+                const cand = {
+                    name: r.name,
+                    ean: String(r.ean || r.id || ''),
+                    price,
+                    url: `https://www.k-rauta.fi/tuote/${r.id || r.ean}`
+                };
+                if (!isSameExactProduct(cand, targetName, targetEan, refPrice)) continue;
+                const isPlussa = pObj?.qualifier === 'PLUSSA' || Boolean(pObj?.loyaltyOnly);
+                offers.push({
+                    store: 'K-Rauta',
+                    price,
+                    totalPrice: price,
+                    deliveryFee: 0,
+                    url: cand.url,
+                    stockStatus: 'instock',
+                    stockLabel: r.name,
+                    isClubOffer: isPlussa,
+                    clubLabel: isPlussa ? 'Plussa-etu' : null,
+                    normalPrice: pObj?.previousPrice || pObj?.basePrice || null
+                });
+                break;
+            }
+            return offers;
+        } catch (_) {
+            return [];
+        }
+    }
+
+    async function fetchMotonetDirectOffers(query, targetName, targetEan, refPrice) {
+        if (!query || query.length < 3) return [];
+        try {
+            const url = `https://www.motonet.fi/haku?q=${encodeURIComponent(query)}`;
+            const { text: html } = await gmFetch(url);
+            const nextIdx = html.indexOf('__NEXT_DATA__');
+            if (nextIdx === -1) return [];
+            const start = html.indexOf('>', nextIdx) + 1;
+            const end = html.indexOf('</script>', start);
+            const data = JSON.parse(html.slice(start, end));
+            const queries = data.props?.pageProps?.dehydratedState?.queries || [];
+            const searchQ = queries.find(q => q.queryKey?.[0] === 'productSearch');
+            const products = searchQ?.state?.data?.products || [];
+            const offers = [];
+
+            for (const p of products.slice(0, 4)) {
+                const price = parsePriceNumber(String(p.price || ''));
+                if (!price || !p.name) continue;
+                const prodUrl = `https://www.motonet.fi/haku?q=${encodeURIComponent(p.id || p.name)}`;
+                if (!isSameExactProduct({ name: p.name, sku: `${p.id || ''} ${p.description || ''}`, price, url: prodUrl }, targetName, targetEan, refPrice)) {
+                    continue;
+                }
+                offers.push({
+                    store: 'Motonet',
+                    price,
+                    totalPrice: price,
+                    deliveryFee: 0,
+                    url: prodUrl,
+                    stockStatus: 'instock',
+                    stockLabel: p.name
+                });
+                break;
+            }
+            return offers;
+        } catch (_) {
+            return [];
+        }
+    }
+
+    async function fetchPuuiloDirectOffers(query, targetName, targetEan, refPrice) {
+        if (!query || query.length < 3) return [];
+        try {
+            let algCfg = getCached('puuilo_algolia_cfg');
+            if (!algCfg) {
+                const { text: homeHtml } = await gmFetch('https://www.puuilo.fi/');
+                const m = homeHtml.match(/window\.algoliaConfig\s*=\s*JSON\.parse\('([^']+)'\)/);
+                if (m) {
+                    const parsed = JSON.parse(JSON.parse(`"${m[1]}"`));
+                    algCfg = {
+                        applicationId: parsed.applicationId,
+                        apiKey: parsed.apiKey,
+                        indexName: parsed.indexName || 'puuilo_fi'
+                    };
+                    setCached('puuilo_algolia_cfg', algCfg);
+                }
+            }
+            if (!algCfg || !algCfg.applicationId || !algCfg.apiKey) return [];
+
+            const algUrl = `https://${algCfg.applicationId}-dsn.algolia.net/1/indexes/${algCfg.indexName}_products?query=${encodeURIComponent(query)}&hitsPerPage=4&x-algolia-application-id=${encodeURIComponent(algCfg.applicationId)}&x-algolia-api-key=${encodeURIComponent(algCfg.apiKey)}`;
+            const { text } = await gmFetch(algUrl, 'application/json');
+            const data = JSON.parse(text);
+            const hits = data?.hits || [];
+            const offers = [];
+
+            for (const h of hits) {
+                const price = Number(h.price?.EUR?.default);
+                if (!Number.isFinite(price) || price <= 0 || !h.name) continue;
+                const cand = {
+                    name: h.name,
+                    sku: String(h.sku || ''),
+                    ean: String(h.ean || ''),
+                    price,
+                    url: h.url || `https://www.puuilo.fi/catalogsearch/result/?q=${encodeURIComponent(query)}`
+                };
+                if (!isSameExactProduct(cand, targetName, targetEan, refPrice)) continue;
+                offers.push({
+                    store: 'Puuilo',
+                    price,
+                    totalPrice: price,
+                    deliveryFee: 0,
+                    url: cand.url,
+                    stockStatus: h.in_stock ? 'instock' : 'unknown',
+                    stockLabel: h.name
+                });
+                break;
+            }
+            return offers;
+        } catch (_) {
+            return [];
+        }
+    }
+
+    async function fetchTokmanniDirectOffers(query, targetName, targetEan, refPrice) {
+        if (!query || query.length < 3) return [];
+        try {
+            const url = `https://eucs11.ksearchnet.com/cloud-search/n-search/search?ticket=klevu-15488592134928913&term=${encodeURIComponent(query)}&paginationStartsFrom=0&noOfResults=4&responseType=json`;
+            const { text } = await gmFetch(url, 'application/json');
+            const data = JSON.parse(text);
+            const results = data?.result || [];
+            const offers = [];
+
+            for (const p of results) {
+                const price = parsePriceNumber(String(p.salePrice || p.price || ''));
+                if (!price || !p.name) continue;
+                // On Tokmanni, p.sku is the 13-digit EAN!
+                const cand = {
+                    name: p.name,
+                    sku: String(p.sku || ''),
+                    ean: /^\d{8,14}$/.test(String(p.sku || '')) ? String(p.sku) : null,
+                    price,
+                    url: p.url || `https://www.tokmanni.fi/search/?q=${encodeURIComponent(query)}`
+                };
+                if (!isSameExactProduct(cand, targetName, targetEan, refPrice)) continue;
+                offers.push({
+                    store: 'Tokmanni',
+                    price,
+                    totalPrice: price,
+                    deliveryFee: 0,
+                    url: cand.url,
+                    stockStatus: p.inStock === 'yes' ? 'instock' : 'unknown',
+                    stockLabel: p.name
+                });
+                break;
+            }
+            return offers;
+        } catch (_) {
+            return [];
+        }
+    }
+
+    async function fetchDirectFinnishRetailers(productInfo, marketProduct, customQuery = null) {
+        const targetName = customQuery || marketProduct?.title || productInfo?.name || '';
+        const targetEan = customQuery ? (/^\d{8,14}$/.test(customQuery.trim()) ? customQuery.trim() : null) : productInfo?.ean;
+        const refPrice = marketProduct?.lowestPrice || productInfo?.currentPrice || null;
+        const modelCodes = extractModelCodes(targetName);
+        const primaryQuery = targetEan || modelCodes[0] || extractConciseModelQuery(targetName) || targetName;
+        const modelOrNameQuery = modelCodes[0] || extractConciseModelQuery(targetName) || primaryQuery;
+
+        if (!primaryQuery || primaryQuery.length < 3) return [];
+        const cacheKey = `direct_fi_${primaryQuery.toLowerCase()}_${(modelOrNameQuery || '').toLowerCase()}`;
+        const cached = getCached(cacheKey);
+        if (cached) return cached;
+
+        const host = location.hostname.toLowerCase();
+        try {
+            const [prismaOffers, krautaOffers, motonetOffers, puuiloOffers, tokmanniOffers] = await Promise.all([
+                !host.includes('prisma.fi')
+                    ? fetchPrismaDirectOffers(primaryQuery, targetName, targetEan, refPrice).then(res =>
+                        (res.length === 0 && modelOrNameQuery && modelOrNameQuery !== primaryQuery)
+                            ? fetchPrismaDirectOffers(modelOrNameQuery, targetName, targetEan, refPrice)
+                            : res
+                    )
+                    : Promise.resolve([]),
+                !host.includes('k-rauta.fi')
+                    ? fetchKRautaDirectOffers(primaryQuery, targetName, targetEan, refPrice)
+                    : Promise.resolve([]),
+                !host.includes('motonet.fi')
+                    ? fetchMotonetDirectOffers(modelOrNameQuery, targetName, targetEan, refPrice)
+                    : Promise.resolve([]),
+                !host.includes('puuilo.fi')
+                    ? fetchPuuiloDirectOffers(modelOrNameQuery, targetName, targetEan, refPrice)
+                    : Promise.resolve([]),
+                !host.includes('tokmanni.fi')
+                    ? fetchTokmanniDirectOffers(primaryQuery, targetName, targetEan, refPrice)
+                    : Promise.resolve([])
+            ]);
+
+            const allDirect = [
+                ...prismaOffers,
+                ...krautaOffers,
+                ...motonetOffers,
+                ...puuiloOffers,
+                ...tokmanniOffers
+            ];
+            setCached(cacheKey, allDirect);
+            return allDirect;
+        } catch (_) {
+            return [];
+        }
+    }
+
     // Live Autocomplete Suggestion Fetcher so users never have to memorize full model names (e.g. typing "dji mini 4" suggests "DJI Mini 4 Pro", or furniture/grocery items)
     async function fetchAutocompleteSuggestions(queryStr) {
         const q = (queryStr || '').trim();
@@ -2002,7 +2349,20 @@
             ? detectProductCategory(customQuery)
             : (productInfo.category || detectProductCategory(productInfo.name));
 
-        for (const q of queriesToTry) {
+        const host = location.hostname.toLowerCase();
+
+        // If user is currently browsing a Hinta.fi product page directly, parse current document directly
+        if (!customQuery && host.includes('hinta.fi') && /^\/\d+\b/.test(location.pathname)) {
+            const data = parseHintaProductDoc(document, location.href);
+            data.history = await fetchProductHistory(location.href);
+            marketResult = {
+                matchedQuery: { type: 'Hinta.fi', value: data.title },
+                product: data,
+                alternatives: []
+            };
+        }
+
+        for (const q of (marketResult ? [] : queriesToTry)) {
             const cacheKey = `search_${q.value.toLowerCase()}`;
             const cachedComp = getCached(cacheKey);
             if (cachedComp) {
@@ -2049,10 +2409,56 @@
             }
         }
 
+        // Supplement with Direct Finnish Retailers that Hinta.fi does NOT index (Prisma, K-Rauta, Puuilo, Motonet, Tokmanni)
+        // Strictly verified via isSameExactProduct (EAN / Model code / >=75% word overlap + price guard)
+        if (effectiveCategory !== 'furniture' && effectiveCategory !== 'grocery') {
+            try {
+                const directOffers = await fetchDirectFinnishRetailers(productInfo, marketResult?.product, customQuery);
+                if (directOffers.length > 0) {
+                    if (marketResult && marketResult.product) {
+                        const existingStores = new Set(marketResult.product.offers.map(o => o.store.toLowerCase()));
+                        const mergedOffers = [...marketResult.product.offers];
+                        for (const dOff of directOffers) {
+                            if (!existingStores.has(dOff.store.toLowerCase())) {
+                                mergedOffers.push(dOff);
+                                existingStores.add(dOff.store.toLowerCase());
+                            }
+                        }
+                        mergedOffers.sort((a, b) => a.price - b.price);
+                        marketResult = {
+                            ...marketResult,
+                            product: {
+                                ...marketResult.product,
+                                offers: mergedOffers,
+                                lowestPrice: mergedOffers[0].price,
+                                lowestDelivered: Math.min(...mergedOffers.map(o => o.totalPrice || o.price))
+                            }
+                        };
+                    } else {
+                        directOffers.sort((a, b) => a.price - b.price);
+                        marketResult = {
+                            matchedQuery: { type: 'Suora', value: directOffers[0].stockLabel || targetNameForScoring },
+                            product: {
+                                title: directOffers[0].stockLabel || targetNameForScoring,
+                                url: directOffers[0].url,
+                                lowestPrice: directOffers[0].price,
+                                lowestDelivered: directOffers[0].price,
+                                low30d: null,
+                                offers: directOffers,
+                                history: null
+                            },
+                            alternatives: []
+                        };
+                    }
+                }
+            } catch (_) {
+                // Ignore direct store errors
+            }
+        }
+
         // Only use live IKEA Finland (Furniture) or Ruohonjuuri (Groceries/Organic) APIs as a strict fallback when Hinta.fi has no match,
         // and NEVER inject external search items into an existing Hinta.fi product's offers array.
         const primaryQuery = customQuery || extractConciseModelQuery(productInfo.name) || queriesToTry[0]?.value || '';
-        const host = location.hostname.toLowerCase();
         if (!marketResult && primaryQuery && (effectiveCategory === 'furniture' || effectiveCategory === 'grocery')) {
             try {
                 const [ikeaItems, rjItems] = await Promise.all([
@@ -2123,7 +2529,8 @@
             return { offers: [], lowestPrice: null, cheapestOffer: null, lowestNonClubPrice: null, lowestNonClubOffer: null };
         }
 
-        const currentStoreName = detectCurrentStore().name.toLowerCase().replace(/\.(fi|com|de).*$/, '');
+        const currentStoreObj = detectCurrentStore();
+        const currentStoreName = currentStoreObj.name.toLowerCase().replace(/\.(fi|com|de).*$/, '');
         const pageClub = productInfo?.clubOffer || null;
 
         let offers = Array.isArray(marketProduct.offers)
@@ -2143,6 +2550,30 @@
                 return clone;
             })
             : [];
+
+        // If the current retail store (e.g. Prisma, Bauhaus, Jula, Puuilo, Motonet, K-Rauta) is not indexed by Hinta.fi,
+        // inject the current page's live price into the offers list so it appears in "Uutena kaupoissa"
+        if (
+            productInfo &&
+            !productInfo.isUsedSite &&
+            !currentStoreObj.match.includes('hinta.fi') &&
+            Number.isFinite(productInfo.currentPrice) &&
+            productInfo.currentPrice > 0 &&
+            !offers.some(o => o.store.toLowerCase().includes(currentStoreName))
+        ) {
+            offers.push({
+                store: currentStoreObj.name,
+                price: productInfo.currentPrice,
+                totalPrice: productInfo.currentPrice,
+                deliveryFee: 0,
+                url: location.href,
+                stockStatus: 'instock',
+                stockLabel: productInfo.name || '',
+                isClubOffer: Boolean(pageClub),
+                clubLabel: pageClub?.clubLabel || null,
+                normalPrice: pageClub?.normalPrice || null
+            });
+        }
 
         if (inStockOnly) {
             const inStockList = offers.filter(o => o.stockStatus === 'instock');
@@ -4138,7 +4569,7 @@
                 `;
             }
 
-            const low30dSub = (verdict.isClubVerdict && lowestNonClubPrice && lowestNonClubOffer)
+            const low30dSub = ((verdict.isClubVerdict || offers[0]?.isClubOffer) && lowestNonClubPrice && lowestNonClubOffer)
                 ? `Ilman klubia: ${formatEur(lowestNonClubPrice)} (${lowestNonClubOffer.store})`
                 : (marketProd?.history?.atl
                     ? `ATL: ${formatEur(marketProd.history.atl.price)} (${marketProd.history.atl.dateStr})`
