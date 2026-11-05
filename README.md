@@ -2,12 +2,13 @@
 
 # ⚡ HintaTutka
 
-**Suomen älykkäin reaaliaikainen hintatutka, hintahistoria-analyysaattori & Tori.fi-markkinavertailija**  
-*The ultimate real-time price comparison, price history chart & Tori.fi used market overlay for 33 Finnish & EU online stores.*
+**Suomen älykkäin reaaliaikainen hintatutka: Elektroniikka, Huonekalut, Ruoka & Tori.fi**  
+*The ultimate real-time price comparison, unit-price analyzer (`€/kg`, `€/l`), price history chart & Tori.fi used market overlay for 55 Finnish & EU online stores.*
 
-[![Version](https://img.shields.io/badge/version-5.7-10b981?style=for-the-badge)](https://github.com/FIMARx/hintatutka)
+[![Version](https://img.shields.io/badge/version-6.0-10b981?style=for-the-badge)](https://github.com/FIMARx/hintatutka)
 [![Author](https://img.shields.io/badge/author-FIMARx-6366f1?style=for-the-badge)](https://github.com/FIMARx)
 [![Install](https://img.shields.io/badge/Install-HintaTutka.user.js-f43f5e?style=for-the-badge&logo=tampermonkey)](https://raw.githubusercontent.com/FIMARx/hintatutka/main/HintaTutka.user.js)
+[![Stores](https://img.shields.io/badge/stores-55%20supported-f59e0b?style=for-the-badge)](#)
 [![Languages](https://img.shields.io/badge/FI%20%7C%20EN-supported-3b82f6?style=for-the-badge)](#)
 
 </div>
@@ -16,14 +17,15 @@
 
 ## 🚀 Mikä on HintaTutka? / What is HintaTutka?
 
-**HintaTutka** on Tampermonkey / Violentmonkey -lisäosa, joka tuo tyylikkään, lasimorfisen hintatutka-sivupaneelin suoraan **33 suomalaisen ja eurooppalaisen verkkokaupan** (sekä **Tori.fi**:n) tuotesivuille.
+**HintaTutka** on Tampermonkey / Violentmonkey -lisäosa, joka tuo tyylikkään, lasimorfisen hintatutka-sivupaneelin suoraan **55 suomalaisen ja eurooppalaisen verkkokaupan** (elektroniikka, ruokakaupat, huonekaluliikkeet, rautakaupat sekä **Tori.fi**) tuotesivuille.
 
 Se kertoo välittömästi yhdellä silmäyksellä:
 1. **Onko kaupan hinta oikeasti edullinen vai ylihintainen?** (Vihreä = Halvin/Edullinen, Keltainen = OK, Punainen = Kallis).
 2. **Onko "halvin hinta" vain klubitarjous?** (`👑 HH PLUS`, `Klubihinta`, `MyPOWER`, `Jäsenhinta`) — näyttää sekä klubihinnan, normaalihinnan että halvimman kaupan *ilman* klubijäsenyyttä.
 3. **Miltä tuotteen hintahistoria näyttää?** Interaktiivinen SVG-hintakäyrä kaikkien aikojen alimmalla hinnalla (**ATL**) sekä hiiren kohdistimella toimivalla päivämäärä- ja kauppatarkastelulla.
-4. **Paljonko sama tuote maksaa käytettynä Tori.fi:ssä?** Hakee automaattisesti täsmälleen saman mallin myynti-ilmoitukset Tori.fi:stä, suodattaa pois kuoret/varaosat/Osto-ilmoitukset ja piirtää käytettyjen hintajakaumakäyrän.
-5. **Kumpi sukupolvi kannattaa ostaa?** Laajennettava **2-sarakkeinen vertailutila (`⚔️ Vertaa`)**, jolla vertaat kahta mallia (esim. *DJI Mini 5 Pro* vs. *DJI Mini 4 Pro* tai *RTX 5080* vs. *RTX 4080 Super*) rinnakkain sekä uutena että käytettynä!
+4. **Paljonko sama tuote (tai huonekalu/pöytä) maksaa käytettynä Tori.fi:ssä?** Hakee automaattisesti vastaavat myynti-ilmoitukset Tori.fi:stä, suodattaa pois varaosat/Osto-ilmoitukset ja piirtää käytettyjen hintajakaumakäyrän.
+5. **Paljonko ruoka tai päivittäistavara maksaa kilolta tai litralta (`€/kg`, `€/l`)?** Laskee automaattisesti pakkauskoosta (myös monipakkaukset kuten `6 x 330 ml` tai `500 g`) yksikköhinnan ja tarjoaa pikavertailun **S-kaupat.fi**-, **K-Ruoka.fi**-, **Fiksuruoka**- ja **Ruohonjuuri**-valikoimiin.
+6. **Kumpi malli tai vaihtoehto kannattaa ostaa?** Laajennettava **2-sarakkeinen vertailutila (`⚔️ Vertaa`)**, jolla vertaat kahta mallia (esim. *DJI Mini 5 Pro* vs. *DJI Mini 4 Pro* tai *IKEA MALM* vs. *IKEA MITTZON*) rinnakkain sekä uutena että käytettynä!
 
 ---
 
@@ -58,9 +60,13 @@ Se kertoo välittömästi yhdellä silmäyksellä:
 * **🚚 `+Toimitus`**: Vaihda pelkän tuotehinnan ja toimituskulut sisältävän kokonaishinnan välillä.
 * **📦 `Varastossa`**: Näytä vain kaupat, joilla tuote on heti varastossa.
 
+### ⚖️ 6. Ruoka, Päivittäistavarat & Huonekalut (v6.0 Uutuus!)
+* **⚖️ Automaattinen yksikköhinta-analyysi (`€/kg`, `€/l`)**: Tunnistaa tai laskee automaattisesti ruokatuotteiden, juomien, kahvien ja lisäravinteiden kilo- ja litrahinnan (tukee myös monipakkauksia kuten `6 x 330 ml`, `24 x 0,33 l`, `500 g`) ja lisää pikavertailupainikkeet **S-kaupat.fi**-, **K-Ruoka.fi**- ja **Fiksuruoka.fi**-kauppoihin.
+* **🪑 Huonekalut, Pöydät & Koti**: Hakee reaaliaikaisesti **IKEA Suomen** valikoiman ja hinnat sekä **Tori.fi**:n käytetyt pöydät, työpöydät, tuolit, sohvat ja hyllyt (esim. *IKEA MALM*, *MITTZON*, *KALLAX*, *Artek*, *JYSK*, *Sotka*, *Asko*, *Masku*, *Veke*).
+
 ---
 
-## 🏪 Tuetut kaupat / Supported Stores (33)
+## 🏪 Tuetut kaupat / Supported Stores (55)
 
 HintaTutka toimii automaattisesti kaikilla kielipoluilla (`/fi/`, `/en/`, `/sv/`) ja SPA-sivustoilla:
 
@@ -68,7 +74,9 @@ HintaTutka toimii automaattisesti kaikilla kielipoluilla (`/fi/`, `/en/`, `/sv/`
 | :--- | :--- |
 | **Kodinkoneet & Elektroniikka** | Verkkokauppa.com, Gigantti, Power, Veikon Kone, Euronics, HobbyHall, Bigbox |
 | **PC-komponentit & Pelaaminen** | Jimm's, Proshop, Datatronic, Multitronic, Tietokonekauppa.fi, Data-Systems, Komponenttikauppa.fi, Cruzbroker, MaxGaming, VPD Pelikauppa, Puolenkuun Pelit, Kasuplan, Mikromafia, TeraStore, DigiDreamer, CS Megastore |
-| **Tavaratalot & Verkkokaupat** | Prisma, Kärkkäinen, Amazon.de, Dustin / DustinHome, e-ville, SatShop |
+| **Ruoka & Päivittäistavarat** | **S-kaupat.fi** *(Prisma, S-market, Alepa, Sale)*, **K-Ruoka.fi** *(K-Citymarket, K-Supermarket, K-Market)*, **Fiksuruoka**, **Matsmart**, **Ruohonjuuri**, **Tokmanni**, **Puuilo** |
+| **Huonekalut, Pöydät & Koti** | **IKEA**, **JYSK**, **Sotka**, **Asko**, **Masku**, **Isku**, **Veke**, **Finnish Design Shop**, **Stockmann**, **Rusta**, **Clas Ohlson** |
+| **Rauta, Autoilu & Tavaratalot** | **K-Rauta**, **Bauhaus**, **Motonet**, **Biltema**, Prisma, Kärkkäinen, Amazon.de, Dustin / DustinHome, e-ville, SatShop |
 | **Operaattorit** | Elisa, Telia, DNA |
 | **Käytetyt (Vertaiskauppa)** | **Tori.fi** *(sekä kaupan tuotesivuilla että suoraan Tori.fi-ilmoitussivuilla)* |
 
@@ -82,7 +90,7 @@ HintaTutka toimii automaattisesti kaikilla kielipoluilla (`/fi/`, `/en/`, `/sv/`
 2. Klikkaa alla olevaa asennuslinkkiä:
    * 👉 **[Asenna HintaTutka (`HintaTutka.user.js`)](https://raw.githubusercontent.com/FIMARx/hintatutka/main/HintaTutka.user.js)**
 3. Vahvista asennus klikkaamalla **Install / Asenna**.
-4. Avaa mikä tahansa tuotesivu (esim. Verkkokauppa.com, Gigantti, Jimm's, HobbyHall tai Tori.fi) — **HintaTutka** avautuu automaattisesti oikeaan reunaan!
+4. Avaa mikä tahansa tuotesivu (esim. Verkkokauppa.com, Gigantti, IKEA, JYSK, S-kaupat.fi, K-Ruoka.fi tai Tori.fi) — **HintaTutka** avautuu automaattisesti oikeaan reunaan!
 
 ---
 
@@ -92,7 +100,7 @@ HintaTutka toimii automaattisesti kaikilla kielipoluilla (`/fi/`, `/en/`, `/sv/`
 - [x] Tori.fi-käytettyjen markkinahaku, hintajakaumakäyrä & suora Tori.fi-sivutuki
 - [x] 2-sarakkeinen mallivertailu (`⚔️ Vertaa`) & Live Autocomplete -hakuehdotukset
 - [x] Klubitarjousten (`👑 HH PLUS`, `Klubihinta`, `MyPOWER`) tunnistus ja erottelu normaalihinnoista
-- [ ] Laajennus päivittäistavaroihin, ruokakauppoihin (yksikköhinnat `€/kg`, `€/l`) sekä huonekaluihin ja kodin tuotteisiin (pöydät, tuolit, kalusteet)
+- [x] Laajennus päivittäistavaroihin, ruokakauppoihin (yksikköhinnat `€/kg`, `€/l`) sekä huonekaluihin ja kodin tuotteisiin (pöydät, tuolit, kalusteet, 55 kauppaa)
 
 ---
 
