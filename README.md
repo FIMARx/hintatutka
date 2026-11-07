@@ -5,7 +5,7 @@
 **Suomen älykkäin reaaliaikainen hintatutka: Elektroniikka, Huonekalut, Ruoka, Urheilu, Apteekit, Tori.fi, Vinted & Huuto.net**  
 *The ultimate real-time price comparison, unit-price analyzer (`€/kg`, `€/l`), price watchlist, bargaining advisor, S-Bonus calculator & second-hand overlay for 81 Finnish & EU online stores.*
 
-[![Version](https://img.shields.io/badge/version-7.2-10b981?style=for-the-badge)](https://github.com/FIMARx/hintatutka)
+[![Version](https://img.shields.io/badge/version-7.3-10b981?style=for-the-badge)](https://github.com/FIMARx/hintatutka)
 [![Author](https://img.shields.io/badge/author-FIMARx-6366f1?style=for-the-badge)](https://github.com/FIMARx)
 [![Install](https://img.shields.io/badge/Install-HintaTutka.user.js-f43f5e?style=for-the-badge&logo=tampermonkey)](https://raw.githubusercontent.com/FIMARx/hintatutka/main/HintaTutka.user.js)
 [![Stores](https://img.shields.io/badge/stores-81%20supported-f59e0b?style=for-the-badge)](#)
@@ -34,7 +34,16 @@ Se kertoo välittömästi yhdellä silmäyksellä:
 
 ## ✨ Tärkeimmät ominaisuudet / Key Features
 
-### 🎨 1. Suora hintavärjäys & arvio tuotesivulla (On-Page Price Verdict)
+### 💎 1. Uudistettu, selkeä ja kompakti käyttöliittymä (Modern Tabbed GUI)
+* **Täysikokoinen tuoteotsikko**: Tuotenimi saa oman täyden rivinsä ilman ahtaumaa tai katkeilua.
+* **Modernit välilehdet (Segmented Tabs)**:
+  * 🏪 **Kaupat**: Kauppojen hintavertailu toimituskuluineen ja saatavuustietoineen sekä täsmälinkit vertailupalveluihin.
+  * ♻️ **Käytetyt**: Tori-, Vinted- ja Huuto.net -löydöt, suodattimet ja Tinkausapuri.
+  * 📈 **Hintahistoria**: Interaktiivinen hintakäyrä (Uudet vs. Käytetyt), kaikkien aikojen alin hinta (ATL) ja hintatilastot.
+* **Virtaviivaistettu yläpalkki**: Kaikki työkalut (`⭐ Hintavahti`, `🔔 Seuranta`, `⚔️ Rinnakkaisvertailu`, `📋 Jaa`, `↔ Puolenvaihto`, `FI/EN`, `✕ Sulje`) kätevinä ja yhtenäisinä pikakuvakkeina.
+* **Ei enää loputonta skrollaamista**: Paneeli on siisti ja kompakti (~500 px korkea), ja jokainen välilehti rullaa itsenäisesti.
+
+### 🎨 2. Suora hintavärjäys & arvio tuotesivulla (On-Page Price Verdict)
 * Värjää kaupan oman hintatekstin suoraan sivulla:
   * 🟢 **Vihreä (`✓ EDULLINEN`)** — Markkinoiden halvin tai lähes halvin hinta.
   * 🟡 **Keltainen (`● OK HINTA`)** — Kohtuullinen hinta (`≤ 8.5 %` erolla).

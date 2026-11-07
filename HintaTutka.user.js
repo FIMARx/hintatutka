@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         HintaTutka
 // @namespace    https://github.com/FIMARx/hintatutka
-// @version      7.2
-// @description  Suomen älykkäin hintatutka: Elektroniikka, huonekalut, ruoka, urheilu, Tori.fi, Vinted & Huuto.net — hintakäyrät, yksikköhinnat (€/kg, €/l), hintavahti, tinkausapuri, S-bonus, kunnostetut & suora haku 81 sivustolla
+// @version      7.3
+// @description  Suomen älykkäin hintatutka: Uudistettu selkeä käyttöliittymä, välilehdet (Kaupat, Käytetyt, Hintahistoria), täysikokoinen otsikko, hintakäyrät, yksikköhinnat, hintavahti, tinkausapuri, S-bonus & suora haku 81 kaupassa
 // @author       FIMARx
 // @homepageURL  https://github.com/FIMARx/hintatutka
 // @supportURL   https://github.com/FIMARx/hintatutka/issues
@@ -144,7 +144,7 @@
     // =========================================================================
     // CONFIGURATION & THRESHOLDS
     // =========================================================================
-    const SCRIPT_VERSION = '7.2';
+    const SCRIPT_VERSION = '7.3';
     const GITHUB_RAW_SCRIPT_URL = 'https://raw.githubusercontent.com/FIMARx/hintatutka/main/HintaTutka.user.js';
     const GITHUB_API_CONTENTS_URL = 'https://api.github.com/repos/FIMARx/hintatutka/contents/HintaTutka.user.js';
     const GITHUB_REPO_URL = 'https://github.com/FIMARx/hintatutka';
@@ -171,6 +171,7 @@
         storageKeyDockSide: 'ufhpc_dock_side_v70',
         storageKeyWatchlist: 'ufhpc_watchlist_items_v70',
         storageKeyChartTab: 'ufhpc_chart_tab_v55',
+        storageKeyMainTab: 'ufhpc_main_tab_v73',
         maxStoresShown: 8,
         maxToriShown: 4
     };
@@ -318,6 +319,9 @@
             toriEmpty: 'Ei vastaavia käytettyjä ilmoituksia Torissa tai Vintedissä juuri nyt.',
             toriSavings: (pct) => `-${pct}% vs. uusi`,
             toriCompany: 'Yritys',
+            tabStores: (n) => `Kaupat (${n})`,
+            tabUsed: (n) => `Käytetyt (${n})`,
+            tabHistory: 'Hintahistoria',
             compareBtn: '⚔️ Vertaa',
             compareCloseBtn: '⇔ Kapea',
             compareHeader: '⚔️ Vertaa toiseen malliin (esim. edellinen sukupolvi)',
@@ -409,6 +413,9 @@
             toriEmpty: 'No matching used listings found on Tori.fi or Vinted right now.',
             toriSavings: (pct) => `-${pct}% vs. new`,
             toriCompany: 'Refurb/Shop',
+            tabStores: (n) => `Stores (${n})`,
+            tabUsed: (n) => `Used (${n})`,
+            tabHistory: 'Price History',
             compareBtn: '⚔️ Compare',
             compareCloseBtn: '⇔ Narrow',
             compareHeader: '⚔️ Compare Side-by-Side (e.g. Previous Gen)',
@@ -3903,11 +3910,11 @@
                 transform: rotate(180deg);
             }
 
-            /* Main Sidebar Panel (358px standard, 700px when expanded for side-by-side comparison) */
+            /* Main Sidebar Panel (382px standard, 740px when expanded for side-by-side comparison) */
             .ufhpc-panel {
-                width: 358px;
-                max-width: calc(100vw - 54px);
-                max-height: 92vh;
+                width: 382px;
+                max-width: calc(100vw - 48px);
+                max-height: 94vh;
                 overflow-y: auto;
                 background: rgba(14, 16, 23, 0.96);
                 backdrop-filter: blur(22px);
@@ -3915,15 +3922,15 @@
                 border-right: none;
                 border-radius: 16px 0 0 16px;
                 box-shadow: -16px 0 45px rgba(0, 0, 0, 0.65);
-                padding: 15px;
+                padding: 13px 14px;
                 display: flex;
                 flex-direction: column;
-                gap: 11px;
+                gap: 9px;
                 color: #f3f4f6;
                 transition: width 0.28s cubic-bezier(0.16, 1, 0.3, 1);
             }
             .ufhpc-panel.is-expanded {
-                width: 700px;
+                width: 740px;
             }
             .ufhpc-panel::-webkit-scrollbar {
                 width: 5px;
@@ -3945,7 +3952,7 @@
             .ufhpc-col {
                 display: flex;
                 flex-direction: column;
-                gap: 10px;
+                gap: 9px;
                 min-width: 0;
             }
             .ufhpc-col-compare {
@@ -3953,18 +3960,12 @@
                 padding-left: 14px;
             }
 
-            /* Top Header */
-            .ufhpc-header {
+            /* Top Header Bar */
+            .ufhpc-header-bar, .ufhpc-header {
                 display: flex;
-                align-items: flex-start;
+                align-items: center;
                 justify-content: space-between;
                 gap: 8px;
-            }
-            .ufhpc-brand {
-                display: flex;
-                flex-direction: column;
-                gap: 2px;
-                min-width: 0;
             }
             .ufhpc-brand-top {
                 display: flex;
@@ -3976,22 +3977,24 @@
                 text-transform: uppercase;
                 letter-spacing: 0.08em;
                 color: #9ca3af;
+                min-width: 0;
             }
             .ufhpc-product-title {
-                font-size: 13px;
-                font-weight: 600;
-                color: #f9fafb;
+                font-size: 13.5px;
+                font-weight: 700;
+                color: #ffffff;
                 line-height: 1.35;
                 display: -webkit-box;
                 -webkit-line-clamp: 2;
                 -webkit-box-orient: vertical;
                 overflow: hidden;
                 user-select: text;
+                word-break: break-word;
             }
             .ufhpc-header-btns {
                 display: flex;
                 align-items: center;
-                gap: 5px;
+                gap: 4px;
                 flex-shrink: 0;
             }
             .ufhpc-icon-btn {
@@ -3999,13 +4002,14 @@
                 border: 1px solid rgba(255, 255, 255, 0.1);
                 color: #9ca3af;
                 height: 25px;
-                padding: 0 8px;
+                min-width: 25px;
+                padding: 0 6px;
                 border-radius: 7px;
                 cursor: pointer;
-                display: flex;
+                display: inline-flex;
                 align-items: center;
                 justify-content: center;
-                font-size: 10.5px;
+                font-size: 11px;
                 font-weight: 700;
                 transition: all 0.15s ease;
                 white-space: nowrap;
@@ -4013,11 +4017,83 @@
             .ufhpc-icon-btn:hover {
                 background: rgba(255, 255, 255, 0.14);
                 color: #ffffff;
+                transform: translateY(-1px);
+            }
+            .ufhpc-icon-btn.is-active {
+                background: rgba(245, 158, 11, 0.2);
+                color: #fbbf24;
+                border-color: rgba(245, 158, 11, 0.45);
             }
             .ufhpc-icon-btn.is-active-compare {
                 background: rgba(99, 102, 241, 0.22);
                 color: #a5b4fc;
                 border-color: rgba(99, 102, 241, 0.5);
+            }
+
+            /* Modern Segmented Navigation Tabs */
+            .ufhpc-tabs {
+                display: flex;
+                background: rgba(0, 0, 0, 0.35);
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                border-radius: 10px;
+                padding: 3px;
+                gap: 3px;
+                margin-top: 1px;
+            }
+            .ufhpc-tab {
+                flex: 1;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: 4px;
+                background: transparent;
+                border: 1px solid transparent;
+                color: #9ca3af;
+                font-size: 11px;
+                font-weight: 700;
+                padding: 6px 4px;
+                border-radius: 7px;
+                cursor: pointer;
+                transition: all 0.15s ease;
+                white-space: nowrap;
+                user-select: none;
+            }
+            .ufhpc-tab:hover {
+                color: #e5e7eb;
+                background: rgba(255, 255, 255, 0.06);
+            }
+            .ufhpc-tab.is-active-stores {
+                background: rgba(16, 185, 129, 0.18);
+                color: #34d399;
+                border-color: rgba(16, 185, 129, 0.38);
+                box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15);
+            }
+            .ufhpc-tab.is-active-used {
+                background: rgba(244, 63, 94, 0.18);
+                color: #fda4af;
+                border-color: rgba(244, 63, 94, 0.38);
+                box-shadow: 0 2px 8px rgba(244, 63, 94, 0.15);
+            }
+            .ufhpc-tab.is-active-history {
+                background: rgba(99, 102, 241, 0.18);
+                color: #a5b4fc;
+                border-color: rgba(99, 102, 241, 0.38);
+                box-shadow: 0 2px 8px rgba(99, 102, 241, 0.15);
+            }
+            .ufhpc-tab-pane {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                max-height: 330px;
+                overflow-y: auto;
+                padding-right: 2px;
+            }
+            .ufhpc-tab-pane::-webkit-scrollbar {
+                width: 4px;
+            }
+            .ufhpc-tab-pane::-webkit-scrollbar-thumb {
+                background: rgba(255, 255, 255, 0.16);
+                border-radius: 4px;
             }
 
             /* Suggestion Chips for Quick Model Comparison (e.g. DJI Mini 4 Pro) */
@@ -5116,6 +5192,7 @@
             this.dockSide = localStorage.getItem(CONFIG.storageKeyDockSide) || 'right';
             this.showWatchlistDrawer = false;
             this.chartTab = localStorage.getItem(CONFIG.storageKeyChartTab) || (detectCurrentStore().isUsedSite ? 'tori' : 'new');
+            this.mainTab = localStorage.getItem(CONFIG.storageKeyMainTab) || null;
             this.lastProductInfo = null;
             this.lastComparison = null;
             this.compareQuery = '';
@@ -5373,15 +5450,17 @@
                     <div class="ufhpc-handle-chevron">❮</div>
                 </div>
                 <div class="ufhpc-panel ${this.isExpanded ? 'is-expanded' : ''}">
-                    <div class="ufhpc-header">
-                        <div class="ufhpc-brand">
-                            <div class="ufhpc-brand-top"><span>⚡ ${escapeHtml(t.headerTag)}</span></div>
-                            <div class="ufhpc-product-title">${escapeHtml(productInfo.name || 'Product')}</div>
+                    <div class="ufhpc-header-bar">
+                        <div class="ufhpc-brand-top">
+                            <span>⚡ ${escapeHtml(detectCurrentStore()?.name || t.headerTag)}</span>
                         </div>
                         <div class="ufhpc-header-btns">
                             <button class="ufhpc-icon-btn" id="ufhpc-lang-btn" title="Switch Language (FI / EN)">${this.lang.toUpperCase()}</button>
                             <button class="ufhpc-icon-btn" id="ufhpc-collapse-btn" title="Collapse">✕</button>
                         </div>
+                    </div>
+                    <div class="ufhpc-product-title" title="${escapeHtml(productInfo.name || 'Product')}">
+                        ${escapeHtml(productInfo.name || 'Product')}
                     </div>
                     <div class="ufhpc-verdict-card">
                         <div class="ufhpc-verdict-top">
@@ -5771,15 +5850,6 @@
                 <a class="ufhpc-btn ufhpc-btn-hintaopas" href="https://hintaopas.fi/search?search=${encodedSearch}" target="_blank" rel="noopener noreferrer">
                     Hintaopas ↗
                 </a>
-                <a class="ufhpc-btn ufhpc-btn-tori" href="${escapeHtml(toriSearchUrl)}" target="_blank" rel="noopener noreferrer">
-                    Tori (${toriCount}) ↗
-                </a>
-                <a class="ufhpc-btn ufhpc-btn-vinted" href="${escapeHtml(vintedSearchUrl)}" target="_blank" rel="noopener noreferrer">
-                    Vinted (${vintedCount}) ↗
-                </a>
-                <a class="ufhpc-btn ufhpc-btn-huuto" href="${escapeHtml(huutoSearchUrl)}" target="_blank" rel="noopener noreferrer">
-                    Huuto (${huutoCount}) ↗
-                </a>
             ` : (productInfo.category === 'sports' ? `
                 <a class="ufhpc-btn ufhpc-btn-hintaseuranta" href="https://hintaseuranta.fi/haku?q=${encodedSearch}" target="_blank" rel="noopener noreferrer">
                     Hintaseuranta ↗
@@ -5796,15 +5866,6 @@
                 <a class="ufhpc-btn ufhpc-btn-hinta" href="${escapeHtml(hintaUrl)}" target="_blank" rel="noopener noreferrer">
                     Hinta.fi ↗
                 </a>
-                <a class="ufhpc-btn ufhpc-btn-tori" href="${escapeHtml(toriSearchUrl)}" target="_blank" rel="noopener noreferrer">
-                    Tori (${toriCount}) ↗
-                </a>
-                <a class="ufhpc-btn ufhpc-btn-vinted" href="${escapeHtml(vintedSearchUrl)}" target="_blank" rel="noopener noreferrer">
-                    Vinted (${vintedCount}) ↗
-                </a>
-                <a class="ufhpc-btn ufhpc-btn-huuto" href="${escapeHtml(huutoSearchUrl)}" target="_blank" rel="noopener noreferrer">
-                    Huuto (${huutoCount}) ↗
-                </a>
             ` : `
                 <a class="ufhpc-btn ufhpc-btn-hinta" href="${escapeHtml(hintaUrl)}" target="_blank" rel="noopener noreferrer">
                     Hinta.fi ↗
@@ -5815,6 +5876,9 @@
                 <a class="ufhpc-btn ufhpc-btn-hintaopas" href="https://hintaopas.fi/search?search=${encodedSearch}" target="_blank" rel="noopener noreferrer">
                     Hintaopas ↗
                 </a>
+            `));
+
+            const usedActionBtnsHtml = `
                 <a class="ufhpc-btn ufhpc-btn-tori" href="${escapeHtml(toriSearchUrl)}" target="_blank" rel="noopener noreferrer">
                     Tori (${toriCount}) ↗
                 </a>
@@ -5824,7 +5888,47 @@
                 <a class="ufhpc-btn ufhpc-btn-huuto" href="${escapeHtml(huutoSearchUrl)}" target="_blank" rel="noopener noreferrer">
                     Huuto (${huutoCount}) ↗
                 </a>
-            `));
+            `;
+
+            let effectiveMainTab = this.mainTab;
+            if (productInfo.isUsedSite && effectiveMainTab !== 'history') {
+                effectiveMainTab = 'used';
+            } else if (!effectiveMainTab) {
+                if (offers.length > 0) {
+                    effectiveMainTab = 'stores';
+                } else if (toriData.items && toriData.items.length > 0) {
+                    effectiveMainTab = 'used';
+                } else {
+                    effectiveMainTab = 'stores';
+                }
+            }
+
+            const totalUsedCount = (toriData.items?.length || 0);
+
+            let tabPaneContentHtml = '';
+            if (effectiveMainTab === 'stores') {
+                tabPaneContentHtml = `
+                    ${variantSelectHtml}
+                    ${storesHtml}
+                    <div class="ufhpc-actions">
+                        ${actionBtnsHtml}
+                    </div>
+                `;
+            } else if (effectiveMainTab === 'used') {
+                tabPaneContentHtml = `
+                    ${bargainHtml}
+                    ${toriHtml}
+                    <div class="ufhpc-actions">
+                        ${usedActionBtnsHtml}
+                    </div>
+                `;
+            } else if (effectiveMainTab === 'history') {
+                tabPaneContentHtml = chartHtml ? chartHtml : `
+                    <div class="ufhpc-empty">
+                        📈 ${this.lang === 'en' ? 'No price history points recorded for this item yet.' : 'Tuotteelle ei ole vielä kertynyt hintahistoriapisteitä.'}
+                    </div>
+                `;
+            }
 
             // Bargaining Advisor on Used Item Pages
             let bargainHtml = '';
@@ -5949,16 +6053,11 @@
                 <div class="ufhpc-panel ${this.isExpanded ? 'is-expanded' : ''}">
                     ${watchlistModalHtml}
                     ${updateBannerHtml}
-                    <div class="ufhpc-header">
-                        <div class="ufhpc-brand">
-                            <div class="ufhpc-brand-top">
-                                <span>⚡ ${escapeHtml(storeName)}</span>
-                                ${comparison?.matchedQuery ? `<span>• ${escapeHtml(comparison.matchedQuery.type)}</span>` : ''}
-                                <a class="ufhpc-ver-link ${latestUpdateVersion ? 'has-update' : ''}" id="ufhpc-version-check-btn" href="${GITHUB_RAW_SCRIPT_URL}" target="_blank" rel="noopener noreferrer" title="HintaTutka v${SCRIPT_VERSION} (GitHub: FIMARx/hintatutka) — Klikkaa tarkistaaksesi päivitykset">${latestUpdateVersion ? `🚀 v${SCRIPT_VERSION} → v${escapeHtml(latestUpdateVersion)}` : `v${SCRIPT_VERSION} ↻`}</a>
-                            </div>
-                            <div class="ufhpc-product-title" title="${escapeHtml(marketProd?.title || productInfo.name)}">
-                                ${escapeHtml(marketProd?.title || productInfo.name || 'Product')}
-                            </div>
+                    <div class="ufhpc-header-bar">
+                        <div class="ufhpc-brand-top">
+                            <span>⚡ ${escapeHtml(storeName)}</span>
+                            ${comparison?.matchedQuery ? `<span>• ${escapeHtml(comparison.matchedQuery.type)}</span>` : ''}
+                            <a class="ufhpc-ver-link ${latestUpdateVersion ? 'has-update' : ''}" id="ufhpc-version-check-btn" href="${GITHUB_RAW_SCRIPT_URL}" target="_blank" rel="noopener noreferrer" title="HintaTutka v${SCRIPT_VERSION} (GitHub: FIMARx/hintatutka) — Klikkaa tarkistaaksesi päivitykset">${latestUpdateVersion ? `🚀 v${SCRIPT_VERSION} → v${escapeHtml(latestUpdateVersion)}` : `v${SCRIPT_VERSION} ↻`}</a>
                         </div>
                         <div class="ufhpc-header-btns">
                             <button class="ufhpc-icon-btn ${isSaved ? 'is-active' : ''}" id="ufhpc-watchlist-toggle-btn" title="${escapeHtml(isSaved ? t.watchlistRemoved : t.watchlistBtn)}">
@@ -5967,18 +6066,21 @@
                             <button class="ufhpc-icon-btn" id="ufhpc-watchlist-open-btn" title="${escapeHtml(t.watchlistTitle)}">
                                 🔔${watchlist.length > 0 ? ` ${watchlist.length}` : ''}
                             </button>
+                            <button class="ufhpc-icon-btn ${this.isExpanded ? 'is-active-compare' : ''}" id="ufhpc-expand-btn" title="${escapeHtml(this.isExpanded ? t.compareCloseBtn : t.compareBtn)}">
+                                ${this.isExpanded ? '⇔' : '⚔️'}
+                            </button>
                             <button class="ufhpc-icon-btn" id="ufhpc-share-btn" title="${escapeHtml(t.shareBtn)}">
                                 📋
                             </button>
                             <button class="ufhpc-icon-btn" id="ufhpc-dock-btn" title="${escapeHtml(t.dockSwitch)}">
                                 ↔
                             </button>
-                            <button class="ufhpc-icon-btn ${this.isExpanded ? 'is-active-compare' : ''}" id="ufhpc-expand-btn" title="Expand / Compare two models side-by-side">
-                                ${escapeHtml(this.isExpanded ? t.compareCloseBtn : t.compareBtn)}
-                            </button>
                             <button class="ufhpc-icon-btn" id="ufhpc-lang-btn" title="Switch Language (FI / EN)">${this.lang.toUpperCase()}</button>
                             <button class="ufhpc-icon-btn" id="ufhpc-collapse-btn" title="Collapse to side">✕</button>
                         </div>
+                    </div>
+                    <div class="ufhpc-product-title" title="${escapeHtml(marketProd?.title || productInfo.name)}">
+                        ${escapeHtml(marketProd?.title || productInfo.name || 'Product')}
                     </div>
 
                     <div class="ufhpc-columns">
@@ -5990,7 +6092,6 @@
                                 </div>
                                 <div class="ufhpc-verdict-sub">${escapeHtml(theme.sublabel)}</div>
                             </div>
-                            ${bargainHtml}
                             ${bonusHtml}
 
                             <div class="ufhpc-metrics">
@@ -6006,10 +6107,21 @@
                                 </div>
                             </div>
 
-                            ${chartHtml}
-                            ${variantSelectHtml}
-                            ${storesHtml}
-                            ${toriHtml}
+                            <div class="ufhpc-tabs">
+                                <button type="button" class="ufhpc-tab ${effectiveMainTab === 'stores' ? 'is-active is-active-stores' : ''}" data-main-tab="stores">
+                                    🏪 ${escapeHtml(t.tabStores(offers.length))}
+                                </button>
+                                <button type="button" class="ufhpc-tab ${effectiveMainTab === 'used' ? 'is-active is-active-used' : ''}" data-main-tab="used">
+                                    ♻️ ${escapeHtml(t.tabUsed(totalUsedCount))}
+                                </button>
+                                <button type="button" class="ufhpc-tab ${effectiveMainTab === 'history' ? 'is-active is-active-history' : ''}" data-main-tab="history">
+                                    📈 ${escapeHtml(t.tabHistory)}
+                                </button>
+                            </div>
+
+                            <div class="ufhpc-tab-pane">
+                                ${tabPaneContentHtml}
+                            </div>
 
                             <div class="ufhpc-search-wrap">
                                 <div class="ufhpc-ac-menu is-upward" id="ufhpc-custom-ac-menu"></div>
@@ -6020,10 +6132,6 @@
                                            value="${escapeHtml(productInfo.ean || marketProd?.title || comparison?.matchedQuery?.value || searchTermRaw)}" />
                                     <button type="submit" class="ufhpc-search-btn">${escapeHtml(t.searchBtn)}</button>
                                 </form>
-                            </div>
-
-                            <div class="ufhpc-actions">
-                                ${actionBtnsHtml}
                             </div>
                         </div>
 
@@ -6347,6 +6455,18 @@
             if (dockBtn) {
                 dockBtn.addEventListener('click', () => this.toggleDockSide());
             }
+
+            const mainTabBtns = this.shadow.querySelectorAll('.ufhpc-tab[data-main-tab]');
+            mainTabBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const targetTab = btn.getAttribute('data-main-tab');
+                    if (targetTab && targetTab !== this.mainTab) {
+                        this.mainTab = targetTab;
+                        localStorage.setItem(CONFIG.storageKeyMainTab, targetTab);
+                        this.refreshView();
+                    }
+                });
+            });
 
             const shareBtn = this.shadow.getElementById('ufhpc-share-btn');
             if (shareBtn) {
