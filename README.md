@@ -5,7 +5,7 @@
 **Suomen älykkäin reaaliaikainen hintatutka: Elektroniikka, Huonekalut, Ruoka, Urheilu, Apteekit, Tori.fi, Vinted & Huuto.net**  
 *The ultimate real-time price comparison, unit-price analyzer (`€/kg`, `€/l`), price watchlist, bargaining advisor, S-Bonus calculator & second-hand overlay for 81 Finnish & EU online stores.*
 
-[![Version](https://img.shields.io/badge/version-7.4-10b981?style=for-the-badge)](https://github.com/FIMARx/hintatutka)
+[![Version](https://img.shields.io/badge/version-7.5-10b981?style=for-the-badge)](https://github.com/FIMARx/hintatutka)
 [![Author](https://img.shields.io/badge/author-FIMARx-6366f1?style=for-the-badge)](https://github.com/FIMARx)
 [![Install](https://img.shields.io/badge/Install-HintaTutka.user.js-f43f5e?style=for-the-badge&logo=tampermonkey)](https://raw.githubusercontent.com/FIMARx/hintatutka/main/HintaTutka.user.js)
 [![Stores](https://img.shields.io/badge/stores-81%20supported-f59e0b?style=for-the-badge)](#)
@@ -115,7 +115,14 @@ HintaTutka toimii automaattisesti kaikilla kielipoluilla (`/fi/`, `/en/`, `/sv/`
 
 ## 🗺️ Kehityssuunnitelma & Versiohistoria / Roadmap & Changelog
 
-### 🚀 v7.4 Päivitys (Uusin / Latest)
+### 🚀 v7.5 Päivitys (Uusin / Latest)
+- 🎯 **Tyylikäs ja siisti hintamerkintöjen kohdistus (Verkkokauppa.com, Gigantti ym.)**:
+  - **Ei enää rivinsisäistä leveyden venymistä**: Verkkokauppa.comissa ja vastaavissa kaupoissa hintamerkintä (`ufhpc-inline-price-badge-wrapper`) ankkuroidaan ulompaan hintalohkoon täydellä 100 % leveydellä omalle siistille rivilleen, jolloin se ei enää tunge epäsiististi hintanumeroiden viereen vaakasuunnassa.
+  - **Ei enää osamaksuelementtien tai painikkeiden peittymistä**: Gigantissa ja vastaavissa kaupoissa hintamerkintä sijoittuu hintasäiliön alapuolelle normaaliin sivuvirtaukseen (DOM-flow), jolloin alapuolella olevat rahoitus- ja osamaksuboksit (kuten Resurs Bank) siirtyvät kauniisti alaspäin ilman päällekkäisyyttä.
+  - **Miellyttävämpi ja ammattimaisempi typografia**: Poistettu huutavat suuraakkoset (`KALLIS!`, `HALVIN HINTA MARKKINOILLA`) ja hintojen turha toisto heti sivun oman hinnan perään. Tilalla on tasapainoinen lausekoko (esim. `✓ Markkinoiden halvin hinta` ja `⚠ Kalliimpi: +39,09 € (+26.3%) • Halvin: 148,90 € (Gigantti)`).
+  - **Kaikkien kauppojen suojaus**: Älykäs `findBestPriceAnchor`-apufunktio varmistaa ihanteellisen sijoittelun kaikissa 81 tuetussa verkkokaupassa.
+
+### 🌟 v7.4
 - 💎 **Täysin uudistettu moderni ulkoasu (Modern Obsidian Glassmorphism UI)**:
   - Uudelleenmuotoiltu, ylellinen tumma lasimorfia (`backdrop-filter: blur(28px)`), jossa valo heijastuu pehmeästi paneelin reunoilta ja tilakohtainen hehku (`emerald`, `rose`, `amber`, `purple`) ympäröi elementtejä.
   - Laajennettu ja ilmava asettelu (leveys kasvatettu 396 px / 760 px) ja tarkempi fonttipino subpixel-antialiasingilla.

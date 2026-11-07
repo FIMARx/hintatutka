@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         HintaTutka
 // @namespace    https://github.com/FIMARx/hintatutka
-// @version      7.4
-// @description  Suomen älykkäin hintatutka: Modernisoitu lasimorfinen käyttöliittymä, välilehdet (Kaupat, Käytetyt, Hintahistoria), interaktiivinen päivitys & sivun uudelleenlataus, täysikokoinen otsikko, hintakäyrät, yksikköhinnat, hintavahti, tinkausapuri, S-bonus & suora haku 81 kaupassa
+// @version      7.5
+// @description  Suomen älykkäin hintatutka: Tyylikäs hintamerkintöjen kohdistus (Verkkokauppa, Gigantti ym.), modernisoitu lasimorfinen käyttöliittymä, välilehdet (Kaupat, Käytetyt, Hintahistoria), interaktiivinen päivitys & sivun uudelleenlataus, täysikokoinen otsikko, hintakäyrät, yksikköhinnat, hintavahti, tinkausapuri, S-bonus & suora haku 81 kaupassa
 // @author       FIMARx
 // @homepageURL  https://github.com/FIMARx/hintatutka
 // @supportURL   https://github.com/FIMARx/hintatutka/issues
@@ -144,7 +144,7 @@
     // =========================================================================
     // CONFIGURATION & THRESHOLDS
     // =========================================================================
-    const SCRIPT_VERSION = '7.4';
+    const SCRIPT_VERSION = '7.5';
     const GITHUB_RAW_SCRIPT_URL = 'https://raw.githubusercontent.com/FIMARx/hintatutka/main/HintaTutka.user.js';
     const GITHUB_API_CONTENTS_URL = 'https://api.github.com/repos/FIMARx/hintatutka/contents/HintaTutka.user.js';
     const GITHUB_REPO_URL = 'https://github.com/FIMARx/hintatutka';
@@ -339,19 +339,19 @@
             clubTag: '👑 KLUBI',
             nonClubCheapestTag: 'Ilman klubia halvin',
             inlineClubCheapest: (clubName, clubPrice, nonClubLow, nonClubStore) =>
-                `👑 ${clubName || 'KLUBIHINTA'} HALVIN (${clubPrice})${nonClubLow ? ` • Ilman klubia: ${nonClubLow} (${nonClubStore})` : ''}`,
+                `👑 ${clubName || 'Klubihinta'} halvin (${clubPrice})${nonClubLow ? ` • Ilman klubia: ${nonClubLow} (${nonClubStore})` : ''}`,
             inlineClubNormalWarn: (diff, pct, low, store) =>
-                `Ilman klubia kallis (+${diff} / +${pct}% vs. ${low} ${store})`,
-            inlineCheapest: (low) => `HALVIN HINTA MARKKINOILLA (${low})`,
-            inlineCheap: (diff, low) => `EDULLINEN (+${diff} vs. halvin ${low})`,
-            inlineOk: (diff, pct, store, low) => `OK HINTA (+${diff} / +${pct}% vs. ${store} ${low})`,
-            inlineExpensive: (diff, pct, low, store) => `KALLIS! +${diff} (+${pct}%) • Halvin: ${low} (${store})`,
-            inlineUsedGood: (saveEur, savePct, newLow, store) => `HYVÄ LÖYTÖ! ${saveEur} (${savePct}%) halvempi kuin uusi (${newLow} @ ${store})`,
-            inlineUsedOk: (saveEur, savePct, newLow, store) => `OK KÄYTETTY (${saveEur} / ${savePct}% vs. uusi ${newLow} @ ${store})`,
-            inlineUsedBad: (newLow, store) => `KALLIS KÄYTETYKSI! Uutena kaupasta takuulla: ${newLow} (${store})`,
-            inlineUsedMedianGood: (diff, pct, med) => `HYVÄ KÄYTETYN HINTA! -${diff} (-${pct}%) alle mediaanin (${med})`,
-            inlineUsedMedianOk: (med) => `OK KÄYTETYN HINTA (~mediaani: ${med})`,
-            inlineUsedMedianBad: (diff, pct, med) => `KALLIS KÄYTETYKSI! +${diff} (+${pct}%) yli mediaanin (${med})`,
+                `Ilman klubia kalliimpi (+${diff} / +${pct}% vs. ${store} ${low})`,
+            inlineCheapest: (low) => `Markkinoiden halvin hinta`,
+            inlineCheap: (diff, low) => `Edullinen hinta (+${diff} vs. halvin ${low})`,
+            inlineOk: (diff, pct, store, low) => `Kohtuullinen hinta (+${diff} • Halvin: ${low} ${store})`,
+            inlineExpensive: (diff, pct, low, store) => `Kalliimpi: +${diff} (+${pct}%) • Halvin: ${low} (${store})`,
+            inlineUsedGood: (saveEur, savePct, newLow, store) => `Hyvä löytö: -${saveEur} (-${savePct}%) vs. uusi (${newLow} @ ${store})`,
+            inlineUsedOk: (saveEur, savePct, newLow, store) => `Kohtuullinen hinta (${saveEur} alle uuden: ${newLow} @ ${store})`,
+            inlineUsedBad: (newLow, store) => `Kallis käytetyksi • Uutena kaupasta: ${newLow} (${store})`,
+            inlineUsedMedianGood: (diff, pct, med) => `Hyvä hinta käytetyksi: -${diff} (-${pct}%) alle mediaanin (${med})`,
+            inlineUsedMedianOk: (med) => `Kohtuullinen käytetyn hinta (~mediaani: ${med})`,
+            inlineUsedMedianBad: (diff, pct, med) => `Kallis käytetyksi: +${diff} (+${pct}%) yli mediaanin (${med})`,
             toriSavingsVsThis: (pct) => `-${pct}% vs. tämä`,
             similarListingsHint: 'Samankaltaiset & vastaavat',
             watchlistBtn: '⭐ Hintavahti',
@@ -433,19 +433,19 @@
             clubTag: '👑 CLUB',
             nonClubCheapestTag: 'Best non-club',
             inlineClubCheapest: (clubName, clubPrice, nonClubLow, nonClubStore) =>
-                `👑 ${clubName || 'CLUB DEAL'} CHEAPEST (${clubPrice})${nonClubLow ? ` • Non-club best: ${nonClubLow} (${nonClubStore})` : ''}`,
+                `👑 ${clubName || 'Club deal'} best price (${clubPrice})${nonClubLow ? ` • Non-club best: ${nonClubLow} (${nonClubStore})` : ''}`,
             inlineClubNormalWarn: (diff, pct, low, store) =>
-                `Expensive without club (+${diff} / +${pct}% vs. ${low} ${store})`,
-            inlineCheapest: (low) => `BEST MARKET PRICE (${low})`,
-            inlineCheap: (diff, low) => `CHEAP (+${diff} vs. lowest ${low})`,
-            inlineOk: (diff, pct, store, low) => `OK PRICE (+${diff} / +${pct}% vs. ${store} ${low})`,
-            inlineExpensive: (diff, pct, low, store) => `TOO EXPENSIVE! +${diff} (+${pct}%) • Lowest: ${low} (${store})`,
-            inlineUsedGood: (saveEur, savePct, newLow, store) => `GREAT USED DEAL! ${saveEur} (${savePct}%) below new (${newLow} @ ${store})`,
-            inlineUsedOk: (saveEur, savePct, newLow, store) => `OK USED PRICE (${saveEur} / ${savePct}% vs. new ${newLow} @ ${store})`,
-            inlineUsedBad: (newLow, store) => `OVERPRICED USED! Brand new in store: ${newLow} (${store})`,
-            inlineUsedMedianGood: (diff, pct, med) => `GREAT SECOND-HAND PRICE! -${diff} (-${pct}%) below median (${med})`,
-            inlineUsedMedianOk: (med) => `FAIR SECOND-HAND PRICE (~median: ${med})`,
-            inlineUsedMedianBad: (diff, pct, med) => `OVERPRICED SECOND-HAND! +${diff} (+${pct}%) above median (${med})`,
+                `Pricier without club (+${diff} / +${pct}% vs. ${low} ${store})`,
+            inlineCheapest: (low) => `Best market price`,
+            inlineCheap: (diff, low) => `Great price (+${diff} vs. lowest ${low})`,
+            inlineOk: (diff, pct, store, low) => `Fair price (+${diff} • Lowest: ${low} ${store})`,
+            inlineExpensive: (diff, pct, low, store) => `Pricier: +${diff} (+${pct}%) • Lowest: ${low} (${store})`,
+            inlineUsedGood: (saveEur, savePct, newLow, store) => `Great deal: -${saveEur} (-${savePct}%) vs. new (${newLow} @ ${store})`,
+            inlineUsedOk: (saveEur, savePct, newLow, store) => `Fair price (${saveEur} below new: ${newLow} @ ${store})`,
+            inlineUsedBad: (newLow, store) => `Pricey for used • Brand new in store: ${newLow} (${store})`,
+            inlineUsedMedianGood: (diff, pct, med) => `Great second-hand price: -${diff} (-${pct}%) vs. median (${med})`,
+            inlineUsedMedianOk: (med) => `Fair second-hand price (~median: ${med})`,
+            inlineUsedMedianBad: (diff, pct, med) => `Pricey for second-hand: +${diff} (+${pct}%) vs. median (${med})`,
             toriSavingsVsThis: (pct) => `-${pct}% vs. this`,
             similarListingsHint: 'Similar & matching',
             watchlistBtn: '⭐ Watchlist',
@@ -3462,45 +3462,118 @@
     // ON-PAGE PRICE COLORING & INLINE BADGE (WRAP-SAFE + CLUB DEAL AWARE)
     // =========================================================================
     function createInlineBadgeElement(text, theme, href) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'ufhpc-inline-price-badge-wrapper';
+        wrapper.style.cssText = `
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: wrap !important;
+            align-items: center !important;
+            flex-basis: 100% !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 6px 0 8px 0 !important;
+            padding: 0 !important;
+            clear: both !important;
+            box-sizing: border-box !important;
+            z-index: 10 !important;
+        `;
+
         const badge = document.createElement('a');
         badge.className = 'ufhpc-inline-price-badge';
         badge.href = href || '#';
         badge.target = '_blank';
         badge.rel = 'noopener noreferrer';
-        badge.title = 'Hinta.fi';
+        badge.title = 'Hinta.fi - Avaa hintavertailu uuteen välilehteen';
         badge.style.cssText = `
             display: inline-flex !important;
-            flex-wrap: wrap !important;
             align-items: center !important;
-            gap: 5px !important;
-            margin: 6px 0 4px 0 !important;
-            padding: 5px 10px !important;
+            gap: 6px !important;
+            margin: 0 !important;
+            padding: 5px 11px !important;
             max-width: 100% !important;
             box-sizing: border-box !important;
-            border-radius: 10px !important;
+            border-radius: 9px !important;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif !important;
             font-size: 11.5px !important;
-            font-weight: 700 !important;
+            font-weight: 600 !important;
             line-height: 1.35 !important;
             letter-spacing: 0.01em !important;
             color: ${theme.textBright} !important;
             background: #11131a !important;
             background-image: linear-gradient(135deg, ${theme.bgSoft}, rgba(17, 19, 26, 0.96)) !important;
             border: 1px solid ${theme.border} !important;
-            box-shadow: ${theme.glow}, 0 4px 12px rgba(0, 0, 0, 0.35) !important;
+            box-shadow: ${theme.glow}, 0 2px 8px rgba(0, 0, 0, 0.35) !important;
             text-decoration: none !important;
             vertical-align: middle !important;
             cursor: pointer !important;
-            z-index: 9999 !important;
             white-space: normal !important;
             word-break: break-word !important;
+            transition: transform 0.15s ease, box-shadow 0.15s ease !important;
         `;
         badge.textContent = text;
-        return badge;
+        badge.addEventListener('mouseenter', () => {
+            badge.style.setProperty('transform', 'translateY(-1px)', 'important');
+            badge.style.setProperty('box-shadow', `${theme.glow}, 0 4px 14px rgba(0, 0, 0, 0.5)`, 'important');
+        });
+        badge.addEventListener('mouseleave', () => {
+            badge.style.setProperty('transform', 'none', 'important');
+            badge.style.setProperty('box-shadow', `${theme.glow}, 0 2px 8px rgba(0, 0, 0, 0.35)`, 'important');
+        });
+
+        wrapper.appendChild(badge);
+        return wrapper;
+    }
+
+    function findBestPriceAnchor(priceElement) {
+        if (!priceElement || !priceElement.parentElement) return priceElement;
+
+        // 1. Look for known outer price container components across supported stores
+        const knownContainer = priceElement.closest(
+            '[data-testid="price-container"], ' +
+            '[data-testid*="price-container"], ' +
+            '[data-test-id*="price-container"], ' +
+            '[data-testid="item-sidebar-price-container"], ' +
+            '[data-testid="item-price"], ' +
+            '[class*="PriceWrapper"], ' +
+            '[class*="ProductPrice"], ' +
+            '[class*="Price-sc"], ' +
+            '[class*="product-price-container"], ' +
+            '[class*="product-box-price"], ' +
+            '[class*="price-box"], ' +
+            '#site-product-price, ' +
+            'pwr-price'
+        );
+        if (knownContainer && knownContainer.parentElement && knownContainer !== document.body && knownContainer !== document.documentElement) {
+            return knownContainer;
+        }
+
+        // 2. Heuristic: if priceElement is an inline node or in a tight horizontal flex-row,
+        // step up towards the block-level row to keep the badge underneath the price digits.
+        let current = priceElement;
+        for (let depth = 0; depth < 3; depth++) {
+            const parent = current.parentElement;
+            if (!parent || parent === document.body || parent === document.documentElement) break;
+
+            const tag = parent.tagName.toLowerCase();
+            if (['main', 'section', 'article', 'form', 'body'].includes(tag)) break;
+
+            const style = window.getComputedStyle(parent);
+            const isRowFlex = style.display.includes('flex') && style.flexDirection.includes('row');
+            const isInline = style.display === 'inline' || style.display === 'inline-block';
+
+            if (isRowFlex || isInline) {
+                current = parent;
+            } else {
+                break;
+            }
+        }
+
+        return current;
     }
 
     function applyOnPagePriceAnnotation(priceElement, verdict, marketProduct, lang = detectLanguage(), includeShipping = false, inStockOnly = false, productInfo = null) {
-        document.querySelectorAll('.ufhpc-inline-price-badge').forEach(el => el.remove());
+        document.querySelectorAll('.ufhpc-inline-price-badge, .ufhpc-inline-price-badge-wrapper').forEach(el => el.remove());
 
         if (!priceElement || !priceElement.isConnected || !verdict) {
             return;
@@ -3512,8 +3585,9 @@
             const qEnc = encodeURIComponent(extractConciseModelQuery(productInfo.name) || productInfo.name || '');
             const unitBadgeText = `⚖️ ${u.formatted}${u.quantityStr ? ` (${u.quantityStr})` : ''} • Vertaa S-kaupat ↗`;
             const unitBadge = createInlineBadgeElement(unitBadgeText, verdict.theme, `https://www.s-kaupat.fi/haku?q=${qEnc}`);
-            if (priceElement.parentNode) {
-                priceElement.insertAdjacentElement('afterend', unitBadge);
+            const unitAnchor = findBestPriceAnchor(priceElement);
+            if (unitAnchor && unitAnchor.parentNode) {
+                unitAnchor.insertAdjacentElement('afterend', unitBadge);
             }
             return;
         }
@@ -3551,8 +3625,9 @@
                 lowestNonClubOffer ? lowestNonClubOffer.store : null
             );
             const clubBadge = createInlineBadgeElement(clubBadgeText, theme, marketProduct?.url);
-            if (clubEl.parentNode) {
-                clubEl.insertAdjacentElement('afterend', clubBadge);
+            const clubAnchor = findBestPriceAnchor(clubEl);
+            if (clubAnchor && clubAnchor.parentNode) {
+                clubAnchor.insertAdjacentElement('afterend', clubBadge);
             }
 
             if (normEl && normEl !== clubEl && normEl.isConnected) {
@@ -3569,8 +3644,9 @@
                         refStore
                     )}`;
                     const normBadge = createInlineBadgeElement(normBadgeText, themes.red, marketProduct?.url);
-                    if (normEl.parentNode) {
-                        normEl.insertAdjacentElement('afterend', normBadge);
+                    const normAnchor = findBestPriceAnchor(normEl);
+                    if (normAnchor && normAnchor.parentNode) {
+                        normAnchor.insertAdjacentElement('afterend', normBadge);
                     }
                 }
             }
@@ -3623,8 +3699,9 @@
         }
 
         const badge = createInlineBadgeElement(badgeText, theme, marketProduct?.url);
-        if (priceElement.parentNode) {
-            priceElement.insertAdjacentElement('afterend', badge);
+        const anchor = findBestPriceAnchor(priceElement);
+        if (anchor && anchor.parentNode) {
+            anchor.insertAdjacentElement('afterend', badge);
         }
     }
 
@@ -6939,7 +7016,7 @@
         }
         const existingRoot = document.getElementById('ufhpc-root');
         if (existingRoot) existingRoot.remove();
-        document.querySelectorAll('.ufhpc-inline-price-badge').forEach(el => el.remove());
+        document.querySelectorAll('.ufhpc-inline-price-badge, .ufhpc-inline-price-badge-wrapper').forEach(el => el.remove());
     }
 
     async function runPriceChecker(retryCount = 0) {
