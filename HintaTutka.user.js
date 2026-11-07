@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         HintaTutka
 // @namespace    https://github.com/FIMARx/hintatutka
-// @version      8.1
-// @description  Suomen älykkäin hintatutka (v8.1 Shield): 0-CLS hintamerkintä, taustavälilehtien älytauko, jaettu GM-välimuisti, Cloudflare/429-suoja, etäpäivitettävät selektorit, monikielinen (FI/EN/SV) haku & 81 kauppaa
+// @version      9.0
+// @description  Suomen älykkäin hintatutka (v9.0): EU/Saksa ALV+toimitus -vertailu, Flip-arbitraasi (Tori/Vinted/Huuto), Klubi-totuusmittari, kausiennuste & 81 kauppaa
 // @author       FIMARx
 // @homepageURL  https://github.com/FIMARx/hintatutka
 // @supportURL   https://github.com/FIMARx/hintatutka/issues
@@ -130,11 +130,15 @@
 // @connect      sik.search.blue.cdtapps.com
 // @connect      ruohonjuuri.fi
 // @connect      www.ruohonjuuri.fi
+// @connect      www.amazon.de
+// @connect      amazon.de
+// @connect      workers.dev
 // @connect      raw.githubusercontent.com
 // @connect      api.github.com
 // @grant        GM_xmlhttpRequest
 // @grant        GM_setValue
 // @grant        GM_getValue
+// @grant        GM_registerMenuCommand
 // @run-at       document-idle
 // ==/UserScript==
 
@@ -144,7 +148,7 @@
     // =========================================================================
     // CONFIGURATION & THRESHOLDS
     // =========================================================================
-    const SCRIPT_VERSION = '8.1';
+    const SCRIPT_VERSION = '9.0';
     const GITHUB_RAW_SCRIPT_URL = 'https://raw.githubusercontent.com/FIMARx/hintatutka/main/HintaTutka.user.js';
     const GITHUB_SELECTORS_URL = 'https://raw.githubusercontent.com/FIMARx/hintatutka/main/selectors.json';
     const GITHUB_API_CONTENTS_URL = 'https://api.github.com/repos/FIMARx/hintatutka/contents/HintaTutka.user.js';
@@ -164,6 +168,7 @@
         storageKeySharedCache: 'ufhpc_shared_cache_v81',
         storageKeyCircuitBreakers: 'ufhpc_circuit_breakers_v81',
         storageKeyHostPacing: 'ufhpc_host_pacing_v81',
+        storageKeyProxyUrl: 'ufhpc_proxy_url_v90',
         storageKeyObservedOffers: 'ufhpc_observed_offers_v70',
         storageKeyCollapsed: 'ufhpc_sidebar_collapsed_v55',
         storageKeyExpanded: 'ufhpc_sidebar_expanded_v55',
@@ -848,6 +853,8 @@
             .replace(/,–/g, ',00')
             .replace(/\s+/g, ' ')
             .trim()
+            // Normalize US/UK comma-thousands with dot-cents (e.g. Amazon.de en-GB "€1,181.28" -> "1181,28")
+            .replace(/\b(\d{1,3}),(\d{3})\.(\d{2})\b/g, '$1$2,$3')
             // Collapse spaces around comma/dot decimals (e.g. Clas Ohlson / IKEA split spans "94 , 90" -> "94,90")
             .replace(/(\d)\s*([,.])\s*(\d{2})(?!\d)/g, '$1$2$3')
             // Handle superscript/split cents separated by space (e.g. Power "270 30", HobbyHall "819 00", "1 295 39")
@@ -2346,6 +2353,99 @@
         });
     }
 
+    function getConfiguredProxyUrl() {
+        try {
+            const raw = (typeof GM_getValue === 'function' ? GM_getValue(CONFIG.storageKeyProxyUrl, '') : '')
+                || localStorage.getItem(CONFIG.storageKeyProxyUrl)
+                || '';
+            const trimmed = String(raw || '').trim().replace(/\/proxy\/?$/i, '').replace(/\/+$/, '');
+            if (trimmed && /^https?:\/\/[a-z0-9.-]+(?::\d+)?(?:\/[^\s]*)?$/i.test(trimmed)) {
+                return trimmed;
+            }
+        } catch (_) {}
+        return '';
+    }
+
+    function setConfiguredProxyUrl(rawUrl) {
+        const cleaned = String(rawUrl || '').trim().replace(/\/proxy\/?$/i, '').replace(/\/+$/, '');
+        const valid = cleaned && /^https?:\/\/[a-z0-9.-]+(?::\d+)?(?:\/[^\s]*)?$/i.test(cleaned) ? cleaned : '';
+        try {
+            if (typeof GM_setValue === 'function') GM_setValue(CONFIG.storageKeyProxyUrl, valid);
+        } catch (_) {}
+        try {
+            if (valid) localStorage.setItem(CONFIG.storageKeyProxyUrl, valid);
+            else localStorage.removeItem(CONFIG.storageKeyProxyUrl);
+        } catch (_) {}
+        return valid;
+    }
+
+    if (typeof GM_registerMenuCommand === 'function') {
+        try {
+            GM_registerMenuCommand('☁️ HintaTutka: Serverless Proxy URL (Cloudflare Worker)', () => {
+                const current = getConfiguredProxyUrl();
+                const input = window.prompt(
+                    'Syötä oma Cloudflare Worker -välityspalvelimen osoite (esim. https://hintatutka-proxy.oma-tili.workers.dev).\nJätä tyhjäksi käyttääksesi suoraa yhteyttä:',
+                    current
+                );
+                if (input === null) return;
+                const saved = setConfiguredProxyUrl(input);
+                window.alert(saved
+                    ? `☁️ HintaTutka Serverless Proxy käytössä:\n${saved}`
+                    : '⚡ HintaTutka käyttää nyt suoraa yhteyttä (ei proxyä).');
+            });
+        } catch (_) {}
+    }
+
+    function executeRawGmGet(requestUrl, accept, effectiveTimeout, targetHost, isProxyHop = false) {
+        return new Promise((resolve, reject) => {
+            GM_xmlhttpRequest({
+                method: 'GET',
+                url: requestUrl,
+                headers: {
+                    'Accept': accept,
+                    'Accept-Language': 'fi-FI,fi;q=0.9,en;q=0.8'
+                },
+                timeout: effectiveTimeout,
+                onload: (res) => {
+                    const challenge = detectAntiBotChallenge(res.status, res.responseText, res.responseHeaders);
+                    if (challenge.blocked) {
+                        if (!isProxyHop) tripHostCircuitBreaker(targetHost, challenge.cooldownMs, challenge.reason);
+                        reject(new Error(`AntiBot:${challenge.reason}`));
+                        return;
+                    }
+                    if (!isProxyHop) {
+                        if (res.status === 403 && targetHost) {
+                            const prev403 = (hostConsecutive403.get(targetHost) || 0) + 1;
+                            hostConsecutive403.set(targetHost, prev403);
+                            if (prev403 >= 2) {
+                                tripHostCircuitBreaker(targetHost, 5 * 60 * 1000, 'repeated_403');
+                            }
+                        } else if (targetHost && res.status >= 200 && res.status < 300) {
+                            hostConsecutive403.delete(targetHost);
+                        }
+                    }
+
+                    if (res.status >= 200 && res.status < 400) {
+                        const headerFinalMatch = String(res.responseHeaders || '').match(/x-final-url:\s*([^\r\n]+)/i);
+                        const resolvedFinalUrl = headerFinalMatch
+                            ? headerFinalMatch[1].trim()
+                            : (isProxyHop ? null : (res.finalUrl || requestUrl));
+                        resolve({
+                            text: res.responseText,
+                            finalUrl: resolvedFinalUrl || requestUrl,
+                            status: res.status,
+                            viaProxy: isProxyHop
+                        });
+                    } else {
+                        reject(new Error(`HTTP ${res.status}`));
+                    }
+                },
+                onerror: () => reject(new Error('Network error')),
+                ontimeout: () => reject(new Error('Timeout'))
+            });
+        });
+    }
+
     function gmFetch(url, acceptOrOpts = 'text/html,application/xhtml+xml,application/json', timeoutMs = 8500) {
         let accept = 'text/html,application/xhtml+xml,application/json';
         let effectiveTimeout = timeoutMs;
@@ -2358,7 +2458,16 @@
         }
 
         const targetHost = extractNormalizedHost(url);
-        if (targetHost && isHostCircuitOpen(targetHost)) {
+        const proxyBase = getConfiguredProxyUrl();
+        const shouldUseProxy = Boolean(
+            proxyBase &&
+            targetHost &&
+            !targetHost.endsWith('githubusercontent.com') &&
+            !targetHost.endsWith('github.com') &&
+            !url.startsWith(proxyBase)
+        );
+
+        if (!shouldUseProxy && targetHost && isHostCircuitOpen(targetHost)) {
             return Promise.reject(new Error(`CircuitOpen:${targetHost}`));
         }
 
@@ -2372,45 +2481,20 @@
             }
             const releaseSlot = await acquirePoliteHostSlot(targetHost);
             try {
+                if (shouldUseProxy) {
+                    try {
+                        const proxiedUrl = `${proxyBase}/proxy?url=${encodeURIComponent(url)}`;
+                        const res = await executeRawGmGet(proxiedUrl, accept, effectiveTimeout, targetHost, true);
+                        if (!res.finalUrl || res.finalUrl === proxiedUrl) res.finalUrl = url;
+                        return res;
+                    } catch (_) {
+                        // Automatic resilient fallback to direct client fetch if serverless proxy is unreachable or declines
+                    }
+                }
                 if (targetHost && isHostCircuitOpen(targetHost)) {
                     throw new Error(`CircuitOpen:${targetHost}`);
                 }
-                return await new Promise((resolve, reject) => {
-                    GM_xmlhttpRequest({
-                        method: 'GET',
-                        url,
-                        headers: {
-                            'Accept': accept,
-                            'Accept-Language': 'fi-FI,fi;q=0.9,en;q=0.8'
-                        },
-                        timeout: effectiveTimeout,
-                        onload: (res) => {
-                            const challenge = detectAntiBotChallenge(res.status, res.responseText, res.responseHeaders);
-                            if (challenge.blocked) {
-                                tripHostCircuitBreaker(targetHost, challenge.cooldownMs, challenge.reason);
-                                reject(new Error(`AntiBot:${challenge.reason}`));
-                                return;
-                            }
-                            if (res.status === 403 && targetHost) {
-                                const prev403 = (hostConsecutive403.get(targetHost) || 0) + 1;
-                                hostConsecutive403.set(targetHost, prev403);
-                                if (prev403 >= 2) {
-                                    tripHostCircuitBreaker(targetHost, 5 * 60 * 1000, 'repeated_403');
-                                }
-                            } else if (targetHost && res.status >= 200 && res.status < 300) {
-                                hostConsecutive403.delete(targetHost);
-                            }
-
-                            if (res.status >= 200 && res.status < 400) {
-                                resolve({ text: res.responseText, finalUrl: res.finalUrl || url, status: res.status });
-                            } else {
-                                reject(new Error(`HTTP ${res.status}`));
-                            }
-                        },
-                        onerror: () => reject(new Error('Network error')),
-                        ontimeout: () => reject(new Error('Timeout'))
-                    });
-                });
+                return await executeRawGmGet(url, accept, effectiveTimeout, targetHost, false);
             } finally {
                 releaseSlot();
             }
@@ -4453,8 +4537,9 @@
             const shouldQueryHintaseuranta = effectiveCategory !== 'grocery' &&
                 !host.includes('hintaseuranta.fi') &&
                 (!marketResult || (marketResult.product?.offers?.length || 0) < 3);
+            const shouldQueryEuCrossBorder = effectiveCategory !== 'furniture' && effectiveCategory !== 'grocery';
 
-            const [directOffers, hsResult, toriData] = await Promise.all([
+            const [directOffers, hsResult, toriData, euCrossBorder] = await Promise.all([
                 shouldQueryDirectRetailers
                     ? fetchDirectFinnishRetailers(productInfo, marketResult?.product, customQuery).catch(() => [])
                     : Promise.resolve([]),
@@ -4465,7 +4550,10 @@
                     customQuery ? { name: customQuery, isUsedSite: true, category: effectiveCategory } : productInfo,
                     marketResult?.product,
                     customQuery
-                ).catch(() => ({ query: '', items: [], stats: null }))
+                ).catch(() => ({ query: '', items: [], stats: null })),
+                shouldQueryEuCrossBorder
+                    ? fetchAmazonDeCrossBorder(productInfo, marketResult?.product, customQuery, effectiveCategory).catch(() => null)
+                    : Promise.resolve(null)
             ]);
 
             // Merge Hintaseuranta result if Hinta.fi missed (e.g. outdoor/sports gear) or had < 3 stores
@@ -4586,7 +4674,7 @@
                 }
             }
 
-            if (!marketResult && (!toriData || toriData.items.length === 0)) {
+            if (!marketResult && (!toriData || toriData.items.length === 0) && !euCrossBorder) {
                 return null;
             }
 
@@ -4595,6 +4683,7 @@
                 product: marketResult?.product || null,
                 alternatives: marketResult?.alternatives || [],
                 tori: toriData,
+                euCrossBorder: euCrossBorder || null,
                 isLearnedMatch: Boolean(marketResult?.isLearnedMatch || isLearned),
                 stage2Deferred: false
             };
@@ -4608,6 +4697,7 @@
                 product: marketResult.product,
                 alternatives: marketResult.alternatives || [],
                 tori: { query: '', items: [], stats: null },
+                euCrossBorder: null,
                 isLearnedMatch: Boolean(marketResult.isLearnedMatch || isLearned),
                 isPartialStage: true,
                 stage2Deferred: true,
@@ -4623,6 +4713,7 @@
                     product: marketResult.product,
                     alternatives: marketResult.alternatives || [],
                     tori: { query: '', items: [], stats: null },
+                    euCrossBorder: null,
                     isLearnedMatch: Boolean(marketResult.isLearnedMatch || isLearned),
                     isPartialStage: true
                 });
@@ -4630,6 +4721,490 @@
         }
 
         return await runStage2Enrichment();
+    }
+
+    // =========================================================================
+    // CROSS-BORDER EU SHIPPING & FINNISH VAT LANDED-COST OPTIMIZER (AMAZON.DE + EU HUBS)
+    // =========================================================================
+    function calculateFinnishLandedCost(dePriceEur, category = 'general') {
+        if (!Number.isFinite(dePriceEur) || dePriceEur <= 0) return null;
+        // Germany standard MwSt 19% -> Finland standard ALV 25.5% (Books: DE 7% -> FI 14%)
+        const isBooks = category === 'books';
+        const deVatPct = isBooks ? 7 : 19;
+        const fiVatPct = isBooks ? 14 : 25.5;
+        const vatMultiplier = (1 + fiVatPct / 100) / (1 + deVatPct / 100);
+        const fiVatPrice = Math.round(dePriceEur * vatMultiplier * 100) / 100;
+        const vatDiffEur = Math.round((fiVatPrice - dePriceEur) * 100) / 100;
+        // Amazon.de free standard shipping to Finland on eligible orders >= 99 €
+        const isFreeShipping = dePriceEur >= 99 || fiVatPrice >= 99;
+        const shippingEur = isFreeShipping ? 0 : 10.49;
+        const landedTotalEur = Math.round((fiVatPrice + shippingEur) * 100) / 100;
+
+        return {
+            dePriceEur,
+            fiVatPrice,
+            vatDiffEur,
+            shippingEur,
+            isFreeShipping,
+            landedTotalEur,
+            deVatPct,
+            fiVatPct
+        };
+    }
+
+    function buildEuHubLinks(searchQuery, ean = '') {
+        const cleanEan = (ean && isValidGs1Barcode(ean)) ? String(ean).trim() : '';
+        const effectiveQuery = cleanEan || String(searchQuery || '').trim();
+        const encoded = encodeURIComponent(effectiveQuery);
+        return {
+            query: effectiveQuery,
+            amazonDeUrl: `https://www.amazon.de/s?k=${encoded}&language=en_GB`,
+            geizhalsUrl: `https://geizhals.eu/?fs=${encoded}&hloc=de&hloc=at&hloc=pl`,
+            idealoUrl: `https://www.idealo.de/preisvergleich/MainSearchProductCategory.html?q=${encoded}`
+        };
+    }
+
+    function decodeBasicHtmlEntities(rawStr) {
+        return String(rawStr || '')
+            .replace(/&amp;/gi, '&')
+            .replace(/&quot;/gi, '"')
+            .replace(/&#39;|&apos;/gi, "'")
+            .replace(/&euro;/gi, '€')
+            .replace(/&nbsp;/gi, ' ')
+            .replace(/&lt;/gi, '<')
+            .replace(/&gt;/gi, '>')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    function parseAmazonDeSearchHtml(html, targetNameForScoring = '', isEanSearch = false, referencePrice = null, category = 'general') {
+        if (!html || typeof html !== 'string' || html.length < 2500) return null;
+        const blocks = html.split('data-component-type="s-search-result"').slice(1, 15);
+        if (blocks.length === 0) return null;
+
+        const targetHasBundle = /\b(?:bundle|kit|tuplapakkaus|2-pack|\+)\b/i.test(targetNameForScoring || '');
+        const candidates = [];
+
+        for (const block of blocks) {
+            const asinMatch = block.match(/data-asin="([A-Z0-9]{10})"/i)
+                || block.match(/\/dp\/([A-Z0-9]{10})(?:[/?#"]|$)/i);
+            if (!asinMatch) continue;
+            const asin = asinMatch[1];
+
+            // Skip paid sponsored ad slots so unrelated ad bids never pollute EAN/model lookups
+            if (/puis-sponsored-label|s-sponsored-label-info-icon|sp-sponsored-result/i.test(block.slice(0, 4000))) {
+                continue;
+            }
+
+            const h2Match = block.match(/<h2[^>]*>([\s\S]*?)<\/h2>/i);
+            if (!h2Match) continue;
+            const title = decodeBasicHtmlEntities(h2Match[1].replace(/<[^>]+>/g, ' '));
+            if (!title || title.length < 5) continue;
+
+            // Reject multi-component upgrade bundles unless target itself is a bundle
+            if (!targetHasBundle && /\b(?:upgrade\s*bundle|aufrüstkit|bundle\s*mit|cpu\s*\+\s*mainboard)\b/i.test(title)) {
+                continue;
+            }
+
+            // Strip strikethrough "Was: / List Price:" blocks BEFORE extracting active .a-offscreen price
+            const withoutStrike = block
+                .replace(/<span[^>]*data-a-strike="true"[^>]*>[\s\S]*?<\/span>\s*<\/span>/gi, '')
+                .replace(/<span[^>]*class="[^"]*\ba-text-price\b[^"]*"[^>]*>[\s\S]*?<\/span>/gi, '');
+
+            const offscreenMatch = withoutStrike.match(/class="a-offscreen"[^>]*>([^<]+)</i);
+            let dePrice = offscreenMatch ? parsePriceNumber(decodeBasicHtmlEntities(offscreenMatch[1])) : null;
+            if (!dePrice) {
+                const wholeMatch = withoutStrike.match(/class="a-price-whole"[^>]*>([\d.,\s]+)/i);
+                const fracMatch = withoutStrike.match(/class="a-price-fraction"[^>]*>(\d{2})/i);
+                if (wholeMatch) {
+                    const wholeClean = wholeMatch[1].replace(/[^\d]/g, '');
+                    const fracClean = fracMatch ? fracMatch[1] : '00';
+                    dePrice = parseFloat(`${wholeClean}.${fracClean}`);
+                }
+            }
+            if (!Number.isFinite(dePrice) || dePrice < 2) continue;
+
+            // Price sanity guard against replacement cables/cases or 3x multi-packs
+            if (referencePrice && referencePrice > 18) {
+                if (dePrice < referencePrice * 0.28 || dePrice > referencePrice * 2.35) continue;
+            }
+
+            let matchScore = isEanSearch ? 75 : 0;
+            if (targetNameForScoring) {
+                const compat = evaluateSpecCompatibility(targetNameForScoring, title);
+                if (compat.hasHardConflict) continue;
+                matchScore += (compat.bonusScore || 0);
+
+                if (!isEanSearch && !doesItemMatchQueryWords(title, targetNameForScoring)) {
+                    continue;
+                }
+                if (doesItemMatchQueryWords(title, targetNameForScoring)) {
+                    matchScore += 35;
+                }
+            }
+
+            const landed = calculateFinnishLandedCost(dePrice, category);
+            if (!landed) continue;
+
+            candidates.push({
+                asin,
+                title,
+                store: 'Amazon.de',
+                url: `https://www.amazon.de/dp/${asin}?language=en_GB`,
+                matchScore,
+                matchedByEan: Boolean(isEanSearch),
+                ...landed
+            });
+        }
+
+        if (candidates.length === 0) return null;
+        candidates.sort((a, b) => {
+            if (Math.abs(b.matchScore - a.matchScore) >= 20) return b.matchScore - a.matchScore;
+            return a.landedTotalEur - b.landedTotalEur;
+        });
+        return candidates[0];
+    }
+
+    async function fetchAmazonDeCrossBorder(productInfo, marketProduct = null, customQuery = null, category = 'general') {
+        const targetTitle = customQuery || marketProduct?.title || productInfo?.name || '';
+        const validEan = (!customQuery && productInfo?.ean && isValidGs1Barcode(productInfo.ean))
+            ? String(productInfo.ean).trim()
+            : '';
+        const conciseModel = customQuery
+            ? customQuery.trim()
+            : (extractConciseModelQuery(targetTitle) || '');
+
+        const referencePrice = marketProduct?.lowestPrice || productInfo?.currentPrice || null;
+        const queries = [];
+        if (validEan) queries.push({ type: 'EAN', value: validEan, isEan: true });
+        if (conciseModel && conciseModel.length >= 4 && conciseModel !== validEan) {
+            queries.push({ type: 'Model', value: conciseModel, isEan: false });
+        }
+
+        if (queries.length === 0) return null;
+
+        const cacheKey = `eu_amzde_${validEan || conciseModel.toLowerCase()}`;
+        const cached = getCached(cacheKey);
+        if (cached) return cached.none ? null : cached;
+
+        for (const q of queries) {
+            try {
+                const searchUrl = `https://www.amazon.de/s?k=${encodeURIComponent(q.value)}&language=en_GB`;
+                const { text } = await gmFetch(searchUrl, 'text/html,application/xhtml+xml', 6500);
+                const best = parseAmazonDeSearchHtml(text, targetTitle, q.isEan, referencePrice, category);
+                if (best) {
+                    setCached(cacheKey, best);
+                    return best;
+                }
+            } catch (_) {
+                // Continue or gracefully fall back to manual 1-click EU hub buttons
+            }
+        }
+
+        setCached(cacheKey, { none: true });
+        return null;
+    }
+
+    // =========================================================================
+    // ARBITRAGE & FLIPPING ENGINE + CLUB TRUTH BENCHMARKING + SEASONAL FORECAST
+    // =========================================================================
+    function evaluateItemFlipArbitrage(itemPrice, newLowestPrice = null, usedMedianPrice = null) {
+        if (!Number.isFinite(itemPrice) || itemPrice < 15) return null;
+
+        let resaleTarget = null;
+        if (Number.isFinite(usedMedianPrice) && usedMedianPrice > 0 && Number.isFinite(newLowestPrice) && newLowestPrice > 0) {
+            resaleTarget = Math.min(usedMedianPrice, newLowestPrice * 0.78);
+        } else if (Number.isFinite(usedMedianPrice) && usedMedianPrice > 0) {
+            resaleTarget = usedMedianPrice * 0.95;
+        } else if (Number.isFinite(newLowestPrice) && newLowestPrice > 0) {
+            resaleTarget = newLowestPrice * 0.72;
+        }
+        if (!resaleTarget || resaleTarget <= itemPrice) return null;
+
+        // Account for ToriDiili / Vinted buyer protection & Posti/Matkahuolto shipping (~5%, min 8 €)
+        const frictionEur = Math.max(8, Math.round(itemPrice * 0.05));
+        const netProfitEur = Math.round(resaleTarget - itemPrice - frictionEur);
+        const roiPct = Math.round((netProfitEur / (itemPrice + frictionEur)) * 100);
+        const isFlipOpportunity = netProfitEur >= 22 && roiPct >= 22 && itemPrice <= resaleTarget * 0.76;
+
+        return {
+            isFlipOpportunity,
+            netProfitEur,
+            roiPct,
+            resaleTarget: Math.round(resaleTarget),
+            frictionEur
+        };
+    }
+
+    function findBestFlipArbitrageListing(usedItems, newLowestPrice = null, usedMedianPrice = null) {
+        if (!Array.isArray(usedItems) || usedItems.length === 0) return null;
+        let best = null;
+        for (const item of usedItems) {
+            if (!item || item.isCompany) continue;
+            const arb = evaluateItemFlipArbitrage(item.price, newLowestPrice, usedMedianPrice);
+            if (arb && arb.isFlipOpportunity) {
+                if (!best || arb.netProfitEur > best.arb.netProfitEur) {
+                    best = { item, arb };
+                }
+            }
+        }
+        return best;
+    }
+
+    function evaluateClubBenchmark(clubOffer, lowestNonClubPrice = null, lowestNonClubStore = null, historyAtlPrice = null, lang = 'fi') {
+        if (!clubOffer || !Number.isFinite(clubOffer.clubPrice) || !Number.isFinite(clubOffer.normalPrice)) return null;
+        if (clubOffer.normalPrice <= clubOffer.clubPrice + 0.5) return null;
+
+        const clubPrice = clubOffer.clubPrice;
+        const normalPrice = clubOffer.normalPrice;
+        const clubName = clubOffer.clubLabel || (lang === 'en' ? 'Club' : 'Klubi');
+        const advertisedSaveEur = normalPrice - clubPrice;
+        const openStore = lowestNonClubStore || 'Hinta.fi';
+
+        if (Number.isFinite(lowestNonClubPrice) && lowestNonClubPrice > 0) {
+            const realSavingsVsMarket = lowestNonClubPrice - clubPrice;
+            const normalInflationPct = ((normalPrice - lowestNonClubPrice) / lowestNonClubPrice) * 100;
+
+            // 1. Fake / Illusory Club Deal: Open non-club competitor already matches or beats the "Club" price!
+            if (realSavingsVsMarket <= 0.50) {
+                const cheaperDiff = clubPrice - lowestNonClubPrice;
+                return {
+                    tier: 'fake',
+                    icon: '🎭',
+                    badge: lang === 'en' ? 'ILLUSORY CLUB DEAL' : 'NÄENNÄISALE',
+                    summary: cheaperDiff > 0.50
+                        ? (lang === 'en'
+                            ? `${openStore} sells this WITHOUT membership for ${formatEur(lowestNonClubPrice)} (${formatEur(cheaperDiff)} cheaper than ${clubName}!).`
+                            : `${openStore} myy tuotetta ILMAN jäsenyyttä hintaan ${formatEur(lowestNonClubPrice)} (${formatEur(cheaperDiff)} halvemmalla kuin ${clubName}!).`)
+                        : (lang === 'en'
+                            ? `${openStore} matches ${formatEur(lowestNonClubPrice)} without any loyalty card ("Normal ${formatEur(normalPrice)}" is inflated).`
+                            : `${openStore} myy samaan hintaan ${formatEur(lowestNonClubPrice)} ilman klubikorttia ("Norm. ${formatEur(normalPrice)}" on korotettu vertailuhinta).`),
+                    realSavingsEur: realSavingsVsMarket
+                };
+            }
+
+            // 2. Inflated Reference Price: Club price beats market slightly, but advertised "Normal" price is >8% above open market
+            if (normalInflationPct >= 8.5) {
+                return {
+                    tier: 'inflated_anchor',
+                    icon: '⚠️',
+                    badge: lang === 'en' ? 'INFLATED NORMAL PRICE' : 'KOROTETTU NORMAALIHINTA',
+                    summary: lang === 'en'
+                        ? `Advertised -${formatEur(advertisedSaveEur, 0)} off "${formatEur(normalPrice)}", but true savings vs. ${openStore} (${formatEur(lowestNonClubPrice)}) is -${formatEur(realSavingsVsMarket)}.`
+                        : `Mainostettu etu -${formatEur(advertisedSaveEur, 0)}, mutta todellinen säästö vs. ${openStore} (${formatEur(lowestNonClubPrice)}) on -${formatEur(realSavingsVsMarket)}.`,
+                    realSavingsEur: realSavingsVsMarket
+                };
+            }
+
+            // 3. True Market-Low / All-Time-Low Club Deal
+            const isAtOrBelowAtl = !historyAtlPrice || clubPrice <= historyAtlPrice * 1.02;
+            if (isAtOrBelowAtl && (realSavingsVsMarket >= 5 || (realSavingsVsMarket / lowestNonClubPrice) >= 0.03)) {
+                return {
+                    tier: 'true_atl',
+                    icon: '🏆',
+                    badge: lang === 'en' ? 'TRUE CLUB MARKET LOW' : 'AITO KLUBIPOHJA',
+                    summary: lang === 'en'
+                        ? `Genuine member low! Saves -${formatEur(realSavingsVsMarket)} vs. best non-club store (${openStore} ${formatEur(lowestNonClubPrice)}).`
+                        : `Aidosti markkinoiden halvin! Todellinen klubisäästö -${formatEur(realSavingsVsMarket)} vs. ${openStore} (${formatEur(lowestNonClubPrice)}).`,
+                    realSavingsEur: realSavingsVsMarket
+                };
+            }
+
+            // 4. Genuine Club Discount
+            return {
+                tier: 'genuine',
+                icon: '✓',
+                badge: lang === 'en' ? 'GENUINE CLUB SAVING' : 'AITO KLUBIETU',
+                summary: lang === 'en'
+                    ? `Saves -${formatEur(realSavingsVsMarket)} below best non-club store (${openStore} ${formatEur(lowestNonClubPrice)}).`
+                    : `Säästää aidosti -${formatEur(realSavingsVsMarket)} verrattuna halvimpaan ei-klubikauppaan (${openStore} ${formatEur(lowestNonClubPrice)}).`,
+                realSavingsEur: realSavingsVsMarket
+            };
+        }
+
+        if (Number.isFinite(historyAtlPrice) && historyAtlPrice > 0 && clubPrice <= historyAtlPrice * 1.02) {
+            return {
+                tier: 'true_atl',
+                icon: '🏆',
+                badge: lang === 'en' ? 'MATCHES ALL-TIME LOW' : 'SIVUAA HINTAPOHJAA',
+                summary: lang === 'en'
+                    ? `${clubName} price matches historical All-Time Low (${formatEur(historyAtlPrice)}).`
+                    : `${clubName}-hinta on tuotteen historiallisella pohjatasolla (${formatEur(historyAtlPrice)}).`,
+                realSavingsEur: advertisedSaveEur
+            };
+        }
+        return null;
+    }
+
+    const FINNISH_SEASONAL_SALE_EVENTS = [
+        { id: 'tammiale', month: 1, day: 2, durationDays: 16, avgDropPct: 12, fi: 'Tammiale', en: 'January Clearance (Tammiale)' },
+        { id: 'kevat_hp', month: 4, day: 2, durationDays: 6, avgDropPct: 10, fi: 'Kevään Hullut Päivät', en: 'Spring Hullut Päivät' },
+        { id: 'kesa_ale', month: 6, day: 22, durationDays: 14, avgDropPct: 13, fi: 'Juhannus- & Kesäale', en: 'Midsummer & Summer Sale' },
+        { id: 'back_to_school', month: 8, day: 10, durationDays: 14, avgDropPct: 9, fi: 'Back to School -kampanjat', en: 'Back to School Deals' },
+        { id: 'syksy_hp', month: 10, day: 1, durationDays: 6, avgDropPct: 10, fi: 'Syksyn Hullut Päivät', en: 'Autumn Hullut Päivät' },
+        { id: 'singles_day', month: 11, day: 11, durationDays: 2, avgDropPct: 11, fi: "Singles' Day (11.11.)", en: "Singles' Day (11.11)" },
+        { id: 'black_friday', month: 11, day: 22, durationDays: 9, avgDropPct: 16, fi: 'Black Week & Black Friday', en: 'Black Week & Black Friday' },
+        { id: 'valipaiva', month: 12, day: 25, durationDays: 7, avgDropPct: 14, fi: 'Joulun Välipäiväale', en: 'Post-Christmas Boxing Sale' }
+    ];
+
+    function getUpcomingFinnishSaleEvent(nowDate = new Date()) {
+        const nowMs = nowDate.getTime();
+        const year = nowDate.getFullYear();
+        let bestUpcoming = null;
+
+        for (const yr of [year, year + 1]) {
+            for (const ev of FINNISH_SEASONAL_SALE_EVENTS) {
+                const startMs = new Date(yr, ev.month - 1, ev.day, 0, 0, 0).getTime();
+                const endMs = startMs + ev.durationDays * 86400000;
+                if (nowMs >= startMs && nowMs <= endMs) {
+                    return {
+                        ...ev,
+                        isActiveNow: true,
+                        daysUntil: 0,
+                        daysRemaining: Math.max(1, Math.ceil((endMs - nowMs) / 86400000))
+                    };
+                }
+                if (startMs > nowMs) {
+                    const daysUntil = Math.ceil((startMs - nowMs) / 86400000);
+                    if (!bestUpcoming || daysUntil < bestUpcoming.daysUntil) {
+                        bestUpcoming = {
+                            ...ev,
+                            isActiveNow: false,
+                            daysUntil,
+                            daysRemaining: ev.durationDays
+                        };
+                    }
+                }
+            }
+        }
+        return bestUpcoming;
+    }
+
+    function computePredictivePriceAnalytics(history, currentBestPrice, lang = 'fi', nowDate = new Date()) {
+        const pts = history?.points;
+        if (!Array.isArray(pts) || pts.length < 3) return null;
+
+        const prices = pts.map(p => p.price).filter(v => Number.isFinite(v) && v > 0);
+        if (prices.length < 3) return null;
+
+        const effectiveCurrent = Number.isFinite(currentBestPrice) && currentBestPrice > 0
+            ? currentBestPrice
+            : prices[prices.length - 1];
+        const atlPrice = Math.min(...prices, effectiveCurrent);
+        const athPrice = Math.max(...prices, effectiveCurrent);
+        const avgPrice = prices.reduce((acc, v) => acc + v, 0) / prices.length;
+        const span = Math.max(1, athPrice - atlPrice);
+        const rangePositionPct = Math.round(((effectiveCurrent - atlPrice) / span) * 100);
+        const pctAboveAtl = ((effectiveCurrent - atlPrice) / atlPrice) * 100;
+
+        // Weighted linear regression over the 6 most recent history intervals to detect price momentum
+        const recent = prices.slice(-6);
+        const n = recent.length;
+        let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+        for (let i = 0; i < n; i++) {
+            sumX += i;
+            sumY += recent[i];
+            sumXY += i * recent[i];
+            sumXX += i * i;
+        }
+        const denom = (n * sumXX - sumX * sumX) || 1;
+        const slopePerStep = (n * sumXY - sumX * sumY) / denom;
+        const recentMean = sumY / n;
+        const trendPct = recentMean > 0 ? ((slopePerStep * (n - 1)) / recentMean) * 100 : 0;
+        const trendDir = trendPct <= -2.2 ? 'falling' : (trendPct >= 2.2 ? 'rising' : 'stable');
+        const trendLabel = lang === 'en'
+            ? (trendDir === 'falling' ? '📉 Falling trend' : (trendDir === 'rising' ? '📈 Rising trend' : '➡️ Stable trend'))
+            : (trendDir === 'falling' ? '📉 Laskeva trendi' : (trendDir === 'rising' ? '📈 Nouseva trendi' : '➡️ Vakaa trendi'));
+
+        const saleEvent = getUpcomingFinnishSaleEvent(nowDate);
+        const saleName = saleEvent ? (lang === 'en' ? saleEvent.en : saleEvent.fi) : '';
+
+        // 1. At or within 3% / 4 € of All-Time Low -> Strong BUY NOW signal
+        if (pctAboveAtl <= 3.0 || (effectiveCurrent - atlPrice) <= 4.0) {
+            return {
+                action: 'buy_now',
+                icon: '🟢',
+                badge: lang === 'en' ? 'BUY NOW • AT HISTORICAL LOW' : 'OSTA NYT • LÄHELLÄ HINTAPOHJAA',
+                headline: saleEvent?.isActiveNow
+                    ? (lang === 'en'
+                        ? `${saleName} is live and this item is within ${pctAboveAtl.toFixed(1)}% of its All-Time Low (${formatEur(atlPrice)}).`
+                        : `${saleName} on käynnissä ja hinta on vain +${pctAboveAtl.toFixed(1)}% kaikkien aikojen pohjasta (${formatEur(atlPrice)}).`)
+                    : (lang === 'en'
+                        ? `Trading at the bottom ${Math.max(1, rangePositionPct)}% of its historical range (ATL ${formatEur(atlPrice)}, Avg ${formatEur(avgPrice, 0)}).`
+                        : `Hinta on historiallisen vaihteluvälin pohjalla (ATL ${formatEur(atlPrice)}, keskihinta ${formatEur(avgPrice, 0)}).`),
+                trendDir,
+                trendLabel,
+                atlPrice,
+                athPrice,
+                avgPrice,
+                rangePositionPct,
+                pctAboveAtl,
+                saleEvent
+            };
+        }
+
+        // 2. Upcoming Finnish seasonal sale within <= 30 days & item is > 6.5% above ATL -> WAIT X DAYS
+        if (saleEvent && !saleEvent.isActiveNow && saleEvent.daysUntil <= 30 && pctAboveAtl > 6.5) {
+            const estSaleTarget = Math.max(atlPrice, Math.round(effectiveCurrent * (1 - (saleEvent.avgDropPct * 0.75) / 100)));
+            const waitLabel = saleEvent.daysUntil <= 7
+                ? (lang === 'en' ? `WAIT ${saleEvent.daysUntil} DAYS` : `ODOTA ${saleEvent.daysUntil} PV`)
+                : (lang === 'en' ? `WAIT ~${Math.ceil(saleEvent.daysUntil / 7)} WK` : `ODOTA ~${Math.ceil(saleEvent.daysUntil / 7)} VK`);
+            return {
+                action: 'wait_sale',
+                icon: '⏳',
+                badge: `${waitLabel} • ${saleName.toUpperCase()}`,
+                headline: lang === 'en'
+                    ? `${saleName} starts in ${saleEvent.daysUntil}d (typical category drop ~${saleEvent.avgDropPct}%). Est. target: ~${formatEur(estSaleTarget, 0)} (ATL ${formatEur(atlPrice)}).`
+                    : `${saleName} alkaa ${saleEvent.daysUntil} pv kuluttua (tyypillinen ale ~${saleEvent.avgDropPct}%). Arvioitu kampanjataso: ~${formatEur(estSaleTarget, 0)} (ATL ${formatEur(atlPrice)}).`,
+                trendDir,
+                trendLabel,
+                atlPrice,
+                athPrice,
+                avgPrice,
+                rangePositionPct,
+                pctAboveAtl,
+                estSaleTarget,
+                saleEvent
+            };
+        }
+
+        // 3. Elevated above historical average & >= 15% above ATL -> WAIT FOR DIP
+        if (pctAboveAtl >= 15 && rangePositionPct >= 62 && span >= 12) {
+            return {
+                action: 'wait_dip',
+                icon: '⏳',
+                badge: lang === 'en' ? 'WAIT FOR DIP • ABOVE NORMAL' : 'ODOTA TARJOUSTA • YLI KESKIHINNAN',
+                headline: lang === 'en'
+                    ? `Currently +${pctAboveAtl.toFixed(0)}% above ATL (${formatEur(atlPrice)}) and above historical average (${formatEur(avgPrice, 0)}). Add to ⭐ Watchlist.`
+                    : `Nyt +${pctAboveAtl.toFixed(0)}% yli pohjahinnan (${formatEur(atlPrice)}) ja yli keskihinnan (${formatEur(avgPrice, 0)}). Lisää ⭐ Hintavahtiin.`,
+                trendDir,
+                trendLabel,
+                atlPrice,
+                athPrice,
+                avgPrice,
+                rangePositionPct,
+                pctAboveAtl,
+                saleEvent
+            };
+        }
+
+        // 4. Fair / Stable Mid-Range Price
+        return {
+            action: 'fair_buy',
+            icon: '🔮',
+            badge: lang === 'en' ? 'FAIR TIMING • NORMAL LEVEL' : 'NORMAALI HINTATASO',
+            headline: lang === 'en'
+                ? `Trading near historical average (${formatEur(avgPrice, 0)}, ATL ${formatEur(atlPrice)}).${saleEvent && !saleEvent.isActiveNow && saleEvent.daysUntil <= 45 ? ` Next major sale: ${saleName} in ${saleEvent.daysUntil}d.` : ''}`
+                : `Hinta on lähellä historiallista keskitasoa (${formatEur(avgPrice, 0)}, ATL ${formatEur(atlPrice)}).${saleEvent && !saleEvent.isActiveNow && saleEvent.daysUntil <= 45 ? ` Seuraava alekausi: ${saleName} (${saleEvent.daysUntil} pv).` : ''}`,
+            trendDir,
+            trendLabel,
+            atlPrice,
+            athPrice,
+            avgPrice,
+            rangePositionPct,
+            pctAboveAtl,
+            saleEvent
+        };
     }
 
     // =========================================================================
@@ -4828,11 +5403,12 @@
             return { theme: themes.red, diffEur, diffPct, isUsedSite: true };
         }
 
-        // Special Club / Loyalty Deal Verdict (e.g. HobbyHall HH PLUS 819 € vs Normal 1 295,39 €)
+        // Special Club / Loyalty Deal Verdict (only awarded when club price genuinely beats open non-club competitors!)
         if (clubOffer && clubOffer.clubPrice && clubOffer.normalPrice && clubOffer.normalPrice > clubOffer.clubPrice + 1) {
             const clubDiffEur = clubOffer.clubPrice - marketLowest;
             const clubDiffPct = (clubDiffEur / marketLowest) * 100;
-            if (clubDiffEur <= CONFIG.cheapMaxEur || clubDiffPct <= CONFIG.okMaxPct) {
+            const genuinelyBeatsNonClub = !lowestNonClubPrice || clubOffer.clubPrice < lowestNonClubPrice - 0.50;
+            if (genuinelyBeatsNonClub && (clubDiffEur <= CONFIG.cheapMaxEur || clubDiffPct <= CONFIG.okMaxPct)) {
                 const clubTheme = {
                     ...themes.club,
                     label: t.clubBadgeLabel(clubOffer.clubLabel),
@@ -6870,6 +7446,240 @@
                 border-radius: 9px;
                 border: 1px dashed rgba(255, 255, 255, 0.1);
             }
+
+            /* v9.0 Club Truth Audit, Forecast Chip, EU Cross-Border & Flip Arbitrage */
+            .ufhpc-club-audit-box {
+                padding: 7px 10px;
+                border-radius: 9px;
+                font-size: 10.5px;
+                line-height: 1.35;
+                margin-bottom: 8px;
+                border: 1px solid rgba(168, 85, 247, 0.35);
+                background: rgba(88, 28, 135, 0.2);
+                color: #f3e8ff;
+            }
+            .ufhpc-club-audit-box.is-fake {
+                border-color: rgba(244, 63, 94, 0.5);
+                background: rgba(136, 19, 55, 0.25);
+                color: #ffe4e6;
+            }
+            .ufhpc-club-audit-box.is-inflated_anchor {
+                border-color: rgba(245, 158, 11, 0.45);
+                background: rgba(120, 53, 15, 0.24);
+                color: #fef3c7;
+            }
+            .ufhpc-club-audit-box.is-true_atl {
+                border-color: rgba(16, 185, 129, 0.5);
+                background: rgba(6, 78, 59, 0.25);
+                color: #d1fae5;
+            }
+            .ufhpc-club-audit-head {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                font-weight: 800;
+                font-size: 10px;
+                letter-spacing: 0.03em;
+                margin-bottom: 2px;
+            }
+
+            .ufhpc-forecast-chip {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 6px;
+                padding: 5px 9px;
+                border-radius: 8px;
+                font-size: 10px;
+                font-weight: 700;
+                margin-bottom: 8px;
+                cursor: pointer;
+                border: 1px solid rgba(148, 163, 184, 0.22);
+                background: rgba(30, 41, 59, 0.55);
+                color: #e2e8f0;
+                transition: background 0.15s ease, border-color 0.15s ease;
+            }
+            .ufhpc-forecast-chip:hover {
+                border-color: rgba(255, 255, 255, 0.35);
+                background: rgba(30, 41, 59, 0.8);
+            }
+            .ufhpc-forecast-chip.is-buy_now {
+                border-color: rgba(16, 185, 129, 0.4);
+                background: rgba(6, 78, 59, 0.25);
+                color: #a7f3d0;
+            }
+            .ufhpc-forecast-chip.is-wait_sale,
+            .ufhpc-forecast-chip.is-wait_dip {
+                border-color: rgba(245, 158, 11, 0.42);
+                background: rgba(120, 53, 15, 0.24);
+                color: #fde68a;
+            }
+
+            .ufhpc-forecast-card {
+                padding: 9px 11px;
+                border-radius: 10px;
+                margin-bottom: 9px;
+                background: rgba(15, 23, 42, 0.72);
+                border: 1px solid rgba(148, 163, 184, 0.22);
+                font-size: 11px;
+                line-height: 1.4;
+                color: #e2e8f0;
+            }
+            .ufhpc-forecast-card.is-buy_now {
+                border-color: rgba(16, 185, 129, 0.45);
+                background: linear-gradient(135deg, rgba(6, 78, 59, 0.32), rgba(15, 23, 42, 0.8));
+            }
+            .ufhpc-forecast-card.is-wait_sale,
+            .ufhpc-forecast-card.is-wait_dip {
+                border-color: rgba(245, 158, 11, 0.45);
+                background: linear-gradient(135deg, rgba(120, 53, 15, 0.3), rgba(15, 23, 42, 0.8));
+            }
+            .ufhpc-forecast-top {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 6px;
+                margin-bottom: 4px;
+            }
+            .ufhpc-forecast-badge {
+                font-weight: 800;
+                font-size: 10.5px;
+                letter-spacing: 0.03em;
+            }
+            .ufhpc-forecast-trend {
+                font-size: 9.5px;
+                color: #94a3b8;
+                font-weight: 600;
+            }
+
+            .ufhpc-eu-card {
+                margin-top: 8px;
+                padding: 8px 10px;
+                border-radius: 10px;
+                background: linear-gradient(135deg, rgba(30, 58, 138, 0.22), rgba(15, 23, 42, 0.72));
+                border: 1px solid rgba(96, 165, 250, 0.28);
+            }
+            .ufhpc-eu-card.is-cheaper-eu {
+                border-color: rgba(16, 185, 129, 0.48);
+                background: linear-gradient(135deg, rgba(6, 78, 59, 0.28), rgba(30, 58, 138, 0.22));
+            }
+            .ufhpc-eu-head {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 6px;
+                margin-bottom: 4px;
+            }
+            .ufhpc-eu-title {
+                font-size: 10.5px;
+                font-weight: 800;
+                color: #bfdbfe;
+                letter-spacing: 0.02em;
+            }
+            .ufhpc-eu-delta {
+                font-size: 10px;
+                font-weight: 800;
+                padding: 1.5px 6px;
+                border-radius: 999px;
+                background: rgba(148, 163, 184, 0.16);
+                color: #cbd5e1;
+            }
+            .ufhpc-eu-delta.is-save {
+                background: rgba(16, 185, 129, 0.22);
+                color: #6ee7b7;
+                border: 1px solid rgba(16, 185, 129, 0.4);
+            }
+            .ufhpc-eu-row {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+                text-decoration: none;
+                padding: 5px 7px;
+                border-radius: 7px;
+                background: rgba(255, 255, 255, 0.04);
+                border: 1px solid rgba(255, 255, 255, 0.07);
+                margin-bottom: 6px;
+                transition: background 0.15s ease, border-color 0.15s ease;
+            }
+            .ufhpc-eu-row:hover {
+                background: rgba(255, 255, 255, 0.08);
+                border-color: rgba(96, 165, 250, 0.45);
+            }
+            .ufhpc-eu-prod {
+                font-size: 10.5px;
+                color: #f1f5f9;
+                font-weight: 600;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .ufhpc-eu-math {
+                font-size: 9.5px;
+                color: #94a3b8;
+                margin-top: 1px;
+            }
+            .ufhpc-eu-total {
+                font-size: 12.5px;
+                font-weight: 800;
+                color: #93c5fd;
+                white-space: nowrap;
+            }
+            .ufhpc-eu-card.is-cheaper-eu .ufhpc-eu-total {
+                color: #6ee7b7;
+            }
+            .ufhpc-eu-hubs {
+                display: flex;
+                align-items: center;
+                gap: 5px;
+                flex-wrap: wrap;
+            }
+            .ufhpc-eu-hub-btn {
+                flex: 1 1 auto;
+                text-align: center;
+                text-decoration: none;
+                font-size: 10px;
+                font-weight: 700;
+                padding: 4px 7px;
+                border-radius: 6px;
+                background: rgba(30, 41, 59, 0.75);
+                color: #cbd5e1;
+                border: 1px solid rgba(148, 163, 184, 0.22);
+                transition: all 0.15s ease;
+            }
+            .ufhpc-eu-hub-btn:hover {
+                background: rgba(59, 130, 246, 0.22);
+                color: #ffffff;
+                border-color: rgba(96, 165, 250, 0.5);
+            }
+
+            .ufhpc-tori-tag.flip-tag {
+                background: linear-gradient(135deg, rgba(245, 158, 11, 0.28), rgba(239, 68, 68, 0.28));
+                color: #fde68a;
+                border: 1px solid rgba(251, 191, 36, 0.55);
+                font-weight: 800;
+            }
+            .ufhpc-flip-card {
+                padding: 8px 10px;
+                border-radius: 10px;
+                margin-bottom: 8px;
+                background: linear-gradient(135deg, rgba(120, 53, 15, 0.34), rgba(136, 19, 55, 0.24));
+                border: 1px solid rgba(251, 191, 36, 0.48);
+                color: #fef3c7;
+                font-size: 10.5px;
+                line-height: 1.38;
+                text-decoration: none;
+                display: block;
+            }
+            .ufhpc-flip-head {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                font-weight: 800;
+                font-size: 10.5px;
+                color: #fde68a;
+                margin-bottom: 2px;
+            }
         `;
     }
 
@@ -6881,7 +7691,7 @@
             .replace(/"/g, '&quot;');
     }
 
-    function renderToriRowsHtml(items, refPrice, t, maxCount, isUsedSite = false, hasNewRef = true) {
+    function renderToriRowsHtml(items, refPrice, t, maxCount, isUsedSite = false, hasNewRef = true, usedMedianPrice = null, newLowestPrice = null) {
         return items.slice(0, maxCount).map((item) => {
             const savingsPct = refPrice && item.price < refPrice
                 ? Math.round(((refPrice - item.price) / refPrice) * 100)
@@ -6894,6 +7704,9 @@
             const isHuuto = item.source === 'huuto';
             const savingsLabel = savingsPct && savingsPct > 0
                 ? (hasNewRef ? t.toriSavings(savingsPct) : (isUsedSite ? t.toriSavingsVsThis(savingsPct) : t.toriSavings(savingsPct)))
+                : null;
+            const flipInfo = !item.isCompany
+                ? evaluateItemFlipArbitrage(item.price, newLowestPrice, usedMedianPrice)
                 : null;
             return `
                 <a class="ufhpc-tori-row ${isVinted ? 'is-vinted-row' : (isHuuto ? 'is-huuto-row' : '')}" href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(item.title)} — ${escapeHtml(item.location)}">
@@ -6910,6 +7723,7 @@
                             ${item.hasToriDiili ? `<span class="ufhpc-tori-tag">ToriDiili</span>` : ''}
                             ${(isVinted && item.hasVintedProtection) ? `<span class="ufhpc-tori-tag vinted-shield" title="Vinted Ostajan turva">🛡️ Vinted</span>` : ''}
                             ${item.isCompany ? `<span class="ufhpc-tori-tag company">${escapeHtml(t.toriCompany)}</span>` : ''}
+                            ${flipInfo?.isFlipOpportunity ? `<span class="ufhpc-tori-tag flip-tag" title="Arvioitu jälleenmyyntimarginaali kulujen jälkeen +${flipInfo.netProfitEur} € (+${flipInfo.roiPct}% ROI)">🔥 FLIP +${flipInfo.netProfitEur} €</span>` : ''}
                         </div>
                     </div>
                     <div class="ufhpc-store-right">
@@ -7209,7 +8023,10 @@
             this.renderLoading(productInfo);
             try {
                 const newProd = await fetchProductByUrl(targetUrl);
-                const newTori = await fetchUsedMarketListings(productInfo, newProd, newProd?.title || targetName);
+                const [newTori, newEu] = await Promise.all([
+                    fetchUsedMarketListings(productInfo, newProd, newProd?.title || targetName),
+                    fetchAmazonDeCrossBorder(productInfo, newProd, newProd?.title || targetName, productInfo?.category || 'general').catch(() => null)
+                ]);
                 if (productInfo && newProd) {
                     saveLearnedMapping(productInfo, targetName || newProd.title, newProd);
                     this.showToast(this.lang === 'en' ? '🧠 Learned product match!' : '🧠 Opittu tuoteosuma tallennettu!');
@@ -7219,6 +8036,7 @@
                     matchedQuery: { type: 'Opittu osuma', value: newProd?.title || targetName || '' },
                     product: newProd,
                     tori: newTori,
+                    euCrossBorder: newEu,
                     isLearnedMatch: true
                 };
                 this.refreshView();
@@ -7661,7 +8479,7 @@
                         </div>
                     </div>
                     <div class="ufhpc-stores-list">
-                        ${renderToriRowsHtml(filteredTori, refPrice, t, CONFIG.maxToriShown, productInfo.isUsedSite, hasNewRef)}
+                        ${renderToriRowsHtml(filteredTori, refPrice, t, CONFIG.maxToriShown, productInfo.isUsedSite, hasNewRef, toriData?.stats?.medianPrice || null, lowestPrice || null)}
                     </div>
                 `;
             } else {
@@ -7830,6 +8648,136 @@
                 `;
             }
 
+            // v9.0: Club Price Truth Audit (exposes illusory "Club" discounts vs. genuine market lows)
+            let clubAuditHtml = '';
+            if (!productInfo.isUsedSite && productInfo.clubOffer) {
+                const clubAudit = evaluateClubBenchmark(
+                    productInfo.clubOffer,
+                    lowestNonClubPrice,
+                    lowestNonClubOffer?.store,
+                    marketProd?.history?.atl?.price || null,
+                    this.lang
+                );
+                if (clubAudit) {
+                    clubAuditHtml = `
+                        <div class="ufhpc-club-audit-box is-${escapeHtml(clubAudit.tier)}">
+                            <div class="ufhpc-club-audit-head">
+                                <span>${clubAudit.icon} ${escapeHtml(clubAudit.badge)}</span>
+                                <span>👑 ${escapeHtml(productInfo.clubOffer.clubLabel || 'KLUBI')}</span>
+                            </div>
+                            <div>${escapeHtml(clubAudit.summary)}</div>
+                        </div>
+                    `;
+                }
+            }
+
+            // v9.0: Predictive Price & Finnish Seasonal Buy/Wait Engine
+            const forecast = !productInfo.isUsedSite
+                ? computePredictivePriceAnalytics(marketProd?.history, lowestPrice || productInfo.currentPrice, this.lang)
+                : null;
+            const forecastChipHtml = (forecast && (forecast.action === 'buy_now' || forecast.action === 'wait_sale')) ? `
+                <div class="ufhpc-forecast-chip is-${escapeHtml(forecast.action)}" data-main-tab="history" title="${escapeHtml(forecast.headline)}">
+                    <span>${forecast.icon} ${escapeHtml(forecast.badge)}</span>
+                    <span style="opacity:0.85;">${escapeHtml(forecast.trendLabel)} ❯</span>
+                </div>
+            ` : '';
+            const forecastCardHtml = forecast ? `
+                <div class="ufhpc-forecast-card is-${escapeHtml(forecast.action)}">
+                    <div class="ufhpc-forecast-top">
+                        <span class="ufhpc-forecast-badge">${forecast.icon} ${escapeHtml(forecast.badge)}</span>
+                        <span class="ufhpc-forecast-trend">${escapeHtml(forecast.trendLabel)}</span>
+                    </div>
+                    <div>${escapeHtml(forecast.headline)}</div>
+                </div>
+            ` : '';
+
+            // v9.0: Cross-Border EU Shipping & Finnish VAT Optimizer ("Suomi-lisä" detector)
+            let euCrossBorderHtml = '';
+            if (productInfo.category !== 'grocery' && productInfo.category !== 'furniture') {
+                const euLinks = buildEuHubLinks(bestModelQuery || searchTermRaw, productInfo.ean);
+                const euData = comparison?.euCrossBorder;
+                const fiBestComparable = lowestPrice || productInfo.currentPrice || null;
+                if (euData && euData.landedTotalEur > 0) {
+                    const euDiffEur = fiBestComparable ? (euData.landedTotalEur - fiBestComparable) : null;
+                    const isCheaperInEu = euDiffEur !== null && euDiffEur < -2.5;
+                    const deltaLabel = euDiffEur !== null
+                        ? (isCheaperInEu
+                            ? (this.lang === 'en' ? `SAVE ${formatEur(Math.abs(euDiffEur))} vs. FI` : `SÄÄSTÄ -${formatEur(Math.abs(euDiffEur))} vs. Suomi`)
+                            : (this.lang === 'en' ? `+${formatEur(Math.max(0, euDiffEur))} vs. FI` : `+${formatEur(Math.max(0, euDiffEur))} vs. Suomi`))
+                        : 'Amazon.de';
+                    const shipShort = euData.isFreeShipping
+                        ? (this.lang === 'en' ? 'Free FI ship' : 'Ilm. toimitus')
+                        : `+${formatEur(euData.shippingEur)} ${this.lang === 'en' ? 'ship' : 'toim.'}`;
+                    euCrossBorderHtml = `
+                        <div class="ufhpc-eu-card ${isCheaperInEu ? 'is-cheaper-eu' : ''}">
+                            <div class="ufhpc-eu-head">
+                                <span class="ufhpc-eu-title">🇪🇺 ${this.lang === 'en' ? 'EU / Germany Landed Cost (25.5% FI VAT)' : 'EU / Saksa Suomeen toimitettuna (ALV 25,5%)'}</span>
+                                <span class="ufhpc-eu-delta ${isCheaperInEu ? 'is-save' : ''}">${escapeHtml(deltaLabel)}</span>
+                            </div>
+                            <a class="ufhpc-eu-row" href="${escapeHtml(euData.url)}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(euData.title)}">
+                                <div style="min-width:0;flex:1;">
+                                    <div class="ufhpc-eu-prod">Amazon.de: ${escapeHtml(euData.title)}</div>
+                                    <div class="ufhpc-eu-math">DE ${formatEur(euData.dePriceEur)} → FI ALV ${formatEur(euData.fiVatPrice)} (${escapeHtml(shipShort)})</div>
+                                </div>
+                                <div class="ufhpc-eu-total">${formatEur(euData.landedTotalEur)} ↗</div>
+                            </a>
+                            <div class="ufhpc-eu-hubs">
+                                <a class="ufhpc-eu-hub-btn" href="${escapeHtml(euLinks.amazonDeUrl)}" target="_blank" rel="noopener noreferrer">🇩🇪 Amazon.de ↗</a>
+                                <a class="ufhpc-eu-hub-btn" href="${escapeHtml(euLinks.geizhalsUrl)}" target="_blank" rel="noopener noreferrer">🇪🇺 Geizhals.eu ↗</a>
+                                <a class="ufhpc-eu-hub-btn" href="${escapeHtml(euLinks.idealoUrl)}" target="_blank" rel="noopener noreferrer">🇩🇪 Idealo.de ↗</a>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    euCrossBorderHtml = `
+                        <div class="ufhpc-eu-card">
+                            <div class="ufhpc-eu-head">
+                                <span class="ufhpc-eu-title">🇪🇺 ${this.lang === 'en' ? 'Check EU / Germany Price ("Suomi-lisä")' : 'Tarkista EU / Saksa -hintataso (Suomi-lisä)'}</span>
+                            </div>
+                            <div class="ufhpc-eu-hubs">
+                                <a class="ufhpc-eu-hub-btn" href="${escapeHtml(euLinks.amazonDeUrl)}" target="_blank" rel="noopener noreferrer">🇩🇪 Amazon.de ↗</a>
+                                <a class="ufhpc-eu-hub-btn" href="${escapeHtml(euLinks.geizhalsUrl)}" target="_blank" rel="noopener noreferrer">🇪🇺 Geizhals.eu ↗</a>
+                                <a class="ufhpc-eu-hub-btn" href="${escapeHtml(euLinks.idealoUrl)}" target="_blank" rel="noopener noreferrer">🇩🇪 Idealo.de ↗</a>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
+            // v9.0: Arbitrage & Flipping Engine Card (Tori.fi / Vinted / Huuto.net)
+            let flipArbitrageHtml = '';
+            if (currentStore.isUsedSite && productInfo.currentPrice > 0) {
+                const selfFlip = evaluateItemFlipArbitrage(productInfo.currentPrice, lowestPrice, toriData?.stats?.medianPrice);
+                if (selfFlip && selfFlip.isFlipOpportunity) {
+                    flipArbitrageHtml = `
+                        <div class="ufhpc-flip-card">
+                            <div class="ufhpc-flip-head">
+                                <span>🔥 ${this.lang === 'en' ? 'ARBITRAGE / FLIP OPPORTUNITY' : 'ARBITRAASI- / FLIP-LÖYTÖ'}</span>
+                                <span>+${formatEur(selfFlip.netProfitEur, 0)} (+${selfFlip.roiPct}% ROI)</span>
+                            </div>
+                            <div>${this.lang === 'en'
+                                ? `Deeply below resale benchmark (~${formatEur(selfFlip.resaleTarget, 0)}) even after ~${formatEur(selfFlip.frictionEur, 0)} shipping/protection fees!`
+                                : `Selvästi alle jälleenmyyntitason (~${formatEur(selfFlip.resaleTarget, 0)}) jopa ~${formatEur(selfFlip.frictionEur, 0)} toimitus-/turvakulujen jälkeen!`}</div>
+                        </div>
+                    `;
+                }
+            } else if (!currentStore.isUsedSite && filteredTori.length > 0) {
+                const bestFlip = findBestFlipArbitrageListing(filteredTori, lowestPrice, toriData?.stats?.medianPrice);
+                if (bestFlip) {
+                    flipArbitrageHtml = `
+                        <a class="ufhpc-flip-card" href="${escapeHtml(bestFlip.item.url)}" target="_blank" rel="noopener noreferrer">
+                            <div class="ufhpc-flip-head">
+                                <span>🔥 ${this.lang === 'en' ? 'UNDERPRICED USED FIND' : 'ALIHINNOITELTU LÖYTÖ KÄYTETTYNÄ'}</span>
+                                <span>${formatEur(bestFlip.item.price, 0)} (Flip +${bestFlip.arb.netProfitEur} €) ↗</span>
+                            </div>
+                            <div>${escapeHtml(bestFlip.item.title)} — ${this.lang === 'en'
+                                ? `Est. resale value ~${formatEur(bestFlip.arb.resaleTarget, 0)}`
+                                : `Arvioitu jälleenmyyntiarvo ~${formatEur(bestFlip.arb.resaleTarget, 0)}`}</div>
+                        </a>
+                    `;
+                }
+            }
+
             let effectiveMainTab = this.mainTab;
             if (productInfo.isUsedSite && effectiveMainTab !== 'history') {
                 effectiveMainTab = 'used';
@@ -7850,12 +8798,14 @@
                 tabPaneContentHtml = `
                     ${variantSelectHtml}
                     ${storesHtml}
+                    ${euCrossBorderHtml}
                     <div class="ufhpc-actions">
                         ${actionBtnsHtml}
                     </div>
                 `;
             } else if (effectiveMainTab === 'used') {
                 tabPaneContentHtml = `
+                    ${flipArbitrageHtml}
                     ${bargainHtml}
                     ${toriHtml}
                     <div class="ufhpc-actions">
@@ -7873,7 +8823,8 @@
                     this.chartTab,
                     'main'
                 );
-                tabPaneContentHtml = chartHtml ? chartHtml : `
+                tabPaneContentHtml = chartHtml ? `${forecastCardHtml}${chartHtml}` : `
+                    ${forecastCardHtml}
                     <div class="ufhpc-empty">
                         📈 ${this.lang === 'en' ? 'No price history points recorded for this item yet.' : 'Tuotteelle ei ole vielä kertynyt hintahistoriapisteitä.'}
                     </div>
@@ -8022,6 +8973,8 @@
                                 </div>
                                 <div class="ufhpc-verdict-sub">${escapeHtml(theme.sublabel)}</div>
                             </div>
+                            ${clubAuditHtml}
+                            ${forecastChipHtml}
                             ${bonusHtml}
 
                             <div class="ufhpc-metrics">
@@ -8435,7 +9388,7 @@
                 dockBtn.addEventListener('click', () => this.toggleDockSide());
             }
 
-            const mainTabBtns = this.shadow.querySelectorAll('.ufhpc-tab[data-main-tab]');
+            const mainTabBtns = this.shadow.querySelectorAll('[data-main-tab]');
             mainTabBtns.forEach(btn => {
                 btn.addEventListener('click', () => {
                     const targetTab = btn.getAttribute('data-main-tab');

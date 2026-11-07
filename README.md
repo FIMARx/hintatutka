@@ -5,7 +5,7 @@
 **Suomen älykkäin reaaliaikainen hintatutka: Elektroniikka, Huonekalut, Ruoka, Urheilu, Apteekit, Tori.fi, Vinted & Huuto.net**  
 *The ultimate real-time price comparison, unit-price analyzer (`€/kg`, `€/l`), price watchlist, bargaining advisor, S-Bonus calculator & second-hand overlay for 81 Finnish & EU online stores.*
 
-[![Version](https://img.shields.io/badge/version-8.1-10b981?style=for-the-badge)](https://github.com/FIMARx/hintatutka)
+[![Version](https://img.shields.io/badge/version-9.0-10b981?style=for-the-badge)](https://github.com/FIMARx/hintatutka)
 [![Author](https://img.shields.io/badge/author-FIMARx-6366f1?style=for-the-badge)](https://github.com/FIMARx)
 [![Install](https://img.shields.io/badge/Install-HintaTutka.user.js-f43f5e?style=for-the-badge&logo=tampermonkey)](https://raw.githubusercontent.com/FIMARx/hintatutka/main/HintaTutka.user.js)
 [![Stores](https://img.shields.io/badge/stores-81%20supported-f59e0b?style=for-the-badge)](#)
@@ -103,6 +103,7 @@ HintaTutka toimii automaattisesti kaikilla kielipoluilla (`/fi/`, `/en/`, `/sv/`
 
 ## 🛠️ Asennus / Installation
 
+### Vaihtoehto A: Tampermonkey / Violentmonkey Userscript (Nopein / Fastest)
 1. Asenna selaimeesi käyttäjäskriptien hallintalisäosa:
    * [**Tampermonkey**](https://www.tampermonkey.net/) (Chrome, Edge, Brave, Firefox, Safari) tai
    * [**Violentmonkey**](https://violentmonkey.github.io/) (Chrome, Firefox, Edge)
@@ -111,11 +112,39 @@ HintaTutka toimii automaattisesti kaikilla kielipoluilla (`/fi/`, `/en/`, `/sv/`
 3. Vahvista asennus klikkaamalla **Install / Asenna**.
 4. Avaa mikä tahansa tuotesivu — **HintaTutka** avautuu automaattisesti reunaan!
 
+### Vaihtoehto B: Natiivi Manifest V3 -selainlaajennus (`extension-mv3/`)
+Natiivi MV3-selainlaajennus siirtää kaikki verkkohaut erilliseen taustasäikeeseen (`background.js` Service Worker) ja jakaa välimuistin sekä Hintavahdin kaikkien 81 verkkokaupan kesken:
+1. Avaa Chrome / Edge / Brave -selaimessa osoite `chrome://extensions/`.
+2. Kytke oikeasta yläkulmasta päälle **Developer mode / Kehittäjätila**.
+3. Klikkaa **Load unpacked / Lataa pakkaamaton** ja valitse kansioksi repositorion `extension-mv3/`-kansio.
+
+### Vaihtoehto C (Valinnainen): Oma Cloudflare Worker Serverless Edge Proxy (`cloudflare-worker/`)
+Jos haluat piilottaa oman IP-osoitteesi kokonaan verkkokauppojen palomuureilta ja jakaa 15 minuutin reunavälimuistin (`caches.default`):
+1. Siirry kansioon `cloudflare-worker/` ja aja `npx wrangler deploy`.
+2. Aseta saamasi `https://hintatutka-proxy.<tili>.workers.dev` -osoite joko MV3-laajennuksen yläpalkkikuvakkeesta tai Tampermonkeyn valikosta (`☁️ HintaTutka: Serverless Proxy URL`).
+
 ---
 
 ## 🗺️ Kehityssuunnitelma & Versiohistoria / Roadmap & Changelog
 
-### 🛡️ v8.1 Päivitys (Uusin / Latest)
+### 🚀 v9.0 Päivitys (Uusin / Latest)
+- 🇪🇺 **EU / Saksa "Suomi-lisä" -laskuri & Cross-Border -hintavertailu (`Amazon.de` + EU-hubit)**:
+  - Hakee automaattisesti tuotteen hinnan suoraan **Amazon.de**:stä EAN-viivakoodilla tai mallikoodilla ja laskee tarkan Suomeen toimitetun kokonaishinnan: **`[Saksan 19 % MwSt -hinta × (1,255 / 1,19)] + [Suomi-toimitus: 0 € yli 99 € tilauksille, muuten 10,49 €]`** (kirjoille `14 % / 7 %`).
+  - Paljastaa yhdellä silmäyksellä Suomen maantieteellisen hintalisän (*"SÄÄSTÄ -XX € vs. Suomi"*) sekä tarjoaa 1-klikkauksen pikapainikkeet **Amazon.de**, **Geizhals.eu** ja **Idealo.de** -hintavertailuihin.
+- 🔥 **Arbitraasi- & Flip-moottori (`Tori.fi`, `Vinted` & `Huuto.net`)**:
+  - Tunnistaa käytettyjen markkinoilta rajusti alihinnoitellut yksityishenkilöiden ilmoitukset suhteessa käytettyjen mediaaniin ja kaupan uuteen hintaan (huomioiden ~5 % / min `8 €` toimitus- ja ostajaturvakulut).
+  - Merkitsee jälleenmyynti- ja huippulöydöt **`🔥 FLIP +XX €`** -tunnisteella sekä kauppojen tuotesivuilla että suoraan Tori-, Vinted- ja Huuto-ilmoitussivuilla.
+- 🎭 **Klubihintojen Totuusmittari (`🏆 Aito Klubipohja` vs. `🎭 Näennäisale`)**:
+  - Auditoi kanta-asiakashinnat (`MyPOWER`, `Klubihinta`, `HH PLUS`, `Asiakasomistaja`) suoraan halvinta ei-klubikauppaa ja historiallista hintapohjaa (**ATL**) vasten.
+  - Paljastaa armotta **`🎭 NÄENNÄISALE`**-tilanteet (joissa kilpailija myy tuotetta *ilman* jäsenyyttä samaan tai halvempaan hintaan) sekä **`⚠️ KOROTETTU NORMAALIHINTA`** -ankkuroinnin, ja palkitsee aidot markkinapohjat **`🏆 AITO KLUBIPOHJA`** -merkillä.
+- 🔮 **Ennustava Hinta-analytiikka & Suomen Alekalenteri (`OSTA NYT` vs. `ODOTA X PV`)**:
+  - Yhdistää historiallisen vaihteluvälin, 6 jakson lineaarisen regressiotrendin (`📉 Laskeva`, `📈 Nouseva`, `➡️ Vakaa`) ja suomalaisen kaupankäynnin kausikalenterin (*Tammiale, Kevään & Syksyn Hullut Päivät, Juhannus-/Kesäale, Back to School, Singles' Day 11.11., Black Week / Black Friday, Välipäiväale*) antaen suoran suosituksen ostohetkestä.
+- ☁️ **Erotettu Serverless Edge Proxy (`cloudflare-worker/`)**:
+  - Valmis Cloudflare Worker -reunapalvelin tiukalla domain-sallintalistalla, 15 minuutin jaetulla reunavälimuistilla (`caches.default`), IP-suojauksella ja automaattisella varayhteydellä (`gmFetch` fallback).
+- 🧩 **Natiivi Manifest V3 -selainlaajennus (`extension-mv3/`)**:
+  - Täydellinen Chrome / Edge / Brave MV3 -laajennuspaketti taustasäikeen Service Worker -hauilla (`background.js`), jaetulla `chrome.storage.local` -välimuistilla ja työkalupalkin hallintaikkunalla (`popup.html`).
+
+### 🛡️ v8.1
 - 🚦 **Cloudflare- & Rate-Limit -suojakilpi, taustavälilehtitauko & jaettu GM-välimuisti**:
   - **Taustavälilehtien älytauko (`visibilityState`)**: Jos avaat kymmeniä tuotelinkkejä kerralla taustavälilehtiin, HintaTutka odottaa kunnes oikeasti avaat välilehden — **0 rinnakkaista verkkopyyntöpiikkiä**.
   - **Kauppojen välinen jaettu L1/L2 GM-välimuisti**: Sama tuote Verkkokaupassa, Gigantissa, Powerissa ja Jimm'sissä haetaan verkon yli vain kerran ja latautuu muilla sivuilla `0 ms` viiveellä suoraan jaetusta välimuistista.
