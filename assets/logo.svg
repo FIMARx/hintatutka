@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 58 58" width="128" height="128" role="img" aria-label="HintaTutka Logo">
+  <defs>
+    <linearGradient id="htIconBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#065f46"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="htBoltGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#a7f3d0"/>
+      <stop offset="100%" stop-color="#10b981"/>
+    </linearGradient>
+  </defs>
+  <rect x="1.25" y="1.25" width="55.5" height="55.5" rx="14.5" fill="url(#htIconBg)" stroke="#10b981" stroke-opacity="0.72" stroke-width="1.6"/>
+  <circle cx="29" cy="29" r="19.5" fill="none" stroke="#34d399" stroke-opacity="0.32" stroke-width="1.35" stroke-dasharray="4 3"/>
+  <path d="M32.5 11L18.5 31H29.5L25.5 47L40.5 26.5H29.5L32.5 11Z" fill="url(#htBoltGrad)"/>
+</svg>

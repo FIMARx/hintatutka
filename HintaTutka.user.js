@@ -1,9 +1,10 @@
 // ==UserScript==
 // @name         HintaTutka
 // @namespace    https://github.com/FIMARx/hintatutka
-// @version      9.1
-// @description  Suomen älykkäin hintatutka (v9.1): EU/Saksa ALV+toimitus -vertailu, Flip-arbitraasi (Tori/Vinted/Huuto), Klubi-totuusmittari, kausiennuste & 81 kauppaa
+// @version      9.2
+// @description  Suomen älykkäin hintatutka (v9.2): EU/Saksa ALV+toimitus -vertailu, Flip-arbitraasi (Tori/Vinted/Huuto), Klubi-totuusmittari, kausiennuste & 81 kauppaa
 // @author       FIMARx
+// @icon         https://raw.githubusercontent.com/FIMARx/hintatutka/main/extension-mv3/icons/icon128.png
 // @homepageURL  https://github.com/FIMARx/hintatutka
 // @supportURL   https://github.com/FIMARx/hintatutka/issues
 // @downloadURL  https://raw.githubusercontent.com/FIMARx/hintatutka/main/HintaTutka.user.js
@@ -99,6 +100,7 @@
 // @match        https://*.rusta.com/*
 // @match        https://*.stockmann.com/*
 // @connect      hinta.fi
+// @connect      www.hinta.fi
 // @connect      hintaseuranta.fi
 // @connect      www.hintaseuranta.fi
 // @connect      budgetsport.fi
@@ -148,7 +150,8 @@
     // =========================================================================
     // CONFIGURATION & THRESHOLDS
     // =========================================================================
-    const SCRIPT_VERSION = '9.1';
+    const SCRIPT_VERSION = '9.2';
+    const BRAND_LOGO_SVG_MINI = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 58 58" width="15" height="15" style="flex-shrink:0;display:block;"><defs><linearGradient id="htMiniBg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#065f46"/><stop offset="100%" stop-color="#0f172a"/></linearGradient><linearGradient id="htMiniBolt" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#a7f3d0"/><stop offset="100%" stop-color="#10b981"/></linearGradient></defs><rect x="1.5" y="1.5" width="55" height="55" rx="14.5" fill="url(#htMiniBg)" stroke="#10b981" stroke-opacity="0.78" stroke-width="2.4"/><circle cx="29" cy="29" r="19.5" fill="none" stroke="#34d399" stroke-opacity="0.36" stroke-width="1.8" stroke-dasharray="4 3"/><path d="M32.5 11L18.5 31H29.5L25.5 47L40.5 26.5H29.5L32.5 11Z" fill="url(#htMiniBolt)"/></svg>`;
     const IS_MV3_EXTENSION = Boolean(
         globalThis.__HT_MV3_EXTENSION__ ||
         (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id && typeof GM_info === 'undefined')
@@ -309,7 +312,7 @@
             usedRedLabel: 'YLIHINTAINEN KÄYTETYKSI',
             usedRedSub: 'Lähes uuden hintainen tai kalliimpi kuin uutena kaupasta!',
             neutralLabel: 'VERTAA HINTOJA',
-            neutralSub: 'Haetaan hintatietoja markkinoilta...',
+            neutralSub: 'Automaattista hintaosumaa ei löytynyt — tarkenna hakua tai käytä pikahakuja alta.',
             checking: 'Tarkistetaan...',
             headerTag: 'Hinta-analyysi',
             fetchingBadge: 'HAETAAN HINTOJA...',
@@ -408,7 +411,7 @@
             usedRedLabel: 'OVERPRICED USED',
             usedRedSub: 'Almost the same price or pricier than buying brand new!',
             neutralLabel: 'COMPARE PRICES',
-            neutralSub: 'Fetching live market prices...',
+            neutralSub: 'No automatic price match found — refine search or use quick links below.',
             checking: 'Checking...',
             headerTag: 'Price Analyzer',
             fetchingBadge: 'CHECKING MARKET...',
@@ -2104,7 +2107,7 @@
             if (targetRect.width === 0 || targetRect.height === 0) return true;
 
             const style = window.getComputedStyle(isOffscreenPrice ? el.parentElement : el);
-            if (style.display === 'none' || style.visibility === 'hidden' || style.textDecorationLine.includes('line-through')) {
+            if (style?.display === 'none' || style?.visibility === 'hidden' || (style?.textDecorationLine || style?.textDecoration || '').includes('line-through')) {
                 return true;
             }
             const txt = (el.innerText || '');
@@ -2318,14 +2321,15 @@
                 try {
                     if (typeof GM_getValue === 'function' && typeof GM_setValue === 'function') {
                         const pacingObj = JSON.parse(GM_getValue(CONFIG.storageKeyHostPacing, '{}') || '{}');
-                        const nextAllowed = Number(pacingObj[host]) || 0;
+                        const rawNext = Number(pacingObj[host]) || 0;
+                        const nextAllowed = (rawNext > now + 5000) ? now : rawNext;
                         const scheduledStart = Math.max(now, nextAllowed) + jitter;
                         waitMs = Math.max(0, scheduledStart - now);
                         pacingObj[host] = scheduledStart + minGapMs;
 
-                        // Keep pacing object tiny by pruning entries older than 60s
+                        // Keep pacing object tiny by pruning entries older than 60s or skewed > 10s ahead
                         for (const [k, ts] of Object.entries(pacingObj)) {
-                            if (!Number.isFinite(ts) || ts < now - 60000) delete pacingObj[k];
+                            if (!Number.isFinite(ts) || ts < now - 60000 || ts > now + 10000) delete pacingObj[k];
                         }
                         GM_setValue(CONFIG.storageKeyHostPacing, JSON.stringify(pacingObj));
                     } else {
@@ -2335,7 +2339,12 @@
                     waitMs = jitter;
                 }
 
+                let released = false;
+                let leaseTimer = null;
                 const releaseSlot = () => {
+                    if (released) return;
+                    released = true;
+                    if (leaseTimer) clearTimeout(leaseTimer);
                     const cur = Math.max(0, (hostActiveCounts.get(host) || 1) - 1);
                     if (cur === 0) hostActiveCounts.delete(host);
                     else hostActiveCounts.set(host, cur);
@@ -2348,10 +2357,15 @@
                     }
                 };
 
-                if (waitMs > 0) {
-                    setTimeout(() => resolve(releaseSlot), Math.min(waitMs, 2500));
-                } else {
+                const grantSlot = () => {
+                    leaseTimer = setTimeout(releaseSlot, 12000);
                     resolve(releaseSlot);
+                };
+
+                if (waitMs > 0) {
+                    setTimeout(grantSlot, Math.min(waitMs, 2500));
+                } else {
+                    grantSlot();
                 }
             };
 
@@ -2404,51 +2418,80 @@
 
     function executeRawGmGet(requestUrl, accept, effectiveTimeout, targetHost, isProxyHop = false) {
         return new Promise((resolve, reject) => {
-            GM_xmlhttpRequest({
-                method: 'GET',
-                url: requestUrl,
-                headers: {
-                    'Accept': accept,
-                    'Accept-Language': 'fi-FI,fi;q=0.9,en;q=0.8'
-                },
-                timeout: effectiveTimeout,
-                onload: (res) => {
-                    const challenge = detectAntiBotChallenge(res.status, res.responseText, res.responseHeaders);
-                    if (challenge.blocked) {
-                        if (!isProxyHop) tripHostCircuitBreaker(targetHost, challenge.cooldownMs, challenge.reason);
-                        reject(new Error(`AntiBot:${challenge.reason}`));
-                        return;
-                    }
-                    if (!isProxyHop) {
-                        if (res.status === 403 && targetHost) {
-                            const prev403 = (hostConsecutive403.get(targetHost) || 0) + 1;
-                            hostConsecutive403.set(targetHost, prev403);
-                            if (prev403 >= 2) {
-                                tripHostCircuitBreaker(targetHost, 5 * 60 * 1000, 'repeated_403');
-                            }
-                        } else if (targetHost && res.status >= 200 && res.status < 300) {
-                            hostConsecutive403.delete(targetHost);
-                        }
-                    }
+            let settled = false;
+            let reqHandle = null;
+            const safeTimeoutMs = Number.isFinite(effectiveTimeout) && effectiveTimeout > 0 ? effectiveTimeout : 8500;
 
-                    if (res.status >= 200 && res.status < 400) {
-                        const headerFinalMatch = String(res.responseHeaders || '').match(/x-final-url:\s*([^\r\n]+)/i);
-                        const resolvedFinalUrl = headerFinalMatch
-                            ? headerFinalMatch[1].trim()
-                            : (isProxyHop ? null : (res.finalUrl || requestUrl));
-                        resolve({
-                            text: res.responseText,
-                            finalUrl: resolvedFinalUrl || requestUrl,
-                            status: res.status,
-                            viaProxy: isProxyHop
-                        });
-                    } else {
-                        reject(new Error(`HTTP ${res.status}`));
-                    }
-                },
-                onerror: () => reject(new Error('Network error')),
-                ontimeout: () => reject(new Error('Timeout'))
-            });
+            const watchdogTimer = setTimeout(() => {
+                if (settled) return;
+                settled = true;
+                try { reqHandle?.abort?.(); } catch (_) {}
+                reject(new Error('WatchdogTimeout'));
+            }, safeTimeoutMs + 750);
+
+            const settleResolve = (val) => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(watchdogTimer);
+                resolve(val);
+            };
+            const settleReject = (err) => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(watchdogTimer);
+                reject(err);
+            };
+
+            try {
+                reqHandle = GM_xmlhttpRequest({
+                    method: 'GET',
+                    url: requestUrl,
+                    headers: {
+                        'Accept': accept,
+                        'Accept-Language': 'fi-FI,fi;q=0.9,en;q=0.8'
+                    },
+                    timeout: safeTimeoutMs,
+                    onload: (res) => {
+                        const challenge = detectAntiBotChallenge(res.status, res.responseText, res.responseHeaders);
+                        if (challenge.blocked) {
+                            if (!isProxyHop) tripHostCircuitBreaker(targetHost, challenge.cooldownMs, challenge.reason);
+                            settleReject(new Error(`AntiBot:${challenge.reason}`));
+                            return;
+                        }
+                        if (!isProxyHop) {
+                            if (res.status === 403 && targetHost) {
+                                const prev403 = (hostConsecutive403.get(targetHost) || 0) + 1;
+                                hostConsecutive403.set(targetHost, prev403);
+                                if (prev403 >= 2) {
+                                    tripHostCircuitBreaker(targetHost, 5 * 60 * 1000, 'repeated_403');
+                                }
+                            } else if (targetHost && res.status >= 200 && res.status < 300) {
+                                hostConsecutive403.delete(targetHost);
+                            }
+                        }
+
+                        if (res.status >= 200 && res.status < 400) {
+                            const headerFinalMatch = String(res.responseHeaders || '').match(/x-final-url:\s*([^\r\n]+)/i);
+                            const resolvedFinalUrl = headerFinalMatch
+                                ? headerFinalMatch[1].trim()
+                                : (isProxyHop ? null : (res.finalUrl || requestUrl));
+                            settleResolve({
+                                text: res.responseText,
+                                finalUrl: resolvedFinalUrl || requestUrl,
+                                status: res.status,
+                                viaProxy: isProxyHop
+                            });
+                        } else {
+                            settleReject(new Error(`HTTP ${res.status}`));
+                        }
+                    },
+                    onerror: () => settleReject(new Error('Network error')),
+                    ontimeout: () => settleReject(new Error('Timeout')),
+                    onabort: () => settleReject(new Error('Aborted'))
+                });
+            } catch (err) {
+                settleReject(err);
+            }
         });
     }
 
@@ -4538,6 +4581,13 @@
             isLearned = true;
         }
 
+        const withStageTimeout = (promise, ms, fallbackVal) => new Promise((resolve) => {
+            const tId = setTimeout(() => resolve(fallbackVal), ms);
+            Promise.resolve(promise)
+                .then((v) => { clearTimeout(tId); resolve(v); })
+                .catch(() => { clearTimeout(tId); resolve(fallbackVal); });
+        });
+
         const runStage2Enrichment = async () => {
             const shouldQueryDirectRetailers = effectiveCategory !== 'furniture' && effectiveCategory !== 'grocery';
             const shouldQueryHintaseuranta = effectiveCategory !== 'grocery' &&
@@ -4547,18 +4597,22 @@
 
             const [directOffers, hsResult, toriData, euCrossBorder] = await Promise.all([
                 shouldQueryDirectRetailers
-                    ? fetchDirectFinnishRetailers(productInfo, marketResult?.product, customQuery).catch(() => [])
+                    ? withStageTimeout(fetchDirectFinnishRetailers(productInfo, marketResult?.product, customQuery), 6800, [])
                     : Promise.resolve([]),
                 shouldQueryHintaseuranta
-                    ? fetchHintaseurantaComparison(queriesToTry, targetNameForScoring, productInfo.ean, targetPriceForScoring).catch(() => null)
+                    ? withStageTimeout(fetchHintaseurantaComparison(queriesToTry, targetNameForScoring, productInfo.ean, targetPriceForScoring), 6800, null)
                     : Promise.resolve(null),
-                fetchUsedMarketListings(
-                    customQuery ? { name: customQuery, isUsedSite: true, category: effectiveCategory } : productInfo,
-                    marketResult?.product,
-                    customQuery
-                ).catch(() => ({ query: '', items: [], stats: null })),
+                withStageTimeout(
+                    fetchUsedMarketListings(
+                        customQuery ? { name: customQuery, isUsedSite: true, category: effectiveCategory } : productInfo,
+                        marketResult?.product,
+                        customQuery
+                    ),
+                    7500,
+                    { query: '', items: [], stats: null }
+                ),
                 shouldQueryEuCrossBorder
-                    ? fetchAmazonDeCrossBorder(productInfo, marketResult?.product, customQuery, effectiveCategory).catch(() => null)
+                    ? withStageTimeout(fetchAmazonDeCrossBorder(productInfo, marketResult?.product, customQuery, effectiveCategory), 7000, null)
                     : Promise.resolve(null)
             ]);
 
@@ -4723,7 +4777,9 @@
                     isLearnedMatch: Boolean(marketResult.isLearnedMatch || isLearned),
                     isPartialStage: true
                 });
-            } catch (_) {}
+            } catch (err) {
+                console.warn('[HintaTutka] Stage 1 partial render error:', err);
+            }
         }
 
         return await runStage2Enrichment();
@@ -4759,7 +4815,7 @@
     }
 
     function buildEuHubLinks(searchQuery, ean = '') {
-        const cleanEan = (ean && isValidGs1Barcode(ean)) ? String(ean).trim() : '';
+        const cleanEan = (ean && isValidBarcodeChecksum(ean)) ? String(ean).trim() : '';
         const effectiveQuery = cleanEan || String(searchQuery || '').trim();
         const encoded = encodeURIComponent(effectiveQuery);
         return {
@@ -4873,7 +4929,7 @@
 
     async function fetchAmazonDeCrossBorder(productInfo, marketProduct = null, customQuery = null, category = 'general') {
         const targetTitle = customQuery || marketProduct?.title || productInfo?.name || '';
-        const validEan = (!customQuery && productInfo?.ean && isValidGs1Barcode(productInfo.ean))
+        const validEan = (!customQuery && productInfo?.ean && isValidBarcodeChecksum(productInfo.ean))
             ? String(productInfo.ean).trim()
             : '';
         const conciseModel = customQuery
@@ -8128,7 +8184,7 @@
                 <div class="ufhpc-panel ${this.isExpanded ? 'is-expanded' : ''}">
                     <div class="ufhpc-header-bar">
                         <div class="ufhpc-brand-top">
-                            <span>⚡ ${escapeHtml(detectCurrentStore()?.name || t.headerTag)}</span>
+                            <span style="display:inline-flex;align-items:center;gap:5px;">${BRAND_LOGO_SVG_MINI}${escapeHtml(detectCurrentStore()?.name || t.headerTag)}</span>
                         </div>
                         <div class="ufhpc-header-btns">
                             <button class="ufhpc-icon-btn" id="ufhpc-lang-btn" title="Switch Language (FI / EN)">${this.lang.toUpperCase()}</button>
@@ -8954,7 +9010,7 @@
                     ${updateBannerHtml}
                     <div class="ufhpc-header-bar">
                         <div class="ufhpc-brand-top">
-                            <span>⚡ ${escapeHtml(storeName)}</span>
+                            <span style="display:inline-flex;align-items:center;gap:5px;">${BRAND_LOGO_SVG_MINI}${escapeHtml(storeName)}</span>
                             ${comparison?.matchedQuery ? `<span>• ${escapeHtml(comparison.matchedQuery.type)}</span>` : ''}
                             ${comparison?.isLearnedMatch ? `
                                 <span class="ufhpc-learned-pill" title="${escapeHtml(t.learnedMatchTooltip)}">
@@ -9760,20 +9816,38 @@
 
         // Zero-CLS Slot Reservation: Reserve fixed-height badge space immediately before network roundtrips
         if (productInfo.priceElement) {
-            reserveInlineBadgeSlot(productInfo.priceElement, sidebar.lang);
+            try {
+                reserveInlineBadgeSlot(productInfo.priceElement, sidebar.lang);
+            } catch (_) {}
         }
 
-        const comparison = await fetchMarketComparison(
-            productInfo,
-            null,
-            (partialComp) => {
-                if (runId !== activeRunId) return;
-                sidebar.lastProductInfo = productInfo;
-                sidebar.lastComparison = partialComp;
-                sidebar.refreshView();
-            },
-            { deferStage2WhenMatched: sidebar.isCollapsed && !productInfo.isUsedSite }
-        );
+        let comparison = null;
+        let outerWatchdogId = null;
+        try {
+            const cmpPromise = fetchMarketComparison(
+                productInfo,
+                null,
+                (partialComp) => {
+                    if (runId !== activeRunId) return;
+                    sidebar.lastProductInfo = productInfo;
+                    sidebar.lastComparison = partialComp;
+                    sidebar.refreshView();
+                },
+                { deferStage2WhenMatched: sidebar.isCollapsed && !productInfo.isUsedSite }
+            );
+            // Outer failsafe watchdog (16s) so UI can never stay frozen on loading even if an unexpected browser hook stalls
+            comparison = await Promise.race([
+                cmpPromise,
+                new Promise((resolve) => {
+                    outerWatchdogId = setTimeout(() => resolve(sidebar.lastComparison || null), 16000);
+                })
+            ]);
+        } catch (err) {
+            console.warn('[HintaTutka] Market comparison error:', err);
+            comparison = sidebar.lastComparison || null;
+        } finally {
+            if (outerWatchdogId) clearTimeout(outerWatchdogId);
+        }
         if (runId !== activeRunId) return;
 
         if (!productInfo.priceElement || !productInfo.currentPrice) {
@@ -9796,7 +9870,7 @@
                         productInfo.priceElement = found.element;
                         productInfo.currentPrice = found.price;
                         recordObservedStoreOffer(productInfo);
-                        sidebar.refreshView();
+                        try { sidebar.refreshView(); } catch (_) {}
                     }
                 }, 800);
             }
@@ -9804,7 +9878,12 @@
 
         sidebar.lastProductInfo = productInfo;
         sidebar.lastComparison = comparison;
-        sidebar.refreshView();
+        try {
+            sidebar.refreshView();
+        } catch (err) {
+            console.error('[HintaTutka] Sidebar render error:', err);
+            dismissReservedBadgeSmoothly();
+        }
 
         // If user opened the sidebar while Stage 1 was in flight and Stage 2 was deferred, trigger Stage 2 now
         if (!sidebar.isCollapsed && comparison?.stage2Deferred) {

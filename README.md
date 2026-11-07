@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/hero-banner.svg" width="100%" alt="HintaTutka v9.1 — Finnish & EU Real-Time Price Intelligence" />
+<img src="assets/hero-banner.svg" width="100%" alt="HintaTutka v9.2 — Finnish & EU Real-Time Price Intelligence" />
 
 <br />
 
@@ -122,7 +122,12 @@ HintaTutka works across all localized store paths (`/fi/`, `/en/`, `/sv/`) and S
 
 ## 🗺️ Changelog
 
-### 🚀 v9.1 (Latest)
+### 🚀 v9.2 (Latest)
+- **⚡ Critical Loading Fix (`isValidBarcodeChecksum`)**: Fixed an uncaught `ReferenceError` when rendering products with GS1 EAN barcodes (`buildEuHubLinks` / `fetchAmazonDeCrossBorder`) that froze the Tampermonkey sidebar and inline `◈ Tarkistetaan...` badge on loading.
+- **🛡️ Anti-Hang Watchdog & Stage-2 Timeouts**: Hardened `executeRawGmGet` (`onabort` + JS watchdog timer), `acquirePoliteHostSlot` (12s auto-releasing slot lease), Stage-2 parallel scraper timeouts, and `runPriceChecker` error recovery so stalled network calls can never freeze the UI.
+- **🎨 Squircle Radar-Bolt Brand Logo**: Added standalone vector [`assets/logo.svg`](assets/logo.svg), 64× supersampled `icon16`/`32`/`48`/`128.png` extension icons, `popup.html` brand header, Tampermonkey `@icon` metadata, and inline sidebar emblem.
+
+### 🚀 v9.1
 - **🔔 Smart MV3 Extension Update System & 1-Click Updater**: Background GitHub version watcher with automatic emerald **`NEW`** toolbar icon badge (`chrome.action.setBadgeText`), MV3-aware download banners/popup UI, on-demand `selectors.json` hot-patch button, and 1-click in-place `update-extension.ps1` / `update-extension.sh` scripts.
 - **🎨 Studio-Grade Vector Hero Banner & Live Download Telemetry**: Rebuilt [`assets/hero-banner.svg`](assets/hero-banner.svg) with custom geometric vector icons, mini price-history sparkline, and automated GitHub Release asset packaging ([`.github/workflows/release.yml`](.github/workflows/release.yml)).
 
