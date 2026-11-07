@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/hero-banner.svg" width="100%" alt="HintaTutka v9.3 — Finnish & EU Real-Time Price Intelligence" />
+<img src="assets/hero-banner.svg" width="100%" alt="HintaTutka v9.4 — Finnish & EU Real-Time Price Intelligence" />
 
 <br />
 
@@ -122,7 +122,11 @@ HintaTutka works across all localized store paths (`/fi/`, `/en/`, `/sv/`) and S
 
 ## 🗺️ Changelog
 
-### 🚀 v9.3 (Latest)
+### 🚀 v9.4 (Latest)
+- **🛡️ Cross-Border EU Cache Invalidation & Stale Model Eviction**: Bumped cache keys to `v94`, purged obsolete GM/session storage entries from previous sessions, and added automatic validation of cached EU results against current target product specs (evicting stale cross-generation entries like `iPhone 17` when browsing `iPhone 18 Pro`).
+- **🔒 Render-Time EU Card Suppression Guard**: Added a fail-safe render-time compatibility check in `renderResult` ensuring that if an EU cross-border item has a hard spec conflict or word mismatch, the card is suppressed and falls back to clean 1-click manual search hub links (`Amazon.de ↗`, `Geizhals.eu ↗`, `Idealo.de ↗`).
+
+### 🚀 v9.3
 - **🎯 Strict Generation & Tier-Modifier Parity (`iPhone 18` vs `18 Pro` vs `18 Pro Max` vs `17` / `17e`)**: Enforces hard conflict rejection across generations, sub-variants (`17` vs `17e`, `Pixel 9` vs `9a`), and model tiers (`Pro`, `Max`, `Ultra`, `Plus`, `Air`, `Mini`, `Ti`, `Super`, `X3D`), plus `1000 GB ↔ 1 TB` normalization and Hinta.fi `<title>` storage enrichment.
 - **💶 Thousands-Separator Price Parser Fix (`≥ 1 000 €`)**: Fixed space/`&nbsp;` thousands-separator truncation on Prisma, Vinted, and Clas Ohlson (`1 659,00 €` / `1 509,00 €` no longer truncating to `659,00 €` / `509,00 €`).
 - **🇩🇪 Amazon.de Multi-`<h2>` Title, EAN Fallback & `.priceToPay` Active Price Fix**: Combines brand + product `<h2>` headers (fixing `"Apple"` 1-word matches), enforces model/generation verification on EAN fallback results, detects `Deliver to Finland` to prevent double 25.5% VAT calculation, and reads `.priceToPay` (`€1,043.02`) instead of strikethrough `RRP` (`€1,159.03`).

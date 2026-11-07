@@ -150,7 +150,7 @@
     // =========================================================================
     // CONFIGURATION & THRESHOLDS
     // =========================================================================
-    const SCRIPT_VERSION = '9.3';
+    const SCRIPT_VERSION = '9.4';
     const BRAND_LOGO_SVG_MINI = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 58 58" width="15" height="15" style="flex-shrink:0;display:block;"><defs><linearGradient id="htMiniBg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#065f46"/><stop offset="100%" stop-color="#0f172a"/></linearGradient><linearGradient id="htMiniBolt" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#a7f3d0"/><stop offset="100%" stop-color="#10b981"/></linearGradient></defs><rect x="1.5" y="1.5" width="55" height="55" rx="14.5" fill="url(#htMiniBg)" stroke="#10b981" stroke-opacity="0.78" stroke-width="2.4"/><circle cx="29" cy="29" r="19.5" fill="none" stroke="#34d399" stroke-opacity="0.36" stroke-width="1.8" stroke-dasharray="4 3"/><path d="M32.5 11L18.5 31H29.5L25.5 47L40.5 26.5H29.5L32.5 11Z" fill="url(#htMiniBolt)"/></svg>`;
     const IS_MV3_EXTENSION = Boolean(
         globalThis.__HT_MV3_EXTENSION__ ||
@@ -174,9 +174,9 @@
         updateCheckTtlMs: 60 * 1000,
         storageKeyUpdateCheck: 'ufhpc_github_update_v70',
         storageKeyRemoteSelectors: 'ufhpc_remote_selectors_v81',
-        storageKeySharedCache: 'ufhpc_shared_cache_v81',
-        storageKeyCircuitBreakers: 'ufhpc_circuit_breakers_v81',
-        storageKeyHostPacing: 'ufhpc_host_pacing_v81',
+        storageKeySharedCache: 'ufhpc_shared_cache_v94',
+        storageKeyCircuitBreakers: 'ufhpc_circuit_breakers_v94',
+        storageKeyHostPacing: 'ufhpc_host_pacing_v94',
         storageKeyProxyUrl: 'ufhpc_proxy_url_v90',
         storageKeyObservedOffers: 'ufhpc_observed_offers_v70',
         storageKeyCollapsed: 'ufhpc_sidebar_collapsed_v55',
@@ -583,12 +583,32 @@
     // =========================================================================
     // IDLE SCHEDULER, REMOTE HOT-PATCH SELECTORS & L1/L2 CROSS-DOMAIN CACHE
     // =========================================================================
-    const CACHE_PREFIX = 'ufhpc_v81_';
+    const CACHE_PREFIX = 'ufhpc_v94_';
     const memoryCache = new Map();
     const pendingSharedCacheWrites = new Map();
     let sharedCacheFlushScheduled = false;
     let gmCacheSnapshot = null;
     let gmCacheSnapshotTs = 0;
+
+    function purgeLegacyCaches() {
+        try {
+            if (typeof GM_setValue === 'function') {
+                GM_setValue('ufhpc_shared_cache_v81', '{}');
+                GM_setValue('ufhpc_shared_cache_v90', '{}');
+            }
+        } catch (_) {}
+        try {
+            localStorage.removeItem('ufhpc_shared_cache_v81');
+            localStorage.removeItem('ufhpc_shared_cache_v90');
+            for (let i = sessionStorage.length - 1; i >= 0; i--) {
+                const k = sessionStorage.key(i);
+                if (k && (k.startsWith('ufhpc_v81_') || k.startsWith('ufhpc_v90_'))) {
+                    sessionStorage.removeItem(k);
+                }
+            }
+        } catch (_) {}
+    }
+    purgeLegacyCaches();
 
     function scheduleIdleTask(fn, timeoutMs = 450) {
         if (typeof window.requestIdleCallback === 'function') {
@@ -5099,6 +5119,7 @@
 
     function parseAmazonDeSearchHtml(html, targetNameForScoring = '', isEanSearch = false, referencePrice = null, category = 'general') {
         if (!html || typeof html !== 'string' || html.length < 2500) return null;
+        if (!targetNameForScoring || typeof targetNameForScoring !== 'string' || targetNameForScoring.trim().length < 2) return null;
 
         // If Amazon explicitly states there are zero results for this EAN/query before showing fallback recommendations, abort immediately
         const firstCardPos = html.indexOf('data-component-type="s-search-result"');
@@ -5246,7 +5267,22 @@
 
         const cacheKey = `eu_amzde_${validEan || conciseModel.toLowerCase()}`;
         const cached = getCached(cacheKey);
-        if (cached) return cached.none ? null : cached;
+        if (cached) {
+            if (cached.none) return null;
+            if (targetTitle && cached.title) {
+                const compat = evaluateSpecCompatibility(targetTitle, cached.title);
+                const matchesWords = doesItemMatchQueryWords(cached.title, targetTitle);
+                if (compat.hasHardConflict || !matchesWords || cached.title.split(/\s+/).length < 2) {
+                    setCached(cacheKey, { none: true });
+                } else {
+                    return cached;
+                }
+            } else if (!cached.title || cached.title.split(/\s+/).length < 2) {
+                setCached(cacheKey, { none: true });
+            } else {
+                return cached;
+            }
+        }
 
         for (const q of queries) {
             try {
@@ -9067,11 +9103,24 @@
                 </div>
             ` : '';
 
-            // v9.0: Cross-Border EU Shipping & Finnish VAT Optimizer ("Suomi-lisä" detector)
+            // v9.4: Cross-Border EU Shipping & Finnish VAT Optimizer ("Suomi-lisä" detector)
             let euCrossBorderHtml = '';
             if (productInfo.category !== 'grocery' && productInfo.category !== 'furniture') {
                 const euLinks = buildEuHubLinks(bestModelQuery || searchTermRaw, productInfo.ean);
-                const euData = comparison?.euCrossBorder;
+                let euData = comparison?.euCrossBorder;
+                const currentProductTitle = productInfo?.name || bestModelQuery || searchTermRaw || '';
+                if (euData && euData.landedTotalEur > 0) {
+                    if (currentProductTitle && euData.title) {
+                        const compat = evaluateSpecCompatibility(currentProductTitle, euData.title);
+                        const matchWords = doesItemMatchQueryWords(euData.title, currentProductTitle);
+                        if (compat.hasHardConflict || !matchWords || euData.title.split(/\s+/).length < 2) {
+                            // Mismatched or stale cross-border EU card! Suppress live card so it falls back to clean manual hub links
+                            euData = null;
+                        }
+                    } else if (!euData.title || euData.title.split(/\s+/).length < 2) {
+                        euData = null;
+                    }
+                }
                 const fiBestComparable = lowestPrice || productInfo.currentPrice || null;
                 if (euData && euData.landedTotalEur > 0) {
                     const euDiffEur = fiBestComparable ? (euData.landedTotalEur - fiBestComparable) : null;
