@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         HintaTutka
 // @namespace    https://github.com/FIMARx/hintatutka
-// @version      7.6
-// @description  Suomen älykkäin hintatutka: Älykäs monivaiheinen mallikoodi- ja brändihaku (löytää tuotteet pitkilläkin tuotenimillä), tyylikäs hintamerkintöjen kohdistus, modernisoitu lasimorfinen käyttöliittymä, välilehdet (Kaupat, Käytetyt, Hintahistoria), interaktiivinen päivitys & sivun uudelleenlataus, täysikokoinen otsikko, hintakäyrät, yksikköhinnat, hintavahti, tinkausapuri, S-bonus & suora haku 81 kaupassa
+// @version      7.7
+// @description  Suomen älykkäin hintatutka: Itseoppiva hakumuisti (oppii ja muistaa tuotteet käyttäjän hauista & valinnoista), älykäs mallikoodi- ja brändihaku, tyylikäs hintamerkintöjen kohdistus, modernisoitu käyttöliittymä, välilehdet (Kaupat, Käytetyt, Hintahistoria), interaktiivinen päivitys, hintakäyrät, yksikköhinnat, hintavahti, tinkausapuri, S-bonus & suora haku 81 kaupassa
 // @author       FIMARx
 // @homepageURL  https://github.com/FIMARx/hintatutka
 // @supportURL   https://github.com/FIMARx/hintatutka/issues
@@ -144,7 +144,7 @@
     // =========================================================================
     // CONFIGURATION & THRESHOLDS
     // =========================================================================
-    const SCRIPT_VERSION = '7.6';
+    const SCRIPT_VERSION = '7.7';
     const GITHUB_RAW_SCRIPT_URL = 'https://raw.githubusercontent.com/FIMARx/hintatutka/main/HintaTutka.user.js';
     const GITHUB_API_CONTENTS_URL = 'https://api.github.com/repos/FIMARx/hintatutka/contents/HintaTutka.user.js';
     const GITHUB_REPO_URL = 'https://github.com/FIMARx/hintatutka';
@@ -174,6 +174,8 @@
         storageKeyMainTab: 'ufhpc_main_tab_v73',
         storageKeyPendingUpdate: 'ufhpc_pending_update_ver_v74',
         storageKeyPendingUpdateTime: 'ufhpc_pending_update_time_v74',
+        storageKeyLearnedMappings: 'ufhpc_learned_mappings_v77',
+        storageKeyLearnedAliases: 'ufhpc_learned_aliases_v77',
         maxStoresShown: 8,
         maxToriShown: 4
     };
@@ -310,6 +312,11 @@
             searchPlaceholder: 'Tarkenna hakua (esim. DJI Mini 5 Pro)...',
             searchBtn: 'Hae',
             variantLabel: 'Vaihda osumaa:',
+            learnedMatchBadge: 'Opittu osuma',
+            learnedMatchTooltip: 'HintaTutka oppi tämän osuman aiemmasta hausta tai valinnasta ja löysi tuotteen automaattisesti.',
+            forgetLearnedTooltip: 'Unohda opittu osuma ja hae uudelleen',
+            learnedToastSaved: '🧠 Opittu! HintaTutka muistaa valinnan jatkossa.',
+            learnedToastForgot: '🧠 Opittu hakumuisti unohdettu tälle tuotteelle',
             chartTabNew: '📈 Uutena',
             chartTabTori: '♻️ Käytettynä',
             chartTitle: 'Hintahistoria',
@@ -404,6 +411,11 @@
             searchPlaceholder: 'Refine search (e.g. DJI Mini 5 Pro)...',
             searchBtn: 'Search',
             variantLabel: 'Switch match:',
+            learnedMatchBadge: 'Learned match',
+            learnedMatchTooltip: 'HintaTutka learned this match from a previous search or selection.',
+            forgetLearnedTooltip: 'Forget learned match and search again',
+            learnedToastSaved: '🧠 Learned! HintaTutka will remember this match.',
+            learnedToastForgot: '🧠 Learned search memory forgotten for this product',
             chartTabNew: '📈 New History',
             chartTabTori: '♻️ Used Market',
             chartTitle: 'Price History',
@@ -966,6 +978,150 @@
     }
 
     // =========================================================================
+    // ADAPTIVE SELF-LEARNING SEARCH MEMORY BRAIN (CROSS-STORE LEARNING)
+    // =========================================================================
+    function normalizeProductUrlKey(rawUrl) {
+        try {
+            const u = new URL(rawUrl || location.href);
+            const host = u.hostname.toLowerCase().replace(/^www\./, '');
+            const p = u.pathname.toLowerCase().replace(/\/+$/, '');
+            const vkMatch = p.match(/\/product\/(\d+)\b/);
+            if (vkMatch) return `${host}/product/${vkMatch[1]}`;
+            const pMatch = p.match(/\/p-(\d+)\b/);
+            if (pMatch) return `${host}/p-${pMatch[1]}`;
+            const gMatch = p.match(/\/product\/.*\/(\d+)$/);
+            if (gMatch) return `${host}/product/${gMatch[1]}`;
+            const xxlMatch = p.match(/\/p\/([0-9a-z_]+)\b/);
+            if (xxlMatch) return `${host}/p/${xxlMatch[1]}`;
+            const jimmsMatch = p.match(/\/product\/show\/(\d+)\b/);
+            if (jimmsMatch) return `${host}/product/show/${jimmsMatch[1]}`;
+            return `${host}${p}`;
+        } catch (_) {
+            return null;
+        }
+    }
+
+    function getLearnedMappings() {
+        try {
+            const raw = localStorage.getItem(CONFIG.storageKeyLearnedMappings);
+            return raw ? JSON.parse(raw) : {};
+        } catch (_) {
+            return {};
+        }
+    }
+
+    function getLearnedAliases() {
+        try {
+            const raw = localStorage.getItem(CONFIG.storageKeyLearnedAliases);
+            return raw ? JSON.parse(raw) : {};
+        } catch (_) {
+            return {};
+        }
+    }
+
+    function saveLearnedMapping(productInfo, query, resolvedProduct) {
+        if (!productInfo || (!resolvedProduct && !query)) return;
+        try {
+            const mappings = getLearnedMappings();
+            const aliases = getLearnedAliases();
+            const entry = {
+                targetUrl: resolvedProduct?.url || null,
+                targetName: resolvedProduct?.title || null,
+                query: query || resolvedProduct?.title || null,
+                updatedAt: Date.now(),
+                store: location.hostname.replace(/^www\./, '')
+            };
+
+            // 1. By URL Key
+            const urlKey = normalizeProductUrlKey(location.href);
+            if (urlKey) {
+                mappings[`url:${urlKey}`] = entry;
+            }
+
+            // 2. By EAN if present
+            if (productInfo.ean && /^\d{8,14}$/.test(productInfo.ean)) {
+                mappings[`ean:${productInfo.ean}`] = entry;
+            }
+
+            // 3. By cleaned product title
+            if (productInfo.name) {
+                const cleanTitleKey = productInfo.name.toLowerCase().replace(/[^a-z0-9äöå]/gi, ' ').trim().replace(/\s+/g, ' ').slice(0, 60);
+                if (cleanTitleKey.length >= 6) {
+                    mappings[`title:${cleanTitleKey}`] = entry;
+                }
+            }
+
+            // Cross-store Model Alias Learning: If resolved product has a concise model code, associate it with this product title!
+            const learnedTitle = resolvedProduct?.title || query;
+            if (learnedTitle) {
+                const codes = extractModelCodes(learnedTitle);
+                if (codes.length > 0 && productInfo.name) {
+                    const code = codes[0];
+                    const key = (productInfo.brand ? `${productInfo.brand.toLowerCase()} ` : '') + productInfo.name.toLowerCase().slice(0, 40);
+                    aliases[key] = code;
+                    const aliasKeys = Object.keys(aliases);
+                    if (aliasKeys.length > 150) {
+                        delete aliases[aliasKeys[0]];
+                    }
+                    localStorage.setItem(CONFIG.storageKeyLearnedAliases, JSON.stringify(aliases));
+                }
+            }
+
+            // Limit storage to 250 most recently updated entries
+            const entries = Object.entries(mappings);
+            if (entries.length > 250) {
+                entries.sort((a, b) => (b[1].updatedAt || 0) - (a[1].updatedAt || 0));
+                const pruned = Object.fromEntries(entries.slice(0, 200));
+                localStorage.setItem(CONFIG.storageKeyLearnedMappings, JSON.stringify(pruned));
+            } else {
+                localStorage.setItem(CONFIG.storageKeyLearnedMappings, JSON.stringify(mappings));
+            }
+        } catch (_) {}
+    }
+
+    function getLearnedMapping(productInfo) {
+        if (!productInfo) return null;
+        try {
+            const mappings = getLearnedMappings();
+
+            // 1. By exact Product URL
+            const urlKey = normalizeProductUrlKey(location.href);
+            if (urlKey && mappings[`url:${urlKey}`]) {
+                return { ...mappings[`url:${urlKey}`], matchType: 'url' };
+            }
+
+            // 2. By EAN
+            if (productInfo.ean && mappings[`ean:${productInfo.ean}`]) {
+                return { ...mappings[`ean:${productInfo.ean}`], matchType: 'ean' };
+            }
+
+            // 3. By product title
+            if (productInfo.name) {
+                const cleanTitleKey = productInfo.name.toLowerCase().replace(/[^a-z0-9äöå]/gi, ' ').trim().replace(/\s+/g, ' ').slice(0, 60);
+                if (cleanTitleKey && mappings[`title:${cleanTitleKey}`]) {
+                    return { ...mappings[`title:${cleanTitleKey}`], matchType: 'title' };
+                }
+            }
+        } catch (_) {}
+        return null;
+    }
+
+    function forgetLearnedMapping(productInfo) {
+        if (!productInfo) return;
+        try {
+            const mappings = getLearnedMappings();
+            const urlKey = normalizeProductUrlKey(location.href);
+            if (urlKey) delete mappings[`url:${urlKey}`];
+            if (productInfo.ean) delete mappings[`ean:${productInfo.ean}`];
+            if (productInfo.name) {
+                const cleanTitleKey = productInfo.name.toLowerCase().replace(/[^a-z0-9äöå]/gi, ' ').trim().replace(/\s+/g, ' ').slice(0, 60);
+                if (cleanTitleKey) delete mappings[`title:${cleanTitleKey}`];
+            }
+            localStorage.setItem(CONFIG.storageKeyLearnedMappings, JSON.stringify(mappings));
+        } catch (_) {}
+    }
+
+    // =========================================================================
     // SMART PRODUCT PAGE DETECTION & METADATA EXTRACTION
     // =========================================================================
     function isNonProductPath() {
@@ -1209,6 +1365,23 @@
         };
 
         const modelCodes = extractModelCodes(`${info.name || ''} ${info.mpn || ''}`);
+
+        // Inject learned model aliases if known from previous user searches across stores
+        const learnedAliases = getLearnedAliases();
+        const lowerName = (info.name || '').toLowerCase();
+        for (const [aliasPhrase, code] of Object.entries(learnedAliases)) {
+            if (lowerName.includes(aliasPhrase.toLowerCase())) {
+                if (!modelCodes.includes(code)) {
+                    modelCodes.unshift(code);
+                }
+            }
+        }
+
+        // If this product or page was previously learned, prioritize learned search query!
+        const learnedMapping = getLearnedMapping(info);
+        if (learnedMapping?.query) {
+            addQuery('Learned', learnedMapping.query);
+        }
 
         if (info.ean && !isPrivateLabelStore) {
             addQuery('EAN', info.ean);
@@ -3196,11 +3369,31 @@
     }
 
     async function fetchMarketComparison(productInfo, customQuery = null) {
+        const learnedMatch = !customQuery ? getLearnedMapping(productInfo) : null;
+        let isLearned = Boolean(learnedMatch);
+        let marketResult = null;
+
+        // If an exact Hinta.fi product URL was previously learned for this item, fetch it directly
+        if (learnedMatch?.targetUrl) {
+            try {
+                const data = await fetchProductByUrl(learnedMatch.targetUrl);
+                if (data && data.title) {
+                    marketResult = {
+                        matchedQuery: { type: 'Opittu osuma', value: learnedMatch.query || data.title },
+                        product: data,
+                        alternatives: [],
+                        isLearnedMatch: true
+                    };
+                }
+            } catch (_) {}
+        }
+
         const queriesToTry = customQuery
             ? [{ type: 'Search', value: customQuery }]
-            : productInfo.queries;
+            : (learnedMatch?.query && !marketResult
+                ? [{ type: 'Opittu haku', value: learnedMatch.query, isLearned: true }, ...productInfo.queries]
+                : productInfo.queries);
 
-        let marketResult = null;
         const targetNameForScoring = customQuery || productInfo.name;
         const targetPriceForScoring = customQuery ? null : productInfo.currentPrice;
         const effectiveCategory = customQuery
@@ -3210,13 +3403,14 @@
         const host = location.hostname.toLowerCase();
 
         // If user is currently browsing a Hinta.fi product page directly, parse current document directly
-        if (!customQuery && host.includes('hinta.fi') && /^\/\d+\b/.test(location.pathname)) {
+        if (!customQuery && !marketResult && host.includes('hinta.fi') && /^\/\d+\b/.test(location.pathname)) {
             const data = parseHintaProductDoc(document, location.href);
             data.history = await fetchProductHistory(location.href);
             marketResult = {
                 matchedQuery: { type: 'Hinta.fi', value: data.title },
                 product: data,
-                alternatives: []
+                alternatives: [],
+                isLearnedMatch: false
             };
         }
 
@@ -3225,6 +3419,7 @@
             const cachedComp = getCached(cacheKey);
             if (cachedComp) {
                 marketResult = cachedComp;
+                if (q.isLearned) isLearned = true;
                 break;
             }
 
@@ -3235,12 +3430,13 @@
 
                 if (parsed.directProductDoc) {
                     const data = parseHintaProductDoc(parsed.directProductDoc, finalUrl);
-                    if (q.type === 'EAN' || customQuery || doesItemMatchQueryWords(data.title, targetNameForScoring)) {
+                    if (q.type === 'EAN' || customQuery || q.isLearned || doesItemMatchQueryWords(data.title, targetNameForScoring)) {
                         data.history = await fetchProductHistory(finalUrl);
                         marketResult = {
                             matchedQuery: q,
                             product: data,
-                            alternatives: []
+                            alternatives: [],
+                            isLearnedMatch: Boolean(q.isLearned || isLearned)
                         };
                         setCached(cacheKey, marketResult);
                         break;
@@ -3257,7 +3453,8 @@
                     marketResult = {
                         matchedQuery: q,
                         product: data,
-                        alternatives: validCandidates.slice(0, 6)
+                        alternatives: validCandidates.slice(0, 6),
+                        isLearnedMatch: Boolean(q.isLearned || isLearned)
                     };
                     setCached(cacheKey, marketResult);
                     break;
@@ -3265,6 +3462,11 @@
             } catch (_) {
                 // Continue to next fallback query
             }
+        }
+
+        if (customQuery && marketResult?.product) {
+            saveLearnedMapping(productInfo, customQuery, marketResult.product);
+            isLearned = true;
         }
 
         // Supplement with Direct Finnish Retailers that Hinta.fi does NOT index (Prisma, K-Rauta, Puuilo, Motonet, Tokmanni)
@@ -3375,7 +3577,8 @@
             matchedQuery: marketResult?.matchedQuery || (customQuery ? { type: 'Search', value: customQuery } : null),
             product: marketResult?.product || null,
             alternatives: marketResult?.alternatives || [],
-            tori: toriData
+            tori: toriData,
+            isLearnedMatch: Boolean(marketResult?.isLearnedMatch || isLearned)
         };
     }
 
@@ -4375,6 +4578,36 @@
                 background: rgba(16, 185, 129, 0.2);
                 border-color: rgba(52, 211, 153, 0.5);
                 color: #34d399;
+            }
+            .ufhpc-learned-pill {
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+                background: linear-gradient(135deg, rgba(147, 51, 234, 0.24), rgba(99, 102, 241, 0.24));
+                border: 1px solid rgba(168, 85, 247, 0.45);
+                color: #d8b4fe;
+                font-size: 10px;
+                font-weight: 800;
+                padding: 2px 7px;
+                border-radius: 999px;
+                letter-spacing: 0.03em;
+                white-space: nowrap;
+                box-shadow: 0 0 10px rgba(168, 85, 247, 0.2);
+            }
+            .ufhpc-forget-learned-btn {
+                background: transparent;
+                border: none;
+                color: #c084fc;
+                cursor: pointer;
+                font-size: 10px;
+                padding: 0 2px;
+                line-height: 1;
+                border-radius: 3px;
+                transition: all 0.15s ease;
+            }
+            .ufhpc-forget-learned-btn:hover {
+                color: #f87171;
+                transform: scale(1.2);
             }
             .ufhpc-handle-update-badge {
                 position: absolute;
@@ -5742,11 +5975,16 @@
             try {
                 const newProd = await fetchProductByUrl(targetUrl);
                 const newTori = await fetchUsedMarketListings(productInfo, newProd, newProd?.title || targetName);
+                if (productInfo && newProd) {
+                    saveLearnedMapping(productInfo, targetName || newProd.title, newProd);
+                    this.showToast(this.lang === 'en' ? '🧠 Learned product match!' : '🧠 Opittu tuoteosuma tallennettu!');
+                }
                 this.lastComparison = {
                     ...(this.lastComparison || {}),
-                    matchedQuery: { type: 'Select', value: newProd?.title || targetName || '' },
+                    matchedQuery: { type: 'Opittu osuma', value: newProd?.title || targetName || '' },
                     product: newProd,
-                    tori: newTori
+                    tori: newTori,
+                    isLearnedMatch: true
                 };
                 this.refreshView();
             } catch (_) {
@@ -6438,6 +6676,12 @@
                         <div class="ufhpc-brand-top">
                             <span>⚡ ${escapeHtml(storeName)}</span>
                             ${comparison?.matchedQuery ? `<span>• ${escapeHtml(comparison.matchedQuery.type)}</span>` : ''}
+                            ${comparison?.isLearnedMatch ? `
+                                <span class="ufhpc-learned-pill" title="${escapeHtml(t.learnedMatchTooltip)}">
+                                    <span>🧠 ${escapeHtml(t.learnedMatchBadge)}</span>
+                                    <button type="button" class="ufhpc-forget-learned-btn" id="ufhpc-forget-learned-btn" title="${escapeHtml(t.forgetLearnedTooltip)}">✕</button>
+                                </span>
+                            ` : ''}
                             <a class="ufhpc-ver-link ${(latestUpdateVersion || this.updateInstalling) ? 'has-update' : ''}" id="ufhpc-version-check-btn" href="${GITHUB_RAW_SCRIPT_URL}" target="_blank" rel="noopener noreferrer" title="HintaTutka v${SCRIPT_VERSION} (GitHub: FIMARx/hintatutka) — Klikkaa tarkistaaksesi päivitykset">${latestUpdateVersion ? `🚀 v${SCRIPT_VERSION} → v${escapeHtml(latestUpdateVersion)}` : `v${SCRIPT_VERSION} ↻`}</a>
                         </div>
                         <div class="ufhpc-header-btns">
@@ -6953,11 +7197,27 @@
                 });
             }
 
+            const forgetLearnedBtn = this.shadow.getElementById('ufhpc-forget-learned-btn');
+            if (forgetLearnedBtn) {
+                forgetLearnedBtn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    forgetLearnedMapping(productInfo);
+                    this.showToast(this.lang === 'en' ? '🧠 Learned memory forgotten' : '🧠 Opittu muisti unohdettu');
+                    this.renderLoading(productInfo);
+                    const comp = await fetchMarketComparison(productInfo);
+                    this.lastComparison = comp;
+                    this.refreshView();
+                });
+            }
+
             if (variantSelect) {
                 variantSelect.addEventListener('change', async () => {
                     const targetUrl = variantSelect.value;
                     if (!targetUrl || !this.lastComparison) return;
-                    await this.runMainByUrl(targetUrl, '', productInfo);
+                    const selectedOpt = variantSelect.options[variantSelect.selectedIndex];
+                    const selectedName = selectedOpt?.textContent?.split('—')[0]?.trim() || '';
+                    await this.runMainByUrl(targetUrl, selectedName, productInfo);
                 });
             }
 
@@ -6979,6 +7239,11 @@
 
                     this.renderLoading(productInfo);
                     const comparison = await fetchMarketComparison(productInfo, queryVal);
+                    if (comparison?.product) {
+                        saveLearnedMapping(productInfo, queryVal, comparison.product);
+                        comparison.isLearnedMatch = true;
+                        this.showToast(this.lang === 'en' ? '🧠 Search learned & mapped!' : '🧠 Haku opittu ja tallennettu muistiin!');
+                    }
                     this.lastComparison = comparison;
                     this.refreshView();
                 });
