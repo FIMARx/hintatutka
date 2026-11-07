@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         HintaTutka
 // @namespace    https://github.com/FIMARx/hintatutka
-// @version      7.5
-// @description  Suomen älykkäin hintatutka: Tyylikäs hintamerkintöjen kohdistus (Verkkokauppa, Gigantti ym.), modernisoitu lasimorfinen käyttöliittymä, välilehdet (Kaupat, Käytetyt, Hintahistoria), interaktiivinen päivitys & sivun uudelleenlataus, täysikokoinen otsikko, hintakäyrät, yksikköhinnat, hintavahti, tinkausapuri, S-bonus & suora haku 81 kaupassa
+// @version      7.6
+// @description  Suomen älykkäin hintatutka: Älykäs monivaiheinen mallikoodi- ja brändihaku (löytää tuotteet pitkilläkin tuotenimillä), tyylikäs hintamerkintöjen kohdistus, modernisoitu lasimorfinen käyttöliittymä, välilehdet (Kaupat, Käytetyt, Hintahistoria), interaktiivinen päivitys & sivun uudelleenlataus, täysikokoinen otsikko, hintakäyrät, yksikköhinnat, hintavahti, tinkausapuri, S-bonus & suora haku 81 kaupassa
 // @author       FIMARx
 // @homepageURL  https://github.com/FIMARx/hintatutka
 // @supportURL   https://github.com/FIMARx/hintatutka/issues
@@ -144,7 +144,7 @@
     // =========================================================================
     // CONFIGURATION & THRESHOLDS
     // =========================================================================
-    const SCRIPT_VERSION = '7.5';
+    const SCRIPT_VERSION = '7.6';
     const GITHUB_RAW_SCRIPT_URL = 'https://raw.githubusercontent.com/FIMARx/hintatutka/main/HintaTutka.user.js';
     const GITHUB_API_CONTENTS_URL = 'https://api.github.com/repos/FIMARx/hintatutka/contents/HintaTutka.user.js';
     const GITHUB_REPO_URL = 'https://github.com/FIMARx/hintatutka';
@@ -809,6 +809,17 @@
                 }
                 return !/^(GDDR\dX?|PCIe|AM4|AM5|LGA\d+|ATX|mATX|ITX|Wi-?Fi|Bluetooth|5G|4G|LTE|RGB|ARGB|Black|White|Silver|Gold|Blue|Green|Pink|Purple|Gray|Grey|Musta|Valkoinen|Hopea|Sininen|Vihreä|Harmaa|kultainen|mustatitaani|luonnontitaani|valkotitaani|tammi|koivu|mänty|valkolakattu|petsattu|Edition|Series|Gaming|OC|Takuu|Takuulla|Kuitti|Uudenveroinen|Hyväkuntoinen|Drone|Drooni|\d+kg|\d+kpl)$/i.test(w);
             });
+
+        const mCodes = extractModelCodes(name);
+        if (mCodes.length > 0) {
+            const code = mCodes[0];
+            const hasCode = words.slice(0, 6).some(w => w.toUpperCase().includes(code.toUpperCase().split(/[-/]/)[0]));
+            if (!hasCode) {
+                // Retain brand/line prefix (e.g. "Philips Sonicare 9000") and guarantee model code is preserved
+                return words.slice(0, 3).concat(code).join(' ').trim();
+            }
+        }
+
         return words.slice(0, 6).join(' ').trim();
     }
 
@@ -1197,13 +1208,36 @@
             }
         };
 
+        const modelCodes = extractModelCodes(`${info.name || ''} ${info.mpn || ''}`);
+
         if (info.ean && !isPrivateLabelStore) {
             addQuery('EAN', info.ean);
             if (/^0\d{12}$/.test(info.ean)) {
                 addQuery('EAN', info.ean.slice(1));
             }
         }
-        if (info.mpn && !isPrivateLabelStore) addQuery('MPN', info.mpn);
+
+        // High-precision Brand + Model Code queries (e.g. "Philips HX3886/43" and "Philips HX3886")
+        if (info.brand && !isPrivateLabelStore) {
+            for (const code of modelCodes) {
+                addQuery('Model', `${info.brand} ${code}`);
+                if (code.includes('/')) {
+                    addQuery('Model', `${info.brand} ${code.split('/')[0]}`);
+                }
+            }
+        }
+
+        // Standalone MPN / Model Code queries (e.g. "HX3886/43", "HX3886", "WH-1000XM5")
+        if (!isPrivateLabelStore) {
+            if (info.mpn) addQuery('MPN', info.mpn);
+            for (const code of modelCodes) {
+                addQuery('MPN', code);
+                if (code.includes('/')) {
+                    addQuery('MPN', code.split('/')[0]);
+                }
+            }
+        }
+
         if (info.name) {
             const simplified = simplifyProductNameForSearch(info.name);
             const simplifiedGb = simplified
@@ -2018,7 +2052,11 @@
         'the', 'and', 'for', 'with', 'pro', 'max', 'plus', 'mini', 'air', 'new', 'uusi',
         'valkoinen', 'musta', 'harmaa', 'hopea', 'sininen', 'vihreä', 'punainen', 'kulta', 'beige', 'ruskea',
         'white', 'black', 'grey', 'gray', 'silver', 'blue', 'green', 'red', 'gold',
-        'edestä', 'päältä', 'täytettävä', 'kpl', 'pkt', 'sarja', 'malli', 'edition', 'series'
+        'edestä', 'päältä', 'täytettävä', 'kpl', 'pkt', 'sarja', 'malli', 'edition', 'series',
+        // Marketing descriptors that must not disqualify concise database titles
+        'electric', 'toothbrush', 'sähköhammasharja', 'hammasharja', 'cleaner', 'flosser', 'cordless',
+        'interdental', 'hammasvälepuhdistin', 'hammasväli', 'puhdistin', 'laite', 'tuote', 'valaisin',
+        'työvalaisin', 'akku', 'runko', 'paketti', 'tuplapakkaus', 'setti', 'bundle', 'original', 'aito'
     ]);
 
     function extractMeaningfulTokens(str) {
@@ -2031,25 +2069,46 @@
     }
 
     function doesItemMatchQueryWords(itemTitle, queryStr) {
-        const qTokens = extractMeaningfulTokens(queryStr);
-        if (qTokens.length === 0) return false;
-        const normTitle = normalizeSwappedModelOrder(itemTitle || '').toLowerCase();
+        if (!itemTitle || !queryStr) return false;
+        // 1. If both share an exact alphanumeric model code, it is an instant match!
+        const targetCodes = extractModelCodes(queryStr);
+        const itemCodes = extractModelCodes(itemTitle);
+        if (targetCodes.length > 0 && itemCodes.length > 0) {
+            const hasCodeMatch = targetCodes.some(tc => itemCodes.some(ic => tc === ic || tc.split(/[-/]/)[0] === ic.split(/[-/]/)[0]));
+            if (hasCodeMatch) return true;
+        }
 
-        let matched = 0;
-        let firstTokenMatched = false;
+        const qTokens = extractMeaningfulTokens(queryStr);
+        const itemTokens = extractMeaningfulTokens(itemTitle);
+        if (qTokens.length === 0 || itemTokens.length === 0) return false;
+
+        const normTitle = normalizeSwappedModelOrder(itemTitle || '').toLowerCase();
+        const normQuery = normalizeSwappedModelOrder(queryStr || '').toLowerCase();
+
+        let matchedQ = 0;
+        let firstQMatched = false;
         for (let i = 0; i < qTokens.length; i++) {
             const token = qTokens[i];
             const esc = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             if (new RegExp(`(?<![a-z0-9äöå])${esc}(?![a-z0-9äöå])`, 'i').test(normTitle)) {
-                matched++;
-                if (i === 0) firstTokenMatched = true;
+                matchedQ++;
+                if (i === 0) firstQMatched = true;
             }
         }
 
-        if (matched === 0) return false;
-        if (qTokens.length === 1) return matched === 1;
-        if (qTokens.length === 2) return matched === 2;
-        return firstTokenMatched && (matched / qTokens.length) >= 0.6;
+        let matchedItem = 0;
+        for (const token of itemTokens) {
+            const esc = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            if (new RegExp(`(?<![a-z0-9äöå])${esc}(?![a-z0-9äöå])`, 'i').test(normQuery)) {
+                matchedItem++;
+            }
+        }
+
+        const qRatio = matchedQ / qTokens.length;
+        const itemRatio = matchedItem / itemTokens.length;
+
+        if (matchedQ === 0 && matchedItem === 0) return false;
+        return (firstQMatched && qRatio >= 0.55) || itemRatio >= 0.75;
     }
 
     function scoreSearchCandidate(candidate, targetName, currentPrice) {
@@ -2060,65 +2119,105 @@
             const normCand = normalizeSwappedModelOrder(candidate.name).toLowerCase();
 
             if (normCand === normTarget) {
-                score += 120;
-            } else {
-                const meaningfulTokens = extractMeaningfulTokens(normTarget);
-                let meaningfulMatched = 0;
-                for (const token of meaningfulTokens) {
-                    const esc = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                    if (new RegExp(`(?<![a-z0-9äöå])${esc}(?![a-z0-9äöå])`, 'i').test(normCand)) {
-                        meaningfulMatched++;
-                    }
-                }
+                return 120;
+            }
 
-                // CRITICAL GUARD: Never allow a candidate with ZERO meaningful words in common
-                // or less than 35% token overlap to match (even if the price happens to be similar)!
-                if (meaningfulTokens.length > 0) {
-                    if (meaningfulMatched === 0) {
-                        return -999;
-                    }
-                    if (meaningfulTokens.length >= 2 && (meaningfulMatched / meaningfulTokens.length) < 0.35) {
-                        return -999;
-                    }
-                }
+            const targetModelCodes = extractModelCodes(targetName);
+            const candModelCodes = extractModelCodes(candidate.name);
 
-                // Huge bonus if candidate starts with the user's query (e.g. "DJI Mini 4 Pro" starts with "DJI Mini 4", unlike "DJI RS 4 Mini")
-                if (normCand.startsWith(normTarget)) {
-                    score += 65;
-                } else if (normCand.includes(normTarget)) {
-                    score += 38;
-                }
+            let hasExactModelMatch = false;
+            let hasBaseModelMatch = false;
+            let hasConflictingModelSuffix = false;
 
-                // Keep single-digit model numbers ("5", "4", "7") when scoring Hinta.fi candidates!
-                const tokens = normTarget.split(/[\s/\-,()+]+/).filter(t => t.length >= 2 || /^\d+$/.test(t));
-                let matched = 0;
-                for (const token of tokens) {
-                    const esc = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                    if (new RegExp(`(?<![a-z0-9])${esc}(?![a-z0-9])`, 'i').test(normCand)) {
-                        matched++;
-                    } else if (/^\d+$/.test(token)) {
-                        // Heavy penalty if a model number (like "5" in "Mini 5 Pro") is missing in the Hinta.fi candidate!
-                        score -= 95;
-                    }
-                }
-                if (tokens.length > 0) {
-                    score += (matched / tokens.length) * 75;
-                }
-
-                // Enforce ordered <word> <number> pairs (e.g. "mini 4" in "DJI Mini 4" vs reversed "rs 4 mini")
-                for (let i = 0; i < tokens.length - 1; i++) {
-                    const w1 = tokens[i];
-                    const w2 = tokens[i + 1];
-                    if (/^[a-zäöå]{2,}$/i.test(w1) && /^\d{1,2}[a-z]?$/i.test(w2)) {
-                        const w1Esc = w1.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                        const w2Esc = w2.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                        const forwardPair = new RegExp(`\\b${w1Esc}\\s*${w2Esc}\\b`, 'i');
-                        const reversedPair = new RegExp(`\\b${w2Esc}\\s+${w1Esc}\\b`, 'i');
-                        if (forwardPair.test(normCand)) {
-                            score += 35;
-                        } else if (reversedPair.test(normCand)) {
-                            score -= 65;
+            if (targetModelCodes.length > 0 && candModelCodes.length > 0) {
+                for (const tCode of targetModelCodes) {
+                    for (const cCode of candModelCodes) {
+                        if (tCode === cCode) {
+                            hasExactModelMatch = true;
+                        } else if (tCode.split(/[-/]/)[0] === cCode.split(/[-/]/)[0]) {
+                            hasBaseModelMatch = true;
+                            if ((tCode.includes('/') && cCode.includes('/') && tCode !== cCode) ||
+                                (tCode.includes('-') && cCode.includes('-') && tCode !== cCode)) {
+                                hasConflictingModelSuffix = true;
+                            }
                         }
+                    }
+                }
+            }
+
+            if (hasExactModelMatch) {
+                score += 90;
+            } else if (hasBaseModelMatch && !hasConflictingModelSuffix) {
+                score += 50;
+            } else if (hasConflictingModelSuffix) {
+                score -= 50;
+            }
+
+            const targetTokens = extractMeaningfulTokens(normTarget);
+            const candTokens = extractMeaningfulTokens(normCand);
+
+            let matchedFromCand = 0;
+            for (const token of candTokens) {
+                const esc = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                if (new RegExp(`(?<![a-z0-9äöå])${esc}(?![a-z0-9äöå])`, 'i').test(normTarget)) {
+                    matchedFromCand++;
+                }
+            }
+            const candOverlap = candTokens.length > 0 ? (matchedFromCand / candTokens.length) : 0;
+
+            let matchedFromTarget = 0;
+            for (const token of targetTokens) {
+                const esc = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                if (new RegExp(`(?<![a-z0-9äöå])${esc}(?![a-z0-9äöå])`, 'i').test(normCand)) {
+                    matchedFromTarget++;
+                }
+            }
+            const targetOverlap = targetTokens.length > 0 ? (matchedFromTarget / targetTokens.length) : 0;
+
+            // Reject candidates with ZERO words in common, UNLESS exact model code matched
+            if (matchedFromCand === 0 && !hasExactModelMatch) {
+                return -999;
+            }
+
+            // Reject candidates with poor bidirectional overlap, UNLESS exact model code matched
+            if (!hasExactModelMatch && candOverlap < 0.50 && targetOverlap < 0.30) {
+                return -999;
+            }
+
+            score += (candOverlap * 45) + (targetOverlap * 35);
+
+            // Bonus if candidate starts with the user's query or is contained within
+            if (normCand.startsWith(normTarget)) {
+                score += 65;
+            } else if (normCand.includes(normTarget)) {
+                score += 38;
+            }
+
+            // Only apply single-digit generation penalty ("5" vs "4") if there is NO model code match
+            if (!hasExactModelMatch && !hasBaseModelMatch) {
+                for (const token of targetTokens) {
+                    if (/^[1-9]$/.test(token)) {
+                        const esc = token;
+                        if (!new RegExp(`(?<![a-z0-9])${esc}(?![a-z0-9])`, 'i').test(normCand)) {
+                            score -= 40;
+                        }
+                    }
+                }
+            }
+
+            // Enforce ordered <word> <number> pairs (e.g. "mini 4" in "DJI Mini 4" vs reversed "rs 4 mini")
+            for (let i = 0; i < targetTokens.length - 1; i++) {
+                const w1 = targetTokens[i];
+                const w2 = targetTokens[i + 1];
+                if (/^[a-zäöå]{2,}$/i.test(w1) && /^\d{1,2}[a-z]?$/i.test(w2)) {
+                    const w1Esc = w1.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    const w2Esc = w2.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    const forwardPair = new RegExp(`\\b${w1Esc}\\s*${w2Esc}\\b`, 'i');
+                    const reversedPair = new RegExp(`\\b${w2Esc}\\s+${w1Esc}\\b`, 'i');
+                    if (forwardPair.test(normCand)) {
+                        score += 35;
+                    } else if (reversedPair.test(normCand)) {
+                        score -= 65;
                     }
                 }
             }
@@ -2283,11 +2382,33 @@
     // =========================================================================
     function extractModelCodes(str) {
         if (!str) return [];
-        const matches = String(str).toUpperCase().match(/\b[A-Z]{1,6}\d{1,5}[A-Z0-9-]{2,15}\b/g) || [];
-        return matches.filter(m =>
-            !/^(18V|12V|20V|36V|40V|230V|20W|8KG|9KG|10KG|16GB|32GB|64GB|128GB|256GB|512GB|1TB|2TB|DDR4|DDR5|ONE|LED|USB|RGB|PRO|MAX)$/i.test(m) &&
-            /[A-Z]/.test(m) && /\d/.test(m) && m.length >= 5
-        );
+        const rawMatches = String(str).toUpperCase().match(/\b[A-Z0-9-]{1,10}[A-Z0-9/-]{3,20}\b/g) || [];
+        const results = [];
+        const seen = new Set();
+        const ignoreList = new Set([
+            '18V', '12V', '20V', '36V', '40V', '230V', '20W', '8KG', '9KG', '10KG',
+            '16GB', '32GB', '64GB', '128GB', '256GB', '512GB', '1TB', '2TB',
+            'DDR4', 'DDR5', 'ONE', 'LED', 'USB', 'RGB', 'ARGB', 'OLED', 'QLED', 'WIFI',
+            'PRO', 'MAX', 'PLUS', 'MINI', 'SLIM', 'ULTRA', 'LITE', 'SE', 'CORE', 'SERIES'
+        ]);
+        for (const m of rawMatches) {
+            const cleaned = m.replace(/^[-/]+|[-/]+$/g, '');
+            if (cleaned.length < 4 || cleaned.length > 24) continue;
+            if (ignoreList.has(cleaned)) continue;
+            if (!(/[A-Z]/.test(cleaned) && /\d/.test(cleaned))) continue;
+            if (!seen.has(cleaned)) {
+                seen.add(cleaned);
+                results.push(cleaned);
+            }
+            if (cleaned.includes('/') || cleaned.includes('-')) {
+                const base = cleaned.split(/[-/]/)[0];
+                if (base.length >= 4 && /[A-Z]/.test(base) && /\d/.test(base) && !ignoreList.has(base) && !seen.has(base)) {
+                    seen.add(base);
+                    results.push(base);
+                }
+            }
+        }
+        return results;
     }
 
     function isSameExactProduct(candidate, targetName, targetEan, referencePrice) {
@@ -2310,17 +2431,19 @@
             return true;
         }
 
-        // 2. If target has specific alphanumeric model codes (e.g. R18ALF-0, EW5F4248N1, EMS190DCL), require model code match
+        // 2. If target has specific alphanumeric model codes (e.g. HX3886/43, R18ALF-0, EW5F4248N1, EMS190DCL), require model code match
         const targetCodes = extractModelCodes(targetName);
         if (targetCodes.length > 0) {
             const candUpper = `${candidate.name} ${candidate.sku || ''} ${candidate.url || ''}`.toUpperCase();
+            const candCodes = extractModelCodes(candUpper);
             return targetCodes.some(code => {
-                const baseCode = code.replace(/-0$/, '');
-                return candUpper.includes(code) || (baseCode.length >= 6 && candUpper.includes(baseCode));
+                const baseCode = code.split(/[-/]/)[0];
+                return candUpper.includes(code) || (baseCode.length >= 4 && candUpper.includes(baseCode)) ||
+                       candCodes.some(cc => cc === code || cc.split(/[-/]/)[0] === baseCode);
             });
         }
 
-        // 3. Otherwise require strong meaningful word overlap (>= 75%) + first brand/noun token match
+        // 3. Otherwise require strong meaningful word overlap (>= 70%) + first brand/noun token match
         if (!doesItemMatchQueryWords(candidate.name, targetName)) return false;
         const tTokens = extractMeaningfulTokens(targetName);
         const cTokens = new Set(extractMeaningfulTokens(candidate.name));
@@ -2329,7 +2452,7 @@
         for (const t of tTokens) {
             if (cTokens.has(t)) matched++;
         }
-        return (matched / tTokens.length) >= 0.75;
+        return (matched / tTokens.length) >= 0.70;
     }
 
     async function fetchPrismaDirectOffers(query, targetName, targetEan, refPrice) {
@@ -5674,10 +5797,12 @@
             const themes = getStatusThemes(this.lang, productInfo.isUsedSite);
             this.setThemeVars(themes.neutral);
 
-            const fallbackQuery = encodeURIComponent(
-                productInfo.ean || productInfo.mpn || simplifyProductNameForSearch(productInfo.name) || ''
-            );
-            const toriQuery = encodeURIComponent(extractConciseModelQuery(productInfo.name) || '');
+            const modelCodes = extractModelCodes(`${productInfo.name || ''} ${productInfo.mpn || ''}`);
+            const bestModelQuery = (modelCodes[0]
+                ? `${productInfo.brand ? productInfo.brand + ' ' : ''}${modelCodes[0]}`
+                : null) || extractConciseModelQuery(productInfo.name) || productInfo.name || productInfo.ean || '';
+            const fallbackQuery = encodeURIComponent(bestModelQuery);
+            const toriQuery = encodeURIComponent(extractConciseModelQuery(productInfo.name) || bestModelQuery || '');
 
             this.wrapperEl.innerHTML = `
                 <div class="ufhpc-handle" id="ufhpc-toggle-handle" title="Click to toggle • Drag vertically to reposition">
@@ -5876,12 +6001,16 @@
                 productInfo
             );
 
-            const searchTermRaw = productInfo.ean || productInfo.mpn || extractConciseModelQuery(productInfo.name) || '';
-            const encodedSearch = encodeURIComponent(searchTermRaw);
+            const modelCodes = extractModelCodes(`${productInfo.name || ''} ${productInfo.mpn || ''}`);
+            const bestModelQuery = (modelCodes[0]
+                ? `${productInfo.brand ? productInfo.brand + ' ' : ''}${modelCodes[0]}`
+                : null) || extractConciseModelQuery(productInfo.name) || productInfo.name || productInfo.ean || '';
+            const searchTermRaw = marketProd?.title || bestModelQuery || productInfo.ean || '';
+            const encodedSearch = encodeURIComponent(marketProd?.title || bestModelQuery);
             const hintaUrl = marketProd?.url || `https://hinta.fi/haku?q=${encodedSearch}`;
 
             const toriData = comparison?.tori || { query: '', items: [], stats: null };
-            const toriSearchUrl = `https://www.tori.fi/recommerce/forsale/search?q=${encodeURIComponent(toriData.query || extractConciseModelQuery(productInfo.name) || searchTermRaw)}`;
+            const toriSearchUrl = `https://www.tori.fi/recommerce/forsale/search?q=${encodeURIComponent(toriData.query || extractConciseModelQuery(productInfo.name) || bestModelQuery || searchTermRaw)}`;
 
             let deltaText = '';
             let handleLabel = theme.label;
@@ -6381,7 +6510,7 @@
                                     <input type="text" class="ufhpc-search-input" id="ufhpc-custom-search-input"
                                            autocomplete="off"
                                            placeholder="${escapeHtml(t.searchPlaceholder)}"
-                                           value="${escapeHtml(productInfo.ean || marketProd?.title || comparison?.matchedQuery?.value || searchTermRaw)}" />
+                                           value="${escapeHtml(marketProd?.title || comparison?.matchedQuery?.value || bestModelQuery || searchTermRaw)}" />
                                     <button type="submit" class="ufhpc-search-btn">${escapeHtml(t.searchBtn)}</button>
                                 </form>
                             </div>

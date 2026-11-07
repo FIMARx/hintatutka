@@ -5,7 +5,7 @@
 **Suomen älykkäin reaaliaikainen hintatutka: Elektroniikka, Huonekalut, Ruoka, Urheilu, Apteekit, Tori.fi, Vinted & Huuto.net**  
 *The ultimate real-time price comparison, unit-price analyzer (`€/kg`, `€/l`), price watchlist, bargaining advisor, S-Bonus calculator & second-hand overlay for 81 Finnish & EU online stores.*
 
-[![Version](https://img.shields.io/badge/version-7.5-10b981?style=for-the-badge)](https://github.com/FIMARx/hintatutka)
+[![Version](https://img.shields.io/badge/version-7.6-10b981?style=for-the-badge)](https://github.com/FIMARx/hintatutka)
 [![Author](https://img.shields.io/badge/author-FIMARx-6366f1?style=for-the-badge)](https://github.com/FIMARx)
 [![Install](https://img.shields.io/badge/Install-HintaTutka.user.js-f43f5e?style=for-the-badge&logo=tampermonkey)](https://raw.githubusercontent.com/FIMARx/hintatutka/main/HintaTutka.user.js)
 [![Stores](https://img.shields.io/badge/stores-81%20supported-f59e0b?style=for-the-badge)](#)
@@ -115,7 +115,17 @@ HintaTutka toimii automaattisesti kaikilla kielipoluilla (`/fi/`, `/en/`, `/sv/`
 
 ## 🗺️ Kehityssuunnitelma & Versiohistoria / Roadmap & Changelog
 
-### 🚀 v7.5 Päivitys (Uusin / Latest)
+### 🚀 v7.6 Päivitys (Uusin / Latest)
+- 🧠 **Älykäs monivaiheinen mallikoodi- ja brändihaku (Smart Multi-Tier Matcher)**:
+  - **Tunnistaa erikoismerkeillä varustetut mallikoodit**: Koodintunnistus tukee nyt vinoviivoja, yhdysmerkkejä ja useampiosaisia sarjakoodeja (esim. `HX3886/43`, `WH-1000XM5`, `R18ALF-0`, `SM-S928B/DS`, `6055022C5`) ja tuottaa automaattisesti myös kantamallikoodit (`HX3886`).
+  - **Monivaiheinen kyselypino**: Vaikka Hinta.fi ei tuntisi verkkokaupan EAN-viivakoodia, HintaTutka hakee välittömästi yhdistelmillä `[Brändi] [Mallikoodi]` (esim. `Philips HX3886/43` ja `Philips HX3886`) sekä mallisarjoilla.
+  - **Täysin korjattu hakutulosten pisteytys (`scoreSearchCandidate`)**:
+    - Korjattu virhe, jossa kaupan pitkä 15 sanan kuvaileva myynti-ilmoitus (esim. *"Philips Sonicare 9000 Diamond Clean electric toothbrush + 3000 Power flosser..."*) sai algoritmin hylkäämään Hinta.fi:n tarkan ja tiiviin tietokantanikkeen (*"Philips HX3886/43"*) liian pienen sanamääräsuhteen ja numeropoikkeamien vuoksi.
+    - Tarkka mallikoodi saa nyt automaattisesti erittäin korkeat prioriteettipisteet (+90 p), eikä sitä hylätä markkinointisanojen puuttumisen takia.
+  - **Siistityt pikalinkit & hakukenttä**:
+    - Hakukentässä ja vertailupalveluiden pikalinkeissä (`[ Hinta.fi ↗ ]`, `[ Hintaseuranta ↗ ]`, `[ Hintaopas ↗ ]`) ei enää näytetä tai haeta paljaalla 13-numeroisella viivakoodilla, vaan aina selkeällä ja vertailupalveluissa suoraan toimivalla mallinimellä (kuten `Philips HX3886/43`).
+
+### 🌟 v7.5
 - 🎯 **Tyylikäs ja siisti hintamerkintöjen kohdistus (Verkkokauppa.com, Gigantti ym.)**:
   - **Ei enää rivinsisäistä leveyden venymistä**: Verkkokauppa.comissa ja vastaavissa kaupoissa hintamerkintä (`ufhpc-inline-price-badge-wrapper`) ankkuroidaan ulompaan hintalohkoon täydellä 100 % leveydellä omalle siistille rivilleen, jolloin se ei enää tunge epäsiististi hintanumeroiden viereen vaakasuunnassa.
   - **Ei enää osamaksuelementtien tai painikkeiden peittymistä**: Gigantissa ja vastaavissa kaupoissa hintamerkintä sijoittuu hintasäiliön alapuolelle normaaliin sivuvirtaukseen (DOM-flow), jolloin alapuolella olevat rahoitus- ja osamaksuboksit (kuten Resurs Bank) siirtyvät kauniisti alaspäin ilman päällekkäisyyttä.
