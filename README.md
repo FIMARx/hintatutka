@@ -5,6 +5,7 @@
 <br />
 
 [![Release](https://img.shields.io/github/v/release/FIMARx/hintatutka?style=for-the-badge&label=RELEASE&labelColor=0f172a&color=10b981)](https://github.com/FIMARx/hintatutka/releases/latest)
+[![Tests](https://img.shields.io/github/actions/workflow/status/FIMARx/hintatutka/test.yml?style=for-the-badge&label=TESTS&labelColor=0f172a&color=10b981)](https://github.com/FIMARx/hintatutka/actions/workflows/test.yml)
 [![Total Downloads](https://img.shields.io/github/downloads/FIMARx/hintatutka/total?style=for-the-badge&logo=github&label=TOTAL%20DOWNLOADS&labelColor=0f172a&color=38bdf8)](https://github.com/FIMARx/hintatutka/releases)
 [![Supported Stores](https://img.shields.io/badge/STORES-81%20SUPPORTED-f59e0b?style=for-the-badge&labelColor=0f172a)](#-supported-stores-81)
 [![Core Size](https://img.shields.io/github/size/FIMARx/hintatutka/HintaTutka.user.js?style=for-the-badge&label=CORE%20ENGINE&labelColor=0f172a&color=8b5cf6)](https://github.com/FIMARx/hintatutka/blob/main/HintaTutka.user.js)
@@ -84,6 +85,37 @@ flowchart LR
     F --> H["v9.0 Intelligence<br/>Club Audit • Flip ROI • Seasonal AI"]
     H --> G
 ```
+
+---
+
+## 🧪 Automated Testing & Real-Time Verification Suite
+
+HintaTutka includes a testing and real-time verification environment patterned after the DigiKaveri project. Built on Node's native `node:test` runner with **zero external testing dependencies**, tests execute in milliseconds locally and continuously in GitHub Actions CI.
+
+```bash
+# Run all unit, precision, parser, algorithm, cache & guard tests (< 1 second)
+npm test
+
+# Run the master verification suite with live real-time store canaries
+npm run verify
+
+# Run quick verification (offline tests only)
+npm run verify:quick
+
+# Run real-time live store checks against live storefront search endpoints
+npm run test:realtime
+```
+
+### Safety Nets & Test Coverage
+
+| Suite | File | What It Protects |
+| :--- | :--- | :--- |
+| **🛡️ Tripwire Guards** | [`tests/guards.test.js`](tests/guards.test.js) | Enforces **100% byte synchronization** between `HintaTutka.user.js` and `extension-mv3/hintatutka-core.js`, version parity across manifests, strict JSON schema validation for [`selectors.json`](selectors.json), valid SVG layout, and zero local developer path leaks. |
+| **🎯 Precision Matrix** | [`tests/precision.test.js`](tests/precision.test.js) | Prevents cross-generation & cross-tier mismatches: iPhone 18 Pro vs. iPhone 17 / 16 / 18 Pro Max, motherboard form-factor shields (`B850M-PLUS` micro-ATX vs `B850-PLUS` ATX), GPU tiers (`RTX 4070 Super` vs base / Ti), CPU architectures (`7800X3D` vs `9800X3D`), and storage variants. |
+| **💶 Store DOM Parsers** | [`tests/parsers.test.js`](tests/parsers.test.js) | Verifies Finnish thousands spaces (`1 509,00 €`), non-breaking spaces (`1\u00a0659,00\u00a0€` in Prisma), German dot decimals (`1.043,02 €`), 25.5% Finnish VAT landed calculations, rejection of installment prices (`39,00 €/kk`), and illusory club deal auditing. |
+| **🔥 Algorithms & AI** | [`tests/algorithms.test.js`](tests/algorithms.test.js) | Verifies Tukey IQR second-hand price outlier filtering, flip arbitrage ROI math, and Finnish seasonal discount calendar forecasting (*Tammiale, Hullut Päivät, Black Friday*). |
+| **⚡ Cache Isolation** | [`tests/cache.test.js`](tests/cache.test.js) | Ensures version-isolated namespaces (`ufhpc_v94_`), automatic legacy cache purging on boot, and TTL enforcement. |
+| **🌐 Real-Time Live Canaries** | [`tests/realtime.mjs`](tests/realtime.mjs) | Fires live network queries against Amazon.de and Finnish storefronts to verify that precision shields actively discard live search engine false positives and catch storefront DOM changes in real time. |
 
 ---
 

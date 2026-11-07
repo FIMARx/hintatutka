@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         HintaTutka
 // @namespace    https://github.com/FIMARx/hintatutka
-// @version      9.3
-// @description  Suomen älykkäin hintatutka (v9.3): EU/Saksa ALV+toimitus -vertailu, Flip-arbitraasi (Tori/Vinted/Huuto), Klubi-totuusmittari, kausiennuste & 81 kauppaa
+// @version      9.4
+// @description  Suomen älykkäin hintatutka (v9.4): EU/Saksa ALV+toimitus -vertailu, Flip-arbitraasi (Tori/Vinted/Huuto), Klubi-totuusmittari, kausiennuste & 81 kauppaa
 // @author       FIMARx
 // @icon         https://raw.githubusercontent.com/FIMARx/hintatutka/main/extension-mv3/icons/icon128.png
 // @homepageURL  https://github.com/FIMARx/hintatutka
@@ -592,18 +592,29 @@
 
     function purgeLegacyCaches() {
         try {
-            if (typeof GM_setValue === 'function') {
-                GM_setValue('ufhpc_shared_cache_v81', '{}');
-                GM_setValue('ufhpc_shared_cache_v90', '{}');
+            if (typeof GM_listValues === 'function' && typeof GM_deleteValue === 'function') {
+                for (const k of GM_listValues()) {
+                    if (k && k.startsWith('ufhpc_') && !k.startsWith(CACHE_PREFIX)) {
+                        GM_deleteValue(k);
+                    }
+                }
             }
         } catch (_) {}
         try {
-            localStorage.removeItem('ufhpc_shared_cache_v81');
-            localStorage.removeItem('ufhpc_shared_cache_v90');
-            for (let i = sessionStorage.length - 1; i >= 0; i--) {
-                const k = sessionStorage.key(i);
-                if (k && (k.startsWith('ufhpc_v81_') || k.startsWith('ufhpc_v90_'))) {
-                    sessionStorage.removeItem(k);
+            if (typeof localStorage !== 'undefined') {
+                for (let i = localStorage.length - 1; i >= 0; i--) {
+                    const k = localStorage.key(i);
+                    if (k && k.startsWith('ufhpc_') && !k.startsWith(CACHE_PREFIX)) {
+                        localStorage.removeItem(k);
+                    }
+                }
+            }
+            if (typeof sessionStorage !== 'undefined') {
+                for (let i = sessionStorage.length - 1; i >= 0; i--) {
+                    const k = sessionStorage.key(i);
+                    if (k && k.startsWith('ufhpc_') && !k.startsWith(CACHE_PREFIX)) {
+                        sessionStorage.removeItem(k);
+                    }
                 }
             }
         } catch (_) {}
@@ -1357,8 +1368,8 @@
                 genTokens.add(tok);
                 continue;
             }
-            // 3. Short series prefix + 1-2 digit gen + optional subvariant (e.g. s24, s25, a56, a57, m3, m4, g8, c4, io9, io10)
-            if (/^[a-z]{1,2}\d{1,2}[a-z]?$/.test(tok) && !/^(?:v\d+|x\d+|ip\d+|bt\d+|m2|u2|am[45]|tb[345]|dp[12]|eu\d+)$/i.test(tok)) {
+            // 3. Short series prefix + 1-3 digit gen + optional subvariant (e.g. s24, s25, a56, a57, b850, b850m, x870e, z890, m3, m4, g8, c4, io9, io10)
+            if (/^[a-z]{1,2}\d{1,3}[a-z]?$/.test(tok) && !/^(?:v\d+|x\d+|ip\d+|bt\d+|m2|u2|am[45]|tb[345]|dp[12]|eu\d+)$/i.test(tok)) {
                 genTokens.add(tok);
                 continue;
             }
@@ -2196,7 +2207,7 @@
         }
         if (!box) box = clubLabelEl.parentElement || rootArea;
 
-        const exVatOrInstallmentRx = /\b(?:ilman\s+alv|alv\s*0\s*%|veroton|excl\.?\s*vat|ex\.?\s*vat|exkl\.?\s*moms|erässä|osamaksu\w*|luotto|palvelumaksu|toimitus(?:\s+alkaen)?|automaatti|noutopiste|vaihtohyvitys|kierrätysetu|liittymäasiakkaille|säästä\s+\d)\b|\/kk\b|\bkk[\s-]erä|\/month\b/i;
+        const exVatOrInstallmentRx = /(?:^|\s)(?:ilman\s+alv|alv\s*0\s*%|veroton|excl\.?\s*vat|ex\.?\s*vat|exkl\.?\s*moms|er[iäa]ss[äa]|osamaksu\w*|luotto|palvelumaksu|toimitus(?:\s+alkaen)?|automaatti|noutopiste|vaihtohyvitys|kierr[äa]tysetu|liittym[äa]asiakkaille|säästä\s+\d)(?![a-zA-Z0-9äöåÄÖÅ])|\/\s*kk\b|\bkk[\s-]er[äa]|\/\s*month\b/i;
 
         const priceNodes = [];
         const boxWalker = document.createTreeWalker(box, NodeFilter.SHOW_ELEMENT);
@@ -2281,7 +2292,7 @@
             '.price'
         ];
 
-        const invalidPriceTextRx = /\b(?:ilman\s+alv|alv\s*0\s*%|veroton|excl\.?\s*vat|ex\.?\s*vat|exkl\.?\s*moms|erässä|osamaksu\w*|luotto|palvelumaksu|toimitus\s+alkaen|vaihtohyvitys|kierrätysetu|liittymäasiakkaille)\b|\/kk\b|\bkk\s|\bkk-erä|\/month\b/i;
+        const invalidPriceTextRx = /(?:^|\s)(?:ilman\s+alv|alv\s*0\s*%|veroton|excl\.?\s*vat|ex\.?\s*vat|exkl\.?\s*moms|er[iäa]ss[äa]|osamaksu\w*|luotto|palvelumaksu|toimitus\s+alkaen|vaihtohyvitys|kierr[äa]tysetu|liittym[äa]asiakkaille)(?![a-zA-Z0-9äöåÄÖÅ])|\/\s*kk\b|\bkk\s|\bkk[\s-]er[äa]|\/\s*month\b/i;
 
         const isInvalidPriceNode = (el) => {
             if (!el || !el.isConnected) return true;

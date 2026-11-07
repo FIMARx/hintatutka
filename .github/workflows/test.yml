@@ -1,0 +1,46 @@
+name: Test & Real-Time Verification
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  schedule:
+    # Daily automated canary run at 06:00 UTC to catch store layout changes and search mismatches
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      quick:
+        description: 'Run quick offline tests only (skips live store queries)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Precision, Parsers, Guards & Real-Time Verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Run unit & precision test suite
+        run: npm test
+
+      - name: Run full verification & real-time store canaries
+        run: |
+          if [ "${{ inputs.quick }}" = "true" ]; then
+            npm run verify:quick
+          else
+            npm run verify
+          fi
