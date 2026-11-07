@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         HintaTutka
 // @namespace    https://github.com/FIMARx/hintatutka
-// @version      9.0
-// @description  Suomen älykkäin hintatutka (v9.0): EU/Saksa ALV+toimitus -vertailu, Flip-arbitraasi (Tori/Vinted/Huuto), Klubi-totuusmittari, kausiennuste & 81 kauppaa
+// @version      9.1
+// @description  Suomen älykkäin hintatutka (v9.1): EU/Saksa ALV+toimitus -vertailu, Flip-arbitraasi (Tori/Vinted/Huuto), Klubi-totuusmittari, kausiennuste & 81 kauppaa
 // @author       FIMARx
 // @homepageURL  https://github.com/FIMARx/hintatutka
 // @supportURL   https://github.com/FIMARx/hintatutka/issues
@@ -148,8 +148,14 @@
     // =========================================================================
     // CONFIGURATION & THRESHOLDS
     // =========================================================================
-    const SCRIPT_VERSION = '9.0';
+    const SCRIPT_VERSION = '9.1';
+    const IS_MV3_EXTENSION = Boolean(
+        globalThis.__HT_MV3_EXTENSION__ ||
+        (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id && typeof GM_info === 'undefined')
+    );
     const GITHUB_RAW_SCRIPT_URL = 'https://raw.githubusercontent.com/FIMARx/hintatutka/main/HintaTutka.user.js';
+    const GITHUB_LATEST_MV3_ZIP_URL = 'https://github.com/FIMARx/hintatutka/releases/latest/download/HintaTutka-MV3-Extension.zip';
+    const PRIMARY_UPDATE_URL = IS_MV3_EXTENSION ? GITHUB_LATEST_MV3_ZIP_URL : GITHUB_RAW_SCRIPT_URL;
     const GITHUB_SELECTORS_URL = 'https://raw.githubusercontent.com/FIMARx/hintatutka/main/selectors.json';
     const GITHUB_API_CONTENTS_URL = 'https://api.github.com/repos/FIMARx/hintatutka/contents/HintaTutka.user.js';
     const GITHUB_REPO_URL = 'https://github.com/FIMARx/hintatutka';
@@ -8346,8 +8352,10 @@
                             <button type="button" class="ufhpc-update-toast-close" id="ufhpc-update-toast-close" title="Sulje ilmoitus">✕</button>
                         </div>
                         <div class="ufhpc-update-toast-actions">
-                            <a class="ufhpc-update-toast-btn" id="ufhpc-toast-update-btn" href="${GITHUB_RAW_SCRIPT_URL}" target="_blank" rel="noopener noreferrer">
-                                🚀 ${this.lang === 'en' ? 'Install Update ↗' : 'Asenna päivitys ↗'}
+                            <a class="ufhpc-update-toast-btn" id="ufhpc-toast-update-btn" href="${PRIMARY_UPDATE_URL}" target="_blank" rel="noopener noreferrer">
+                                🚀 ${this.lang === 'en'
+                                    ? (IS_MV3_EXTENSION ? 'Download MV3 Update (.zip) ↗' : 'Install Update ↗')
+                                    : (IS_MV3_EXTENSION ? 'Lataa MV3-päivitys (.zip) ↗' : 'Asenna päivitys ↗')}
                             </a>
                         </div>
                     </div>
@@ -8866,11 +8874,21 @@
 
             let updateBannerHtml = '';
             if (this.updateInstalling) {
+                const pendingTitle = IS_MV3_EXTENSION
+                    ? (this.lang === 'en' ? 'MV3 Extension ZIP downloaded!' : 'MV3-laajennuspäivitys ladattu!')
+                    : (this.lang === 'en' ? 'Update opened in browser!' : 'Päivitys avattu selaimeen!');
+                const pendingDesc = IS_MV3_EXTENSION
+                    ? (this.lang === 'en'
+                        ? 'Run update-extension.ps1 (or extract ZIP), reload in chrome://extensions, then reload tab:'
+                        : 'Aja update-extension.ps1 (tai pura ZIP), päivitä laajennus (chrome://extensions) ja lataa sivu:')
+                    : (this.lang === 'en'
+                        ? 'Click "Update" in Tampermonkey, then reload this tab:'
+                        : 'Paina "Päivitä" Tampermonkeyssa ja lataa tämä sivu uudelleen:');
                 updateBannerHtml = `
                     <div class="ufhpc-update-banner is-pending">
                         <div class="ufhpc-update-banner-info">
-                            <div class="ufhpc-update-banner-title">🔄 ${this.lang === 'en' ? 'Update opened in browser!' : 'Päivitys avattu selaimeen!'}</div>
-                            <div class="ufhpc-update-banner-desc">${this.lang === 'en' ? 'Click "Update" in Tampermonkey, then reload this tab:' : 'Paina "Päivitä" Tampermonkeyssa ja lataa tämä sivu uudelleen:'}</div>
+                            <div class="ufhpc-update-banner-title">🔄 ${pendingTitle}</div>
+                            <div class="ufhpc-update-banner-desc">${pendingDesc}</div>
                         </div>
                         <button type="button" class="ufhpc-btn-reload-now" id="ufhpc-btn-reload-now" title="${this.lang === 'en' ? 'Reload this page to activate the update' : 'Lataa sivu uudelleen ottaaksesi uuden version käyttöön'}">
                             ↻ ${this.lang === 'en' ? 'Reload Page Now' : 'Lataa sivu uudelleen'}
@@ -8879,9 +8897,9 @@
                 `;
             } else if (latestUpdateVersion) {
                 updateBannerHtml = `
-                    <a class="ufhpc-update-banner" id="ufhpc-update-banner-link" href="${GITHUB_RAW_SCRIPT_URL}" target="_blank" rel="noopener noreferrer" title="Click to install the latest HintaTutka update from GitHub">
+                    <a class="ufhpc-update-banner" id="ufhpc-update-banner-link" href="${PRIMARY_UPDATE_URL}" target="_blank" rel="noopener noreferrer" title="Click to install the latest HintaTutka update from GitHub">
                         <span>🚀 ${this.lang === 'en' ? `New update available! (v${SCRIPT_VERSION} → v${escapeHtml(latestUpdateVersion)})` : `Uusi päivitys saatavilla! (v${SCRIPT_VERSION} → v${escapeHtml(latestUpdateVersion)})`}</span>
-                        <span class="ufhpc-update-banner-cta">${this.lang === 'en' ? 'Update now ↗' : 'Päivitä nyt ↗'}</span>
+                        <span class="ufhpc-update-banner-cta">${this.lang === 'en' ? (IS_MV3_EXTENSION ? 'Download ZIP ↗' : 'Update now ↗') : (IS_MV3_EXTENSION ? 'Lataa ZIP ↗' : 'Päivitä nyt ↗')}</span>
                     </a>
                 `;
             }
@@ -8894,12 +8912,18 @@
                     </div>
                     <div class="ufhpc-update-toast-sub">
                         ${this.lang === 'en'
-                            ? `A newer version (v${escapeHtml(latestUpdateVersion)}) has been pushed to GitHub. Click below to update via Tampermonkey in 1 click.`
-                            : `Uusi versio (v${SCRIPT_VERSION} → v${escapeHtml(latestUpdateVersion)}) on julkaistu GitHubissa! Päivitä skripti yhdellä klikkauksella:`}
+                            ? (IS_MV3_EXTENSION
+                                ? `Version v${escapeHtml(latestUpdateVersion)} is available! Download the MV3 ZIP or run update-extension.ps1 in your extension folder.`
+                                : `A newer version (v${escapeHtml(latestUpdateVersion)}) has been pushed to GitHub. Click below to update via Tampermonkey in 1 click.`)
+                            : (IS_MV3_EXTENSION
+                                ? `Uusi versio (v${SCRIPT_VERSION} → v${escapeHtml(latestUpdateVersion)}) on julkaistu! Lataa MV3-ZIP tai aja kansiossa update-extension.ps1:`
+                                : `Uusi versio (v${SCRIPT_VERSION} → v${escapeHtml(latestUpdateVersion)}) on julkaistu GitHubissa! Päivitä skripti yhdellä klikkauksella:`)}
                     </div>
                     <div class="ufhpc-update-toast-actions">
-                        <a class="ufhpc-update-toast-btn" id="ufhpc-toast-update-btn" href="${GITHUB_RAW_SCRIPT_URL}" target="_blank" rel="noopener noreferrer">
-                            🚀 ${this.lang === 'en' ? 'Install Update ↗' : 'Asenna päivitys ↗'}
+                        <a class="ufhpc-update-toast-btn" id="ufhpc-toast-update-btn" href="${PRIMARY_UPDATE_URL}" target="_blank" rel="noopener noreferrer">
+                            🚀 ${this.lang === 'en'
+                                ? (IS_MV3_EXTENSION ? 'Download MV3 ZIP ↗' : 'Install Update ↗')
+                                : (IS_MV3_EXTENSION ? 'Lataa MV3-ZIP ↗' : 'Asenna päivitys ↗')}
                         </a>
                     </div>
                 </div>
@@ -8938,7 +8962,7 @@
                                     <button type="button" class="ufhpc-forget-learned-btn" id="ufhpc-forget-learned-btn" title="${escapeHtml(t.forgetLearnedTooltip)}">✕</button>
                                 </span>
                             ` : ''}
-                            <a class="ufhpc-ver-link ${(latestUpdateVersion || this.updateInstalling) ? 'has-update' : ''}" id="ufhpc-version-check-btn" href="${GITHUB_RAW_SCRIPT_URL}" target="_blank" rel="noopener noreferrer" title="HintaTutka v${SCRIPT_VERSION} (GitHub: FIMARx/hintatutka) — Klikkaa tarkistaaksesi päivitykset">${latestUpdateVersion ? `🚀 v${SCRIPT_VERSION} → v${escapeHtml(latestUpdateVersion)}` : `v${SCRIPT_VERSION} ↻`}</a>
+                            <a class="ufhpc-ver-link ${(latestUpdateVersion || this.updateInstalling) ? 'has-update' : ''}" id="ufhpc-version-check-btn" href="${PRIMARY_UPDATE_URL}" target="_blank" rel="noopener noreferrer" title="HintaTutka v${SCRIPT_VERSION} (GitHub: FIMARx/hintatutka) — Klikkaa tarkistaaksesi päivitykset">${latestUpdateVersion ? `🚀 v${SCRIPT_VERSION} → v${escapeHtml(latestUpdateVersion)}` : `v${SCRIPT_VERSION} ↻`}</a>
                         </div>
                         <div class="ufhpc-header-btns">
                             <button class="ufhpc-icon-btn ${isSaved ? 'is-active' : ''}" id="ufhpc-watchlist-toggle-btn" title="${escapeHtml(isSaved ? t.watchlistRemoved : t.watchlistBtn)}">
@@ -9309,7 +9333,7 @@
                     if (newVer) {
                         updateToastDismissed = false;
                         this.markUpdateInitiated(newVer);
-                        window.open(GITHUB_RAW_SCRIPT_URL, '_blank', 'noopener,noreferrer');
+                        window.open(PRIMARY_UPDATE_URL, '_blank', 'noopener,noreferrer');
                     } else {
                         versionCheckBtn.classList.add('is-up-to-date');
                         versionCheckBtn.textContent = this.lang === 'en' ? `✓ Latest (v${SCRIPT_VERSION})` : `✓ Uusin (v${SCRIPT_VERSION})`;

@@ -3,7 +3,13 @@
 
     const PROXY_KEY = 'ufhpc_proxy_url_v90';
     const WATCHLIST_KEY = 'ufhpc_watchlist_items_v70';
+    const UPDATE_STATE_KEY = 'ufhpc_mv3_update_state_v91';
 
+    const verBadge = document.getElementById('ver-badge');
+    const checkUpdateBtn = document.getElementById('check-update-btn');
+    const updateCard = document.getElementById('update-card');
+    const updateTitle = document.getElementById('update-title');
+    const updateDownloadLink = document.getElementById('update-download-link');
     const proxyInput = document.getElementById('proxy-input');
     const proxyPill = document.getElementById('proxy-pill');
     const saveProxyBtn = document.getElementById('save-proxy-btn');
@@ -17,7 +23,7 @@
         statusMsg.textContent = text;
         setTimeout(() => {
             if (statusMsg.textContent === text) statusMsg.textContent = '';
-        }, 2500);
+        }, 3200);
     }
 
     function updateProxyBadge(url) {
@@ -28,6 +34,16 @@
             proxyPill.textContent = 'Direct Mode';
             proxyPill.style.color = '#94a3b8';
         }
+    }
+
+    function renderUpdateState(state) {
+        if (!state || !state.hasUpdate) {
+            updateCard.classList.remove('is-visible');
+            return;
+        }
+        updateTitle.textContent = `🚀 Update Available (v${state.localVersion} → v${state.remoteVersion})`;
+        if (state.downloadUrl) updateDownloadLink.href = state.downloadUrl;
+        updateCard.classList.add('is-visible');
     }
 
     function renderWatchlist(rawStr) {
@@ -66,19 +82,40 @@
         }
     }
 
-    chrome.storage.local.get([PROXY_KEY, WATCHLIST_KEY], (res) => {
+    chrome.storage.local.get([PROXY_KEY, WATCHLIST_KEY, UPDATE_STATE_KEY], (res) => {
         const savedProxy = String(res?.[PROXY_KEY] || '').trim();
         proxyInput.value = savedProxy;
         updateProxyBadge(savedProxy);
         if (res?.[WATCHLIST_KEY]) {
             renderWatchlist(res[WATCHLIST_KEY]);
         }
+        if (res?.[UPDATE_STATE_KEY]) {
+            renderUpdateState(res[UPDATE_STATE_KEY]);
+        }
     });
 
     chrome.runtime.sendMessage({ type: 'HT_GET_STATS' }, (res) => {
         if (res?.ok) {
             cacheStat.textContent = `${res.bgCachedUrls} cached`;
+            if (res.localVersion) verBadge.textContent = `MV3 v${res.localVersion}`;
         }
+    });
+
+    checkUpdateBtn.addEventListener('click', () => {
+        checkUpdateBtn.textContent = '⏳...';
+        chrome.runtime.sendMessage({ type: 'HT_CHECK_UPDATE', force: true }, (res) => {
+            checkUpdateBtn.textContent = '↻ Update';
+            if (res?.updateState) {
+                renderUpdateState(res.updateState);
+                if (res.updateState.hasUpdate) {
+                    flashStatus(`🚀 New version v${res.updateState.remoteVersion} found!`);
+                } else {
+                    flashStatus(`✓ Up to date (v${res.updateState.localVersion}) + selectors synced!`);
+                }
+            } else {
+                flashStatus('✓ Selectors hot-patched!');
+            }
+        });
     });
 
     saveProxyBtn.addEventListener('click', () => {

@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/hero-banner.svg" width="100%" alt="HintaTutka v9.0 — Finnish & EU Real-Time Price Intelligence" />
+<img src="assets/hero-banner.svg" width="100%" alt="HintaTutka v9.1 — Finnish & EU Real-Time Price Intelligence" />
 
 <br />
 
@@ -44,7 +44,8 @@
 2. **🧩 Native Manifest V3 Browser Extension (`extension-mv3/`)**
    - Download **[`HintaTutka-MV3-Extension.zip`](https://github.com/FIMARx/hintatutka/releases/latest/download/HintaTutka-MV3-Extension.zip)** and extract it to a folder *(disable the Tampermonkey script first so you don't run two copies at once)*.
    - Open `chrome://extensions` (or `edge://extensions` / `brave://extensions`) and toggle **Developer mode** ON.
-   - Click **Load unpacked** and select the extracted folder. Click the toolbar ⚡ icon anytime to view your cross-store Watchlist or configure an Edge Proxy.
+   - Click **Load unpacked** and select the extracted folder.
+   - **Auto-Updates & Hot-Patches**: Store CSS selectors ([`selectors.json`](selectors.json)) auto-update silently every 12h. When a new engine release ships, the toolbar icon lights up with a **`NEW`** badge — run the included `update-extension.ps1` (Windows) or `update-extension.sh` (macOS/Linux) script to update files in 1 click, then click `↻` in `chrome://extensions`.
 
 3. **☁️ Optional: Self-Hosted Cloudflare Worker Edge Proxy (`cloudflare-worker/`)**
    - Masks your client IP behind Cloudflare's global network, shares a **15-minute edge cache** (`caches.default`), and exposes `/proxy`, `/selectors`, and a custom SVG telemetry card at `/stats-card.svg`:
@@ -121,7 +122,11 @@ HintaTutka works across all localized store paths (`/fi/`, `/en/`, `/sv/`) and S
 
 ## 🗺️ Changelog
 
-### 🚀 v9.0 (Latest)
+### 🚀 v9.1 (Latest)
+- **🔔 Smart MV3 Extension Update System & 1-Click Updater**: Background GitHub version watcher with automatic emerald **`NEW`** toolbar icon badge (`chrome.action.setBadgeText`), MV3-aware download banners/popup UI, on-demand `selectors.json` hot-patch button, and 1-click in-place `update-extension.ps1` / `update-extension.sh` scripts.
+- **🎨 Studio-Grade Vector Hero Banner & Live Download Telemetry**: Rebuilt [`assets/hero-banner.svg`](assets/hero-banner.svg) with custom geometric vector icons, mini price-history sparkline, and automated GitHub Release asset packaging ([`.github/workflows/release.yml`](.github/workflows/release.yml)).
+
+### 🚀 v9.0
 - **🇪🇺 Cross-Border EU Shipping & Finnish VAT Landed-Cost Optimizer**: Live `Amazon.de` lookup (`19% MwSt → 25.5% FI ALV` + `99 €` free FI shipping threshold), US/UK comma-thousands price parser fix (`€1,181.28`), and 1-click **Amazon.de**, **Geizhals.eu**, and **Idealo.de** buttons.
 - **🔥 Arbitrage & Flipping Engine**: Net resale margin & ROI calculator across **Tori.fi**, **Vinted.fi**, and **Huuto.net** (`🔥 FLIP +XX €` row tags + Arbitrage Opportunity cards).
 - **🎭 Club Price Truth Benchmarking**: Audits `MyPOWER`, `Klubihinta`, `HH PLUS`, and `Asiakasomistaja` deals against open non-club stores and historical ATL (`🏆 True Club Low` vs. `🎭 Illusory Club Deal` vs. `⚠️ Inflated Normal Price`).

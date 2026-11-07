@@ -8,6 +8,7 @@
 (function () {
     'use strict';
 
+    globalThis.__HT_MV3_EXTENSION__ = true;
     const WATCHLIST_KEY = 'ufhpc_watchlist_items_v70';
     const PROXY_URL_KEY = 'ufhpc_proxy_url_v90';
     const memStore = Object.create(null);
