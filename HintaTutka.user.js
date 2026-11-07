@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         HintaTutka
 // @namespace    https://github.com/FIMARx/hintatutka
-// @version      8.0
-// @description  Suomen älykkäin hintatutka (v8.0 Engine): Kaksivaiheinen pikarenderöinti, monikielinen (FI/EN/SV) speksi- ja mallihaku, GS1-viivakooditarkistus, jaettujen senttien & ALV 0% -hintojen älytunnistus, live Hintaseuranta + Hinta.fi + Huuto/Tori/Vinted -fuusio, itseoppiva hakumuisti & 81 kauppaa
+// @version      8.1
+// @description  Suomen älykkäin hintatutka (v8.1 Shield): 0-CLS hintamerkintä, taustavälilehtien älytauko, jaettu GM-välimuisti, Cloudflare/429-suoja, etäpäivitettävät selektorit, monikielinen (FI/EN/SV) haku & 81 kauppaa
 // @author       FIMARx
 // @homepageURL  https://github.com/FIMARx/hintatutka
 // @supportURL   https://github.com/FIMARx/hintatutka/issues
@@ -144,8 +144,9 @@
     // =========================================================================
     // CONFIGURATION & THRESHOLDS
     // =========================================================================
-    const SCRIPT_VERSION = '8.0';
+    const SCRIPT_VERSION = '8.1';
     const GITHUB_RAW_SCRIPT_URL = 'https://raw.githubusercontent.com/FIMARx/hintatutka/main/HintaTutka.user.js';
+    const GITHUB_SELECTORS_URL = 'https://raw.githubusercontent.com/FIMARx/hintatutka/main/selectors.json';
     const GITHUB_API_CONTENTS_URL = 'https://api.github.com/repos/FIMARx/hintatutka/contents/HintaTutka.user.js';
     const GITHUB_REPO_URL = 'https://github.com/FIMARx/hintatutka';
 
@@ -156,8 +157,13 @@
         usedCheapDiscountPct: 18.0,
         usedOkDiscountPct: 5.0,
         cacheTtlMs: 15 * 60 * 1000,
+        remoteSelectorsTtlMs: 12 * 60 * 60 * 1000,
         updateCheckTtlMs: 60 * 1000,
         storageKeyUpdateCheck: 'ufhpc_github_update_v70',
+        storageKeyRemoteSelectors: 'ufhpc_remote_selectors_v81',
+        storageKeySharedCache: 'ufhpc_shared_cache_v81',
+        storageKeyCircuitBreakers: 'ufhpc_circuit_breakers_v81',
+        storageKeyHostPacing: 'ufhpc_host_pacing_v81',
         storageKeyObservedOffers: 'ufhpc_observed_offers_v70',
         storageKeyCollapsed: 'ufhpc_sidebar_collapsed_v55',
         storageKeyExpanded: 'ufhpc_sidebar_expanded_v55',
@@ -549,23 +555,173 @@
     }
 
     // =========================================================================
-    // UTILITIES, SESSION CACHE, BARCODE CHECKSUM & MULTILINGUAL NORMALIZERS
+    // IDLE SCHEDULER, REMOTE HOT-PATCH SELECTORS & L1/L2 CROSS-DOMAIN CACHE
     // =========================================================================
-    const CACHE_PREFIX = 'ufhpc_v80_';
+    const CACHE_PREFIX = 'ufhpc_v81_';
+    const memoryCache = new Map();
+    const pendingSharedCacheWrites = new Map();
+    let sharedCacheFlushScheduled = false;
+    let gmCacheSnapshot = null;
+    let gmCacheSnapshotTs = 0;
+
+    function scheduleIdleTask(fn, timeoutMs = 450) {
+        if (typeof window.requestIdleCallback === 'function') {
+            return window.requestIdleCallback(() => {
+                try { fn(); } catch (_) {}
+            }, { timeout: timeoutMs });
+        }
+        return setTimeout(() => {
+            try { fn(); } catch (_) {}
+        }, 16);
+    }
+
+    function waitForVisibleTab() {
+        if (!document.hidden && document.visibilityState !== 'hidden') {
+            return Promise.resolve();
+        }
+        return new Promise((resolve) => {
+            let settled = false;
+            const onWake = () => {
+                if (settled) return;
+                if (!document.hidden && document.visibilityState !== 'hidden') {
+                    settled = true;
+                    document.removeEventListener('visibilitychange', onWake);
+                    window.removeEventListener('focus', onWake);
+                    // Stagger wakeups slightly (60-220ms) when user flips rapidly through tabs
+                    const staggerMs = 60 + Math.floor(Math.random() * 160);
+                    setTimeout(resolve, staggerMs);
+                }
+            };
+            document.addEventListener('visibilitychange', onWake, { passive: true });
+            window.addEventListener('focus', onWake, { passive: true });
+        });
+    }
+
+    // Remote Hot-Patchable Store Selector & Scraper Registry (updates from GitHub without script reinstall)
+    let remoteSelectorConfig = {
+        schemaVersion: 1,
+        storeOverrides: {},
+        globalAnchorSelectors: [],
+        disabledScrapers: []
+    };
+
+    function applyRemoteSelectorConfig(cfg) {
+        if (!cfg || typeof cfg !== 'object') return;
+        remoteSelectorConfig = {
+            schemaVersion: cfg.schemaVersion || 1,
+            storeOverrides: (cfg.storeOverrides && typeof cfg.storeOverrides === 'object') ? cfg.storeOverrides : {},
+            globalAnchorSelectors: Array.isArray(cfg.globalAnchorSelectors) ? cfg.globalAnchorSelectors.filter(s => typeof s === 'string' && s.trim()) : [],
+            disabledScrapers: Array.isArray(cfg.disabledScrapers) ? cfg.disabledScrapers : []
+        };
+
+        for (const store of STORES) {
+            const override = remoteSelectorConfig.storeOverrides[store.match];
+            if (override && Array.isArray(override.prependSelectors) && override.prependSelectors.length > 0) {
+                const validPrepends = override.prependSelectors.filter(s => typeof s === 'string' && s.trim());
+                store.selectors = Array.from(new Set([...validPrepends, ...(store.selectors || [])]));
+            }
+        }
+    }
+
+    function initCachedRemoteSelectors() {
+        try {
+            if (typeof GM_getValue !== 'function') return;
+            const raw = GM_getValue(CONFIG.storageKeyRemoteSelectors, '');
+            if (!raw) return;
+            const parsed = JSON.parse(raw);
+            if (parsed?.data) {
+                applyRemoteSelectorConfig(parsed.data);
+            }
+        } catch (_) {}
+    }
+
+    function isScraperDisabled(scraperId) {
+        return Array.isArray(remoteSelectorConfig.disabledScrapers) &&
+            remoteSelectorConfig.disabledScrapers.includes(scraperId);
+    }
+
+    initCachedRemoteSelectors();
 
     function normalizeQueryForCache(q) {
         return String(q || '').toLowerCase().replace(/\s+/g, ' ').trim().slice(0, 80);
     }
 
-    function getCached(key) {
+    function readSharedGmCacheObject(forceReload = false) {
+        if (typeof GM_getValue !== 'function') return null;
+        const now = Date.now();
+        if (!forceReload && gmCacheSnapshot && (now - gmCacheSnapshotTs) < 2500) {
+            return gmCacheSnapshot;
+        }
         try {
-            const raw = sessionStorage.getItem(`${CACHE_PREFIX}${key}`);
+            const raw = GM_getValue(CONFIG.storageKeySharedCache, '{}');
+            const parsed = JSON.parse(raw || '{}');
+            gmCacheSnapshot = (parsed && typeof parsed === 'object') ? parsed : {};
+            gmCacheSnapshotTs = now;
+            return gmCacheSnapshot;
+        } catch (_) {
+            gmCacheSnapshot = {};
+            gmCacheSnapshotTs = now;
+            return gmCacheSnapshot;
+        }
+    }
+
+    function flushSharedGmCacheWrites() {
+        sharedCacheFlushScheduled = false;
+        if (pendingSharedCacheWrites.size === 0 || typeof GM_setValue !== 'function') return;
+        try {
+            const now = Date.now();
+            const current = readSharedGmCacheObject(true) || {};
+            for (const [k, entry] of pendingSharedCacheWrites.entries()) {
+                current[k] = entry;
+            }
+            pendingSharedCacheWrites.clear();
+
+            // Prune expired entries & enforce compact 85-entry LRU cap across all domains
+            const validEntries = Object.entries(current).filter(([, v]) => v && Number.isFinite(v.ts) && (now - v.ts) <= CONFIG.cacheTtlMs);
+            if (validEntries.length > 85) {
+                validEntries.sort((a, b) => b[1].ts - a[1].ts);
+                validEntries.length = 85;
+            }
+            const nextObj = Object.fromEntries(validEntries);
+            gmCacheSnapshot = nextObj;
+            gmCacheSnapshotTs = now;
+            GM_setValue(CONFIG.storageKeySharedCache, JSON.stringify(nextObj));
+        } catch (_) {
+            pendingSharedCacheWrites.clear();
+        }
+    }
+
+    function getCached(key) {
+        const storageKey = `${CACHE_PREFIX}${key}`;
+        const now = Date.now();
+
+        // L1: Zero-serialization in-tab memory cache
+        const memHit = memoryCache.get(storageKey);
+        if (memHit) {
+            if (now - memHit.ts <= CONFIG.cacheTtlMs) return memHit.data;
+            memoryCache.delete(storageKey);
+        }
+
+        // L2: Cross-tab & cross-domain GM shared cache (prevents re-scraping same product across stores)
+        const sharedObj = readSharedGmCacheObject(false);
+        if (sharedObj && sharedObj[storageKey]) {
+            const entry = sharedObj[storageKey];
+            if (now - entry.ts <= CONFIG.cacheTtlMs) {
+                memoryCache.set(storageKey, entry);
+                return entry.data;
+            }
+        }
+
+        // L3 Fallback: per-origin sessionStorage
+        try {
+            const raw = sessionStorage.getItem(storageKey);
             if (!raw) return null;
             const parsed = JSON.parse(raw);
-            if (Date.now() - parsed.ts > CONFIG.cacheTtlMs) {
-                sessionStorage.removeItem(`${CACHE_PREFIX}${key}`);
+            if (now - parsed.ts > CONFIG.cacheTtlMs) {
+                sessionStorage.removeItem(storageKey);
                 return null;
             }
+            memoryCache.set(storageKey, parsed);
             return parsed.data;
         } catch (_) {
             return null;
@@ -574,12 +730,32 @@
 
     function setCached(key, data) {
         const storageKey = `${CACHE_PREFIX}${key}`;
-        const serialized = JSON.stringify({ ts: Date.now(), data });
+        const entry = { ts: Date.now(), data };
+
+        // Update L1 memory cache (bounded to 120 items)
+        if (memoryCache.size >= 120) {
+            const oldestKey = memoryCache.keys().next().value;
+            if (oldestKey) memoryCache.delete(oldestKey);
+        }
+        memoryCache.set(storageKey, entry);
+
+        // Queue non-blocking L2 cross-domain GM cache write (skip oversized payloads > 45KB)
         try {
-            sessionStorage.setItem(storageKey, serialized);
-        } catch (_) {
-            // Evict oldest ufhpc_ sessionStorage entries when quota is exceeded, then retry once
+            const serialized = JSON.stringify(entry);
+            if (typeof GM_setValue === 'function' && serialized.length <= 45000) {
+                if (gmCacheSnapshot) gmCacheSnapshot[storageKey] = entry;
+                pendingSharedCacheWrites.set(storageKey, entry);
+                if (!sharedCacheFlushScheduled) {
+                    sharedCacheFlushScheduled = true;
+                    scheduleIdleTask(flushSharedGmCacheWrites, 600);
+                }
+                return;
+            }
+
+            // Fallback to sessionStorage with automatic quota eviction
             try {
+                sessionStorage.setItem(storageKey, serialized);
+            } catch (_) {
                 const entries = [];
                 for (let i = 0; i < sessionStorage.length; i++) {
                     const k = sessionStorage.key(i);
@@ -597,9 +773,9 @@
                     sessionStorage.removeItem(entries[i].k);
                 }
                 sessionStorage.setItem(storageKey, serialized);
-            } catch (_) {
-                // Ignore if storage remains unavailable
             }
+        } catch (_) {
+            // Ignore serialization or storage errors
         }
     }
 
@@ -2014,9 +2190,161 @@
     }
 
     // =========================================================================
-    // COALESCED HTTP FETCHER WITH TIERED TIMEOUTS
+    // COALESCED HTTP FETCHER + CROSS-TAB RATE LIMITER + CLOUDFLARE CIRCUIT BREAKER
     // =========================================================================
     const inFlightRequests = new Map();
+    const hostActiveCounts = new Map();
+    const hostWaitQueues = new Map();
+    const hostConsecutive403 = new Map();
+    let circuitBreakerCache = null;
+    let circuitBreakerCacheTs = 0;
+
+    function extractNormalizedHost(rawUrl) {
+        try {
+            return new URL(rawUrl).hostname.toLowerCase().replace(/^www\./, '');
+        } catch (_) {
+            return '';
+        }
+    }
+
+    function readCircuitBreakers() {
+        const now = Date.now();
+        if (circuitBreakerCache && (now - circuitBreakerCacheTs) < 2500) {
+            return circuitBreakerCache;
+        }
+        try {
+            if (typeof GM_getValue === 'function') {
+                const raw = GM_getValue(CONFIG.storageKeyCircuitBreakers, '{}');
+                const parsed = JSON.parse(raw || '{}');
+                circuitBreakerCache = (parsed && typeof parsed === 'object') ? parsed : {};
+            } else {
+                circuitBreakerCache = {};
+            }
+        } catch (_) {
+            circuitBreakerCache = {};
+        }
+        circuitBreakerCacheTs = now;
+        return circuitBreakerCache;
+    }
+
+    function isHostCircuitOpen(host) {
+        if (!host) return false;
+        const breakers = readCircuitBreakers();
+        const entry = breakers[host];
+        if (!entry || !Number.isFinite(entry.until)) return false;
+        return entry.until > Date.now();
+    }
+
+    function tripHostCircuitBreaker(host, cooldownMs, reason = 'rate_limit') {
+        if (!host) return;
+        const now = Date.now();
+        const breakers = { ...readCircuitBreakers() };
+        // Prune expired breakers while recording new cooldown
+        for (const [h, info] of Object.entries(breakers)) {
+            if (!info || !Number.isFinite(info.until) || info.until <= now) {
+                delete breakers[h];
+            }
+        }
+        breakers[host] = { until: now + cooldownMs, reason, trippedAt: now };
+        circuitBreakerCache = breakers;
+        circuitBreakerCacheTs = now;
+        try {
+            if (typeof GM_setValue === 'function') {
+                GM_setValue(CONFIG.storageKeyCircuitBreakers, JSON.stringify(breakers));
+            }
+        } catch (_) {}
+    }
+
+    function detectAntiBotChallenge(status, responseText, responseHeaders = '') {
+        if (status === 429) {
+            return { blocked: true, cooldownMs: 8 * 60 * 1000, reason: 'http_429' };
+        }
+        const headersLow = String(responseHeaders || '').toLowerCase();
+        if (headersLow.includes('cf-mitigated: challenge')) {
+            return { blocked: true, cooldownMs: 8 * 60 * 1000, reason: 'cf_mitigated' };
+        }
+        const sample = (typeof responseText === 'string' && responseText.length < 38000) ? responseText : '';
+        if (sample) {
+            const isCfChallenge = /<title>\s*(?:Just a moment|Attention Required!?\s*\|\s*Cloudflare|Checking your browser|Varmistetaan selainta)/i.test(sample) ||
+                /(?:__cf_chl_opt|cf-chl-bypass|challenges\.cloudflare\.com\/turnstile)/i.test(sample);
+            if (isCfChallenge && (status === 403 || status === 503 || status === 200)) {
+                return { blocked: true, cooldownMs: 8 * 60 * 1000, reason: 'cloudflare_challenge' };
+            }
+        }
+        if (status === 503 && headersLow.includes('retry-after')) {
+            return { blocked: true, cooldownMs: 3 * 60 * 1000, reason: 'http_503_retry' };
+        }
+        return { blocked: false, cooldownMs: 0, reason: null };
+    }
+
+    function acquirePoliteHostSlot(host) {
+        if (!host || host.endsWith('githubusercontent.com') || host === 'api.github.com' || globalThis.__HT_FAST_TEST_MODE) {
+            return Promise.resolve(() => {});
+        }
+
+        const isSensitiveHost = /(?:tori\.fi|vinted\.fi|huuto\.net|hintaseuranta\.fi|duckduckgo\.com)$/.test(host);
+        const minGapMs = isSensitiveHost ? 240 : 110;
+        const jitterMaxMs = isSensitiveHost ? 160 : 80;
+        const maxConcurrent = 2;
+
+        return new Promise((resolve) => {
+            const tryEnter = () => {
+                const active = hostActiveCounts.get(host) || 0;
+                if (active >= maxConcurrent) {
+                    const q = hostWaitQueues.get(host) || [];
+                    q.push(tryEnter);
+                    hostWaitQueues.set(host, q);
+                    return;
+                }
+
+                hostActiveCounts.set(host, active + 1);
+                let waitMs = 0;
+                const now = Date.now();
+                const jitter = Math.floor(Math.random() * jitterMaxMs);
+
+                try {
+                    if (typeof GM_getValue === 'function' && typeof GM_setValue === 'function') {
+                        const pacingObj = JSON.parse(GM_getValue(CONFIG.storageKeyHostPacing, '{}') || '{}');
+                        const nextAllowed = Number(pacingObj[host]) || 0;
+                        const scheduledStart = Math.max(now, nextAllowed) + jitter;
+                        waitMs = Math.max(0, scheduledStart - now);
+                        pacingObj[host] = scheduledStart + minGapMs;
+
+                        // Keep pacing object tiny by pruning entries older than 60s
+                        for (const [k, ts] of Object.entries(pacingObj)) {
+                            if (!Number.isFinite(ts) || ts < now - 60000) delete pacingObj[k];
+                        }
+                        GM_setValue(CONFIG.storageKeyHostPacing, JSON.stringify(pacingObj));
+                    } else {
+                        waitMs = jitter;
+                    }
+                } catch (_) {
+                    waitMs = jitter;
+                }
+
+                const releaseSlot = () => {
+                    const cur = Math.max(0, (hostActiveCounts.get(host) || 1) - 1);
+                    if (cur === 0) hostActiveCounts.delete(host);
+                    else hostActiveCounts.set(host, cur);
+
+                    const q = hostWaitQueues.get(host);
+                    if (q && q.length > 0) {
+                        const nextFn = q.shift();
+                        if (q.length === 0) hostWaitQueues.delete(host);
+                        nextFn();
+                    }
+                };
+
+                if (waitMs > 0) {
+                    setTimeout(() => resolve(releaseSlot), Math.min(waitMs, 2500));
+                } else {
+                    resolve(releaseSlot);
+                }
+            };
+
+            tryEnter();
+        });
+    }
 
     function gmFetch(url, acceptOrOpts = 'text/html,application/xhtml+xml,application/json', timeoutMs = 8500) {
         let accept = 'text/html,application/xhtml+xml,application/json';
@@ -2029,39 +2357,90 @@
             if (Number.isFinite(acceptOrOpts.timeout)) effectiveTimeout = acceptOrOpts.timeout;
         }
 
+        const targetHost = extractNormalizedHost(url);
+        if (targetHost && isHostCircuitOpen(targetHost)) {
+            return Promise.reject(new Error(`CircuitOpen:${targetHost}`));
+        }
+
         const dedupKey = `${url}::${accept}`;
         const existing = inFlightRequests.get(dedupKey);
         if (existing) return existing;
 
-        const reqPromise = new Promise((resolve, reject) => {
+        const reqPromise = (async () => {
             if (typeof GM_xmlhttpRequest !== 'function') {
-                reject(new Error('GM_xmlhttpRequest unavailable'));
-                return;
+                throw new Error('GM_xmlhttpRequest unavailable');
             }
-            GM_xmlhttpRequest({
-                method: 'GET',
-                url,
-                headers: {
-                    'Accept': accept,
-                    'Accept-Language': 'fi-FI,fi;q=0.9,en;q=0.8'
-                },
-                timeout: effectiveTimeout,
-                onload: (res) => {
-                    if (res.status >= 200 && res.status < 400) {
-                        resolve({ text: res.responseText, finalUrl: res.finalUrl || url, status: res.status });
-                    } else {
-                        reject(new Error(`HTTP ${res.status}`));
-                    }
-                },
-                onerror: () => reject(new Error('Network error')),
-                ontimeout: () => reject(new Error('Timeout'))
-            });
-        }).finally(() => {
+            const releaseSlot = await acquirePoliteHostSlot(targetHost);
+            try {
+                if (targetHost && isHostCircuitOpen(targetHost)) {
+                    throw new Error(`CircuitOpen:${targetHost}`);
+                }
+                return await new Promise((resolve, reject) => {
+                    GM_xmlhttpRequest({
+                        method: 'GET',
+                        url,
+                        headers: {
+                            'Accept': accept,
+                            'Accept-Language': 'fi-FI,fi;q=0.9,en;q=0.8'
+                        },
+                        timeout: effectiveTimeout,
+                        onload: (res) => {
+                            const challenge = detectAntiBotChallenge(res.status, res.responseText, res.responseHeaders);
+                            if (challenge.blocked) {
+                                tripHostCircuitBreaker(targetHost, challenge.cooldownMs, challenge.reason);
+                                reject(new Error(`AntiBot:${challenge.reason}`));
+                                return;
+                            }
+                            if (res.status === 403 && targetHost) {
+                                const prev403 = (hostConsecutive403.get(targetHost) || 0) + 1;
+                                hostConsecutive403.set(targetHost, prev403);
+                                if (prev403 >= 2) {
+                                    tripHostCircuitBreaker(targetHost, 5 * 60 * 1000, 'repeated_403');
+                                }
+                            } else if (targetHost && res.status >= 200 && res.status < 300) {
+                                hostConsecutive403.delete(targetHost);
+                            }
+
+                            if (res.status >= 200 && res.status < 400) {
+                                resolve({ text: res.responseText, finalUrl: res.finalUrl || url, status: res.status });
+                            } else {
+                                reject(new Error(`HTTP ${res.status}`));
+                            }
+                        },
+                        onerror: () => reject(new Error('Network error')),
+                        ontimeout: () => reject(new Error('Timeout'))
+                    });
+                });
+            } finally {
+                releaseSlot();
+            }
+        })().finally(() => {
             inFlightRequests.delete(dedupKey);
         });
 
         inFlightRequests.set(dedupKey, reqPromise);
         return reqPromise;
+    }
+
+    async function syncRemoteSelectorsInBackground() {
+        try {
+            if (typeof GM_getValue !== 'function' || typeof GM_setValue !== 'function') return;
+            const raw = GM_getValue(CONFIG.storageKeyRemoteSelectors, '');
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (parsed?.ts && (Date.now() - parsed.ts) < CONFIG.remoteSelectorsTtlMs) {
+                    return;
+                }
+            }
+            const { text } = await gmFetch(GITHUB_SELECTORS_URL, 'application/json', 4500);
+            const json = JSON.parse(text);
+            if (json && typeof json === 'object' && json.schemaVersion >= 1) {
+                GM_setValue(CONFIG.storageKeyRemoteSelectors, JSON.stringify({ ts: Date.now(), data: json }));
+                applyRemoteSelectorConfig(json);
+            }
+        } catch (_) {
+            // Silently retain embedded fallback selectors on offline/network error
+        }
     }
 
     // =========================================================================
@@ -2272,6 +2651,7 @@
     }
 
     async function fetchToriUsedListings(productInfo, marketProduct, customQuery = null) {
+        if (isScraperDisabled('tori')) return { query: '', items: [], stats: null };
         // Combine resolved marketProduct model queries with customQuery so partial searches like "DJI Mini 4"
         // also search the resolved model "DJI Mini 4 Pro" on Tori.fi
         const builtQueries = buildToriSearchQueries(
@@ -2397,6 +2777,7 @@
     }
 
     async function fetchVintedUsedListings(productInfo, marketProduct, customQuery = null) {
+        if (isScraperDisabled('vinted')) return { query: '', items: [] };
         const builtQueries = buildToriSearchQueries(
             customQuery ? { name: customQuery } : productInfo,
             marketProduct
@@ -2502,6 +2883,7 @@
     }
 
     async function fetchHuutoUsedListings(productInfo, marketProduct, customQuery = null) {
+        if (isScraperDisabled('huuto')) return { query: '', items: [] };
         const rawName = customQuery || marketProduct?.title || productInfo?.name || '';
         if (!rawName) return { query: '', items: [] };
 
@@ -3497,6 +3879,7 @@
     }
 
     async function fetchDirectFinnishRetailers(productInfo, marketProduct, customQuery = null) {
+        if (isScraperDisabled('direct_fi')) return [];
         const targetName = customQuery || marketProduct?.title || productInfo?.name || '';
         const targetEan = customQuery ? (/^\d{8,14}$/.test(customQuery.trim()) ? customQuery.trim() : null) : productInfo?.ean;
         const refPrice = marketProduct?.lowestPrice || productInfo?.currentPrice || null;
@@ -3891,6 +4274,7 @@
     }
 
     async function fetchHintaseurantaComparison(queriesToTry, targetName, targetEan, targetPrice) {
+        if (isScraperDisabled('hintaseuranta')) return null;
         if (!Array.isArray(queriesToTry) || queriesToTry.length === 0) return null;
         for (const q of queriesToTry.slice(0, 3)) {
             const qVal = (q?.value || '').trim();
@@ -3960,7 +4344,7 @@
         return null;
     }
 
-    async function fetchMarketComparison(productInfo, customQuery = null, onPartialUpdate = null) {
+    async function fetchMarketComparison(productInfo, customQuery = null, onPartialUpdate = null, opts = {}) {
         const learnedMatch = !customQuery ? getLearnedMapping(productInfo) : null;
         let isLearned = Boolean(learnedMatch);
         let marketResult = null;
@@ -4064,6 +4448,173 @@
             isLearned = true;
         }
 
+        const runStage2Enrichment = async () => {
+            const shouldQueryDirectRetailers = effectiveCategory !== 'furniture' && effectiveCategory !== 'grocery';
+            const shouldQueryHintaseuranta = effectiveCategory !== 'grocery' &&
+                !host.includes('hintaseuranta.fi') &&
+                (!marketResult || (marketResult.product?.offers?.length || 0) < 3);
+
+            const [directOffers, hsResult, toriData] = await Promise.all([
+                shouldQueryDirectRetailers
+                    ? fetchDirectFinnishRetailers(productInfo, marketResult?.product, customQuery).catch(() => [])
+                    : Promise.resolve([]),
+                shouldQueryHintaseuranta
+                    ? fetchHintaseurantaComparison(queriesToTry, targetNameForScoring, productInfo.ean, targetPriceForScoring).catch(() => null)
+                    : Promise.resolve(null),
+                fetchUsedMarketListings(
+                    customQuery ? { name: customQuery, isUsedSite: true, category: effectiveCategory } : productInfo,
+                    marketResult?.product,
+                    customQuery
+                ).catch(() => ({ query: '', items: [], stats: null }))
+            ]);
+
+            // Merge Hintaseuranta result if Hinta.fi missed (e.g. outdoor/sports gear) or had < 3 stores
+            if (hsResult?.product) {
+                if (!marketResult || !marketResult.product) {
+                    marketResult = {
+                        matchedQuery: hsResult.matchedQuery,
+                        product: hsResult.product,
+                        alternatives: [],
+                        isLearnedMatch: false
+                    };
+                } else if (Array.isArray(hsResult.product.offers) && hsResult.product.offers.length > 0) {
+                    const seenIds = new Set(marketResult.product.offers.map(o => normalizeStoreIdentity(o.store)));
+                    const merged = [...marketResult.product.offers];
+                    for (const hOff of hsResult.product.offers) {
+                        const key = normalizeStoreIdentity(hOff.store);
+                        if (key && !seenIds.has(key)) {
+                            seenIds.add(key);
+                            merged.push(hOff);
+                        }
+                    }
+                    merged.sort((a, b) => a.price - b.price);
+                    marketResult = {
+                        ...marketResult,
+                        product: {
+                            ...marketResult.product,
+                            offers: merged,
+                            lowestPrice: merged[0].price,
+                            lowestDelivered: Math.min(...merged.map(o => o.totalPrice || o.price))
+                        }
+                    };
+                }
+            }
+
+            // Merge Direct Finnish Retailers that Hinta.fi does NOT index (Prisma, K-Rauta, Puuilo, Motonet, Tokmanni, Clas Ohlson)
+            if (directOffers.length > 0) {
+                if (marketResult && marketResult.product) {
+                    const existingStores = new Set(marketResult.product.offers.map(o => normalizeStoreIdentity(o.store)));
+                    const mergedOffers = [...marketResult.product.offers];
+                    for (const dOff of directOffers) {
+                        const dKey = normalizeStoreIdentity(dOff.store);
+                        if (dKey && !existingStores.has(dKey)) {
+                            mergedOffers.push(dOff);
+                            existingStores.add(dKey);
+                        }
+                    }
+                    mergedOffers.sort((a, b) => a.price - b.price);
+                    marketResult = {
+                        ...marketResult,
+                        product: {
+                            ...marketResult.product,
+                            offers: mergedOffers,
+                            lowestPrice: mergedOffers[0].price,
+                            lowestDelivered: Math.min(...mergedOffers.map(o => o.totalPrice || o.price))
+                        }
+                    };
+                } else {
+                    directOffers.sort((a, b) => a.price - b.price);
+                    marketResult = {
+                        matchedQuery: { type: 'Suora', value: directOffers[0].stockLabel || targetNameForScoring },
+                        product: {
+                            title: directOffers[0].stockLabel || targetNameForScoring,
+                            url: directOffers[0].url,
+                            lowestPrice: directOffers[0].price,
+                            lowestDelivered: directOffers[0].price,
+                            low30d: null,
+                            offers: directOffers,
+                            history: null
+                        },
+                        alternatives: []
+                    };
+                }
+            }
+
+            // Live IKEA Finland (Furniture) or Ruohonjuuri (Groceries/Organic) strict fallback when Hinta.fi has no match
+            const primaryQuery = customQuery || extractConciseModelQuery(productInfo.name) || queriesToTry[0]?.value || '';
+            if (!marketResult && primaryQuery && (effectiveCategory === 'furniture' || effectiveCategory === 'grocery')) {
+                try {
+                    const [ikeaItems, rjItems] = await Promise.all([
+                        (effectiveCategory === 'furniture' && !host.includes('ikea.com'))
+                            ? fetchIkeaFinlandProducts(primaryQuery)
+                            : Promise.resolve([]),
+                        (effectiveCategory === 'grocery' && !host.includes('ruohonjuuri.fi'))
+                            ? fetchRuohonjuuriProducts(primaryQuery)
+                            : Promise.resolve([])
+                    ]);
+                    const extraItems = [...ikeaItems, ...rjItems].filter(item =>
+                        doesItemMatchQueryWords(item.name, targetNameForScoring)
+                    );
+                    if (extraItems.length > 0) {
+                        const extraOffers = extraItems.map(item => ({
+                            store: `${item.storeName}: ${item.name.slice(0, 34)}`,
+                            price: item.lowestPrice,
+                            totalPrice: item.lowestPrice,
+                            deliveryFee: 0,
+                            url: item.url,
+                            stockStatus: 'instock',
+                            stockLabel: item.name
+                        }));
+
+                        const bestExtra = extraItems[0];
+                        marketResult = {
+                            matchedQuery: { type: effectiveCategory === 'furniture' ? 'IKEA' : 'Grocery', value: primaryQuery },
+                            product: {
+                                title: bestExtra.name,
+                                url: bestExtra.url,
+                                lowestPrice: Math.min(...extraOffers.map(o => o.price)),
+                                lowestDelivered: Math.min(...extraOffers.map(o => o.price)),
+                                low30d: null,
+                                offers: extraOffers,
+                                history: null
+                            },
+                            alternatives: extraItems.slice(0, 6)
+                        };
+                    }
+                } catch (_) {
+                    // Ignore supplementary API errors
+                }
+            }
+
+            if (!marketResult && (!toriData || toriData.items.length === 0)) {
+                return null;
+            }
+
+            return {
+                matchedQuery: marketResult?.matchedQuery || (customQuery ? { type: 'Search', value: customQuery } : null),
+                product: marketResult?.product || null,
+                alternatives: marketResult?.alternatives || [],
+                tori: toriData,
+                isLearnedMatch: Boolean(marketResult?.isLearnedMatch || isLearned),
+                stage2Deferred: false
+            };
+        };
+
+        // Anti-Rate-Limit Optimization: When sidebar is collapsed and Stage 1 already resolved >= 2 verified stores,
+        // skip secondary/used scrapers until the user actually expands the sidebar!
+        if (opts?.deferStage2WhenMatched && !productInfo?.isUsedSite && !customQuery && (marketResult?.product?.offers?.length || 0) >= 2) {
+            return {
+                matchedQuery: marketResult.matchedQuery,
+                product: marketResult.product,
+                alternatives: marketResult.alternatives || [],
+                tori: { query: '', items: [], stats: null },
+                isLearnedMatch: Boolean(marketResult.isLearnedMatch || isLearned),
+                isPartialStage: true,
+                stage2Deferred: true,
+                enrichStage2: runStage2Enrichment
+            };
+        }
+
         // Progressive Rendering Hook: Immediately paint Stage 1 Hinta.fi result (~300ms) while Stage 2 enriches in parallel!
         if (marketResult?.product && typeof onPartialUpdate === 'function') {
             try {
@@ -4078,155 +4629,7 @@
             } catch (_) {}
         }
 
-        // Stage 2: Parallel Multi-Source Enrichment (Direct Retailers + Hintaseuranta fallback/enricher + Used Marketplaces)
-        const shouldQueryDirectRetailers = effectiveCategory !== 'furniture' && effectiveCategory !== 'grocery';
-        const shouldQueryHintaseuranta = effectiveCategory !== 'grocery' &&
-            !host.includes('hintaseuranta.fi') &&
-            (!marketResult || (marketResult.product?.offers?.length || 0) < 3);
-
-        const [directOffers, hsResult, toriData] = await Promise.all([
-            shouldQueryDirectRetailers
-                ? fetchDirectFinnishRetailers(productInfo, marketResult?.product, customQuery).catch(() => [])
-                : Promise.resolve([]),
-            shouldQueryHintaseuranta
-                ? fetchHintaseurantaComparison(queriesToTry, targetNameForScoring, productInfo.ean, targetPriceForScoring).catch(() => null)
-                : Promise.resolve(null),
-            fetchUsedMarketListings(
-                customQuery ? { name: customQuery, isUsedSite: true, category: effectiveCategory } : productInfo,
-                marketResult?.product,
-                customQuery
-            ).catch(() => ({ query: '', items: [], stats: null }))
-        ]);
-
-        // Merge Hintaseuranta result if Hinta.fi missed (e.g. outdoor/sports gear) or had < 3 stores
-        if (hsResult?.product) {
-            if (!marketResult || !marketResult.product) {
-                marketResult = {
-                    matchedQuery: hsResult.matchedQuery,
-                    product: hsResult.product,
-                    alternatives: [],
-                    isLearnedMatch: false
-                };
-            } else if (Array.isArray(hsResult.product.offers) && hsResult.product.offers.length > 0) {
-                const seenIds = new Set(marketResult.product.offers.map(o => normalizeStoreIdentity(o.store)));
-                const merged = [...marketResult.product.offers];
-                for (const hOff of hsResult.product.offers) {
-                    const key = normalizeStoreIdentity(hOff.store);
-                    if (key && !seenIds.has(key)) {
-                        seenIds.add(key);
-                        merged.push(hOff);
-                    }
-                }
-                merged.sort((a, b) => a.price - b.price);
-                marketResult = {
-                    ...marketResult,
-                    product: {
-                        ...marketResult.product,
-                        offers: merged,
-                        lowestPrice: merged[0].price,
-                        lowestDelivered: Math.min(...merged.map(o => o.totalPrice || o.price))
-                    }
-                };
-            }
-        }
-
-        // Merge Direct Finnish Retailers that Hinta.fi does NOT index (Prisma, K-Rauta, Puuilo, Motonet, Tokmanni, Clas Ohlson)
-        if (directOffers.length > 0) {
-            if (marketResult && marketResult.product) {
-                const existingStores = new Set(marketResult.product.offers.map(o => normalizeStoreIdentity(o.store)));
-                const mergedOffers = [...marketResult.product.offers];
-                for (const dOff of directOffers) {
-                    const dKey = normalizeStoreIdentity(dOff.store);
-                    if (dKey && !existingStores.has(dKey)) {
-                        mergedOffers.push(dOff);
-                        existingStores.add(dKey);
-                    }
-                }
-                mergedOffers.sort((a, b) => a.price - b.price);
-                marketResult = {
-                    ...marketResult,
-                    product: {
-                        ...marketResult.product,
-                        offers: mergedOffers,
-                        lowestPrice: mergedOffers[0].price,
-                        lowestDelivered: Math.min(...mergedOffers.map(o => o.totalPrice || o.price))
-                    }
-                };
-            } else {
-                directOffers.sort((a, b) => a.price - b.price);
-                marketResult = {
-                    matchedQuery: { type: 'Suora', value: directOffers[0].stockLabel || targetNameForScoring },
-                    product: {
-                        title: directOffers[0].stockLabel || targetNameForScoring,
-                        url: directOffers[0].url,
-                        lowestPrice: directOffers[0].price,
-                        lowestDelivered: directOffers[0].price,
-                        low30d: null,
-                        offers: directOffers,
-                        history: null
-                    },
-                    alternatives: []
-                };
-            }
-        }
-
-        // Live IKEA Finland (Furniture) or Ruohonjuuri (Groceries/Organic) strict fallback when Hinta.fi has no match
-        const primaryQuery = customQuery || extractConciseModelQuery(productInfo.name) || queriesToTry[0]?.value || '';
-        if (!marketResult && primaryQuery && (effectiveCategory === 'furniture' || effectiveCategory === 'grocery')) {
-            try {
-                const [ikeaItems, rjItems] = await Promise.all([
-                    (effectiveCategory === 'furniture' && !host.includes('ikea.com'))
-                        ? fetchIkeaFinlandProducts(primaryQuery)
-                        : Promise.resolve([]),
-                    (effectiveCategory === 'grocery' && !host.includes('ruohonjuuri.fi'))
-                        ? fetchRuohonjuuriProducts(primaryQuery)
-                        : Promise.resolve([])
-                ]);
-                const extraItems = [...ikeaItems, ...rjItems].filter(item =>
-                    doesItemMatchQueryWords(item.name, targetNameForScoring)
-                );
-                if (extraItems.length > 0) {
-                    const extraOffers = extraItems.map(item => ({
-                        store: `${item.storeName}: ${item.name.slice(0, 34)}`,
-                        price: item.lowestPrice,
-                        totalPrice: item.lowestPrice,
-                        deliveryFee: 0,
-                        url: item.url,
-                        stockStatus: 'instock',
-                        stockLabel: item.name
-                    }));
-
-                    const bestExtra = extraItems[0];
-                    marketResult = {
-                        matchedQuery: { type: effectiveCategory === 'furniture' ? 'IKEA' : 'Grocery', value: primaryQuery },
-                        product: {
-                            title: bestExtra.name,
-                            url: bestExtra.url,
-                            lowestPrice: Math.min(...extraOffers.map(o => o.price)),
-                            lowestDelivered: Math.min(...extraOffers.map(o => o.price)),
-                            low30d: null,
-                            offers: extraOffers,
-                            history: null
-                        },
-                        alternatives: extraItems.slice(0, 6)
-                    };
-                }
-            } catch (_) {
-                // Ignore supplementary API errors
-            }
-        }
-
-        if (!marketResult && (!toriData || toriData.items.length === 0)) {
-            return null;
-        }
-
-        return {
-            matchedQuery: marketResult?.matchedQuery || (customQuery ? { type: 'Search', value: customQuery } : null),
-            product: marketResult?.product || null,
-            alternatives: marketResult?.alternatives || [],
-            tori: toriData,
-            isLearnedMatch: Boolean(marketResult?.isLearnedMatch || isLearned)
-        };
+        return await runStage2Enrichment();
     }
 
     // =========================================================================
@@ -4462,32 +4865,11 @@
     }
 
     // =========================================================================
-    // ON-PAGE PRICE COLORING & INLINE BADGE (WRAP-SAFE + CLUB DEAL AWARE)
+    // ZERO-CLS ON-PAGE PRICE BADGE & GEOMETRY-GUARDED ANCHORING
     // =========================================================================
-    function createInlineBadgeElement(text, theme, href) {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'ufhpc-inline-price-badge-wrapper';
-        wrapper.style.cssText = `
-            display: flex !important;
-            flex-direction: row !important;
-            flex-wrap: wrap !important;
-            align-items: center !important;
-            flex-basis: 100% !important;
-            width: 100% !important;
-            max-width: 100% !important;
-            margin: 6px 0 8px 0 !important;
-            padding: 0 !important;
-            clear: both !important;
-            box-sizing: border-box !important;
-            z-index: 10 !important;
-        `;
-
-        const badge = document.createElement('a');
-        badge.className = 'ufhpc-inline-price-badge';
+    function styleBadgeLinkElement(badge, text, theme, href, isPlaceholder = false) {
         badge.href = href || '#';
-        badge.target = '_blank';
-        badge.rel = 'noopener noreferrer';
-        badge.title = 'Hinta.fi - Avaa hintavertailu uuteen välilehteen';
+        badge._htTheme = theme;
         badge.style.cssText = `
             display: inline-flex !important;
             align-items: center !important;
@@ -4506,23 +4888,59 @@
             background: #11131a !important;
             background-image: linear-gradient(135deg, ${theme.bgSoft}, rgba(17, 19, 26, 0.96)) !important;
             border: 1px solid ${theme.border} !important;
-            box-shadow: ${theme.glow}, 0 2px 8px rgba(0, 0, 0, 0.35) !important;
+            box-shadow: ${isPlaceholder ? 'none' : `${theme.glow}, 0 2px 8px rgba(0, 0, 0, 0.35)`} !important;
+            opacity: ${isPlaceholder ? '0.72' : '1'} !important;
+            pointer-events: ${isPlaceholder ? 'none' : 'auto'} !important;
             text-decoration: none !important;
             vertical-align: middle !important;
-            cursor: pointer !important;
+            cursor: ${isPlaceholder ? 'default' : 'pointer'} !important;
             white-space: normal !important;
             word-break: break-word !important;
-            transition: transform 0.15s ease, box-shadow 0.15s ease !important;
+            transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.2s ease, border-color 0.2s ease !important;
         `;
         badge.textContent = text;
-        badge.addEventListener('mouseenter', () => {
-            badge.style.setProperty('transform', 'translateY(-1px)', 'important');
-            badge.style.setProperty('box-shadow', `${theme.glow}, 0 4px 14px rgba(0, 0, 0, 0.5)`, 'important');
-        });
-        badge.addEventListener('mouseleave', () => {
-            badge.style.setProperty('transform', 'none', 'important');
-            badge.style.setProperty('box-shadow', `${theme.glow}, 0 2px 8px rgba(0, 0, 0, 0.35)`, 'important');
-        });
+
+        if (!badge._htHoverBound) {
+            badge._htHoverBound = true;
+            badge.addEventListener('mouseenter', () => {
+                const curTheme = badge._htTheme || theme;
+                badge.style.setProperty('transform', 'translateY(-1px)', 'important');
+                badge.style.setProperty('box-shadow', `${curTheme.glow}, 0 4px 14px rgba(0, 0, 0, 0.5)`, 'important');
+            });
+            badge.addEventListener('mouseleave', () => {
+                const curTheme = badge._htTheme || theme;
+                badge.style.setProperty('transform', 'none', 'important');
+                badge.style.setProperty('box-shadow', `${curTheme.glow}, 0 2px 8px rgba(0, 0, 0, 0.35)`, 'important');
+            });
+        }
+    }
+
+    function createInlineBadgeElement(text, theme, href, isPlaceholder = false) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'ufhpc-inline-price-badge-wrapper';
+        wrapper.style.cssText = `
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: wrap !important;
+            align-items: center !important;
+            flex-basis: 100% !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            min-height: 27px !important;
+            margin: 6px 0 8px 0 !important;
+            padding: 0 !important;
+            clear: both !important;
+            contain: layout style !important;
+            box-sizing: border-box !important;
+            z-index: 10 !important;
+        `;
+
+        const badge = document.createElement('a');
+        badge.className = 'ufhpc-inline-price-badge';
+        badge.target = '_blank';
+        badge.rel = 'noopener noreferrer';
+        badge.title = 'HintaTutka - Avaa hintavertailu uuteen välilehteen';
+        styleBadgeLinkElement(badge, text, theme, href, isPlaceholder);
 
         wrapper.appendChild(badge);
         return wrapper;
@@ -4530,6 +4948,23 @@
 
     function findBestPriceAnchor(priceElement) {
         if (!priceElement || !priceElement.parentElement) return priceElement;
+
+        // 0. Check hot-patchable remote selector overrides first (zero-reinstall resilience against redesigns)
+        const currentStore = detectCurrentStore();
+        const storeOverride = currentStore?.match ? remoteSelectorConfig?.storeOverrides?.[currentStore.match] : null;
+        const dynamicAnchorSels = [
+            ...(Array.isArray(storeOverride?.anchorSelectors) ? storeOverride.anchorSelectors : []),
+            ...(Array.isArray(remoteSelectorConfig?.globalAnchorSelectors) ? remoteSelectorConfig.globalAnchorSelectors : [])
+        ].filter(s => typeof s === 'string' && s.trim());
+
+        if (dynamicAnchorSels.length > 0) {
+            try {
+                const remoteAnchor = priceElement.closest(dynamicAnchorSels.join(', '));
+                if (remoteAnchor && remoteAnchor.parentElement && remoteAnchor !== document.body && remoteAnchor !== document.documentElement) {
+                    return remoteAnchor;
+                }
+            } catch (_) {}
+        }
 
         // 1. Look for known outer price container components across supported stores
         const knownContainer = priceElement.closest(
@@ -4547,25 +4982,27 @@
             '#site-product-price, ' +
             'pwr-price'
         );
-        if (knownContainer && knownContainer.parentElement && knownContainer !== document.body && knownContainer !== document.documentElement) {
-            return knownContainer;
-        }
 
-        // 2. Heuristic: if priceElement is an inline node or in a tight horizontal flex-row,
-        // step up towards the block-level row to keep the badge underneath the price digits.
-        let current = priceElement;
+        let current = (knownContainer && knownContainer.parentElement && knownContainer !== document.body && knownContainer !== document.documentElement)
+            ? knownContainer
+            : priceElement;
+
+        // 2. Geometry & CSS Heuristic: step up out of inline nodes, tight horizontal flex rows, or clipped overflow:hidden boxes
         for (let depth = 0; depth < 3; depth++) {
             const parent = current.parentElement;
             if (!parent || parent === document.body || parent === document.documentElement) break;
 
-            const tag = parent.tagName.toLowerCase();
+            const tag = (parent.tagName || '').toLowerCase();
             if (['main', 'section', 'article', 'form', 'body'].includes(tag)) break;
 
             const style = window.getComputedStyle(parent);
-            const isRowFlex = style.display.includes('flex') && style.flexDirection.includes('row');
-            const isInline = style.display === 'inline' || style.display === 'inline-block';
+            const disp = style.display || '';
+            const isRowFlex = disp.includes('flex') && (style.flexDirection || '').includes('row') && (style.flexWrap || '') === 'nowrap';
+            const isInline = disp === 'inline' || disp === 'inline-block' || disp === 'inline-flex';
+            const pRect = parent.getBoundingClientRect?.();
+            const isTightClipped = (style.overflow === 'hidden' || style.overflowY === 'hidden') && pRect && pRect.height > 0 && pRect.height < 68;
 
-            if (isRowFlex || isInline) {
+            if (( !knownContainer && (isRowFlex || isInline) ) || isTightClipped) {
                 current = parent;
             } else {
                 break;
@@ -4575,27 +5012,100 @@
         return current;
     }
 
-    function applyOnPagePriceAnnotation(priceElement, verdict, marketProduct, lang = detectLanguage(), includeShipping = false, inStockOnly = false, productInfo = null) {
-        document.querySelectorAll('.ufhpc-inline-price-badge, .ufhpc-inline-price-badge-wrapper').forEach(el => el.remove());
+    // Inserts badge and verifies bounding-box geometry so unknown CSS layouts never stretch horizontally
+    function insertBadgeWithGeometryGuard(priceElement, wrapper) {
+        let anchor = findBestPriceAnchor(priceElement);
+        if (!anchor || !anchor.parentNode) return;
 
+        const parentBeforeRect = anchor.parentElement?.getBoundingClientRect?.();
+        const beforeWidth = parentBeforeRect ? parentBeforeRect.width : 0;
+
+        anchor.insertAdjacentElement('afterend', wrapper);
+
+        // Self-checking post-insert geometry guard: if a narrow inline/grid container stretched horizontally, step up cleanly
+        if (beforeWidth > 0 && beforeWidth < 285 && anchor.parentElement?.getBoundingClientRect) {
+            const afterRect = anchor.parentElement.getBoundingClientRect();
+            if (afterRect.width > beforeWidth + 28) {
+                let fallbackAnchor = anchor.parentElement;
+                for (let step = 0; step < 2; step++) {
+                    if (!fallbackAnchor || !fallbackAnchor.parentElement) break;
+                    const pTag = (fallbackAnchor.parentElement.tagName || '').toLowerCase();
+                    if (['main', 'section', 'article', 'form', 'body'].includes(pTag)) break;
+                    const pStyle = window.getComputedStyle(fallbackAnchor.parentElement);
+                    if (!(pStyle.display || '').startsWith('inline')) break;
+                    fallbackAnchor = fallbackAnchor.parentElement;
+                }
+                if (fallbackAnchor && fallbackAnchor.parentNode && fallbackAnchor !== document.body) {
+                    fallbackAnchor.insertAdjacentElement('afterend', wrapper);
+                }
+            }
+        }
+    }
+
+    // Pre-reserves the 27px inline badge slot immediately upon initial price detection to eliminate late CLS
+    function reserveInlineBadgeSlot(priceElement, lang = detectLanguage()) {
+        if (!priceElement || !priceElement.isConnected) return;
+        if (document.querySelector('.ufhpc-inline-price-badge-wrapper')) return;
+
+        const t = I18N[lang] || I18N.fi;
+        const themes = getStatusThemes(lang, false);
+        const placeholderText = `◈ ${t.checking || 'HintaTutka...'}`;
+        const wrapper = createInlineBadgeElement(placeholderText, themes.neutral, '#', true);
+        wrapper.setAttribute('data-ht-primary', '1');
+        insertBadgeWithGeometryGuard(priceElement, wrapper);
+    }
+
+    function dismissReservedBadgeSmoothly() {
+        document.querySelectorAll('.ufhpc-inline-price-badge-wrapper, .ufhpc-inline-price-badge').forEach((el) => {
+            if (el.getAttribute?.('data-ht-dismissing') === '1') return;
+            if (el.classList?.contains('ufhpc-inline-price-badge-wrapper')) {
+                el.setAttribute('data-ht-dismissing', '1');
+                el.style.setProperty('transition', 'opacity 0.18s ease, max-height 0.2s ease, min-height 0.2s ease, margin 0.2s ease', 'important');
+                el.style.setProperty('overflow', 'hidden', 'important');
+                el.style.setProperty('opacity', '0', 'important');
+                el.style.setProperty('min-height', '0px', 'important');
+                el.style.setProperty('max-height', '0px', 'important');
+                el.style.setProperty('margin', '0px', 'important');
+                setTimeout(() => { if (el.isConnected) el.remove(); }, 210);
+            } else {
+                el.remove();
+            }
+        });
+    }
+
+    function applyOnPagePriceAnnotation(priceElement, verdict, marketProduct, lang = detectLanguage(), includeShipping = false, inStockOnly = false, productInfo = null) {
         if (!priceElement || !priceElement.isConnected || !verdict) {
+            dismissReservedBadgeSmoothly();
             return;
         }
 
-        // If on a grocery page with a calculated unit price (€/kg or €/l), inject an inline unit-price badge
+        const updateOrInsertSingleBadge = (text, themeObj, hrefUrl) => {
+            const existingPrimary = document.querySelector('.ufhpc-inline-price-badge-wrapper[data-ht-primary="1"]:not([data-ht-dismissing="1"])');
+            const allWrappers = document.querySelectorAll('.ufhpc-inline-price-badge-wrapper');
+            if (existingPrimary && allWrappers.length === 1) {
+                const badgeEl = existingPrimary.querySelector('.ufhpc-inline-price-badge');
+                if (badgeEl) {
+                    styleBadgeLinkElement(badgeEl, text, themeObj, hrefUrl, false);
+                    return;
+                }
+            }
+            allWrappers.forEach(el => el.remove());
+            const wrapper = createInlineBadgeElement(text, themeObj, hrefUrl, false);
+            wrapper.setAttribute('data-ht-primary', '1');
+            insertBadgeWithGeometryGuard(priceElement, wrapper);
+        };
+
+        // If on a grocery page with a calculated unit price (€/kg or €/l), inject/update inline unit-price badge
         if (verdict.isUnitPriceVerdict && productInfo?.unitPriceInfo) {
             const u = productInfo.unitPriceInfo;
             const qEnc = encodeURIComponent(extractConciseModelQuery(productInfo.name) || productInfo.name || '');
             const unitBadgeText = `⚖️ ${u.formatted}${u.quantityStr ? ` (${u.quantityStr})` : ''} • Vertaa S-kaupat ↗`;
-            const unitBadge = createInlineBadgeElement(unitBadgeText, verdict.theme, `https://www.s-kaupat.fi/haku?q=${qEnc}`);
-            const unitAnchor = findBestPriceAnchor(priceElement);
-            if (unitAnchor && unitAnchor.parentNode) {
-                unitAnchor.insertAdjacentElement('afterend', unitBadge);
-            }
+            updateOrInsertSingleBadge(unitBadgeText, verdict.theme, `https://www.s-kaupat.fi/haku?q=${qEnc}`);
             return;
         }
 
         if (verdict.theme.id === 'neutral') {
+            dismissReservedBadgeSmoothly();
             return;
         }
 
@@ -4614,6 +5124,7 @@
 
         // If the page has BOTH a Club price (e.g. HH PLUS 819 €) and a Normal price (1 295,39 €), annotate both!
         if (clubOffer && clubOffer.clubElement && clubOffer.normalPrice && clubOffer.normalPrice > clubOffer.clubPrice + 1) {
+            document.querySelectorAll('.ufhpc-inline-price-badge, .ufhpc-inline-price-badge-wrapper').forEach(el => el.remove());
             const clubEl = clubOffer.clubElement;
             const normEl = clubOffer.normalElement;
 
@@ -4628,10 +5139,7 @@
                 lowestNonClubOffer ? lowestNonClubOffer.store : null
             );
             const clubBadge = createInlineBadgeElement(clubBadgeText, theme, marketProduct?.url);
-            const clubAnchor = findBestPriceAnchor(clubEl);
-            if (clubAnchor && clubAnchor.parentNode) {
-                clubAnchor.insertAdjacentElement('afterend', clubBadge);
-            }
+            insertBadgeWithGeometryGuard(clubEl, clubBadge);
 
             if (normEl && normEl !== clubEl && normEl.isConnected) {
                 const refLow = lowestNonClubPrice || lowestPrice;
@@ -4647,10 +5155,7 @@
                         refStore
                     )}`;
                     const normBadge = createInlineBadgeElement(normBadgeText, themes.red, marketProduct?.url);
-                    const normAnchor = findBestPriceAnchor(normEl);
-                    if (normAnchor && normAnchor.parentNode) {
-                        normAnchor.insertAdjacentElement('afterend', normBadge);
-                    }
+                    insertBadgeWithGeometryGuard(normEl, normBadge);
                 }
             }
             return;
@@ -4676,6 +5181,7 @@
                         badgeText = `${theme.icon} ${t.inlineUsedMedianBad(absDiffEur, absDiffPct, medFormatted)}`;
                     }
                 } else {
+                    dismissReservedBadgeSmoothly();
                     return; // No reliable reference price available -> do not display misleading badge!
                 }
             } else {
@@ -4701,11 +5207,7 @@
             }
         }
 
-        const badge = createInlineBadgeElement(badgeText, theme, marketProduct?.url);
-        const anchor = findBestPriceAnchor(priceElement);
-        if (anchor && anchor.parentNode) {
-            anchor.insertAdjacentElement('afterend', badge);
-        }
+        updateOrInsertSingleBadge(badgeText, theme, marketProduct?.url);
     }
 
     // =========================================================================
@@ -5019,6 +5521,16 @@
             }
             .ufhpc-panel.is-expanded {
                 width: 760px;
+            }
+            .ufhpc-panel.is-lazy-shell {
+                backdrop-filter: none !important;
+                -webkit-backdrop-filter: none !important;
+                box-shadow: none !important;
+                background: transparent !important;
+                border-color: transparent !important;
+                pointer-events: none !important;
+                min-height: 24px !important;
+                padding: 0 !important;
             }
             .ufhpc-panel::-webkit-scrollbar {
                 width: 5px;
@@ -6432,6 +6944,8 @@
             this.compareQuery = '';
             this.compareComparison = null;
             this.compareLoading = false;
+            this._panelNeedsHydration = false;
+            this._stage2Running = false;
 
             // Live Update & Reload Confirmation Tracking
             this.updateInstalling = false;
@@ -6590,9 +7104,36 @@
             this.wrapperEl.style.setProperty('--status-glow', theme.glow);
         }
 
+        async triggerDeferredStage2() {
+            if (this._stage2Running || !this.lastComparison?.stage2Deferred) return;
+            const enrichFn = this.lastComparison.enrichStage2;
+            if (typeof enrichFn !== 'function') return;
+
+            this._stage2Running = true;
+            try {
+                const fullComp = await enrichFn();
+                if (fullComp) {
+                    this.lastComparison = fullComp;
+                    this.refreshView();
+                }
+            } catch (_) {
+                // Keep Stage 1 results intact on secondary enrichment failure
+            } finally {
+                this._stage2Running = false;
+            }
+        }
+
         toggleCollapse() {
             this.isCollapsed = !this.isCollapsed;
             localStorage.setItem(CONFIG.storageKeyCollapsed, this.isCollapsed ? '1' : '0');
+            if (!this.isCollapsed) {
+                if (this._panelNeedsHydration && this.lastProductInfo) {
+                    this.refreshView();
+                }
+                if (this.lastComparison?.stage2Deferred) {
+                    this.triggerDeferredStage2();
+                }
+            }
             if (this.wrapperEl) {
                 this.wrapperEl.classList.toggle('is-collapsed', this.isCollapsed);
             }
@@ -6729,6 +7270,22 @@
             const t = I18N[this.lang] || I18N.fi;
             const themes = getStatusThemes(this.lang, productInfo.isUsedSite);
             this.setThemeVars(themes.neutral);
+
+            if (this.isCollapsed) {
+                this._panelNeedsHydration = true;
+                this.wrapperEl.innerHTML = `
+                    <div class="ufhpc-handle" id="ufhpc-toggle-handle" title="Click to toggle • Drag vertically to reposition">
+                        <div class="ufhpc-handle-bar"></div>
+                        <div class="ufhpc-handle-icon">◈</div>
+                        <div class="ufhpc-handle-text">${escapeHtml(t.checking)}</div>
+                        <div class="ufhpc-handle-chevron">❮</div>
+                    </div>
+                    <div class="ufhpc-panel is-lazy-shell ${this.isExpanded ? 'is-expanded' : ''}"></div>
+                `;
+                this.bindCommonEvents(productInfo);
+                return;
+            }
+            this._panelNeedsHydration = false;
 
             const modelCodes = extractModelCodes(`${productInfo.name || ''} ${productInfo.mpn || ''}`);
             const bestModelQuery = (modelCodes[0]
@@ -6961,16 +7518,38 @@
                 }
             }
 
-            const chartHtml = buildDualChartSectionHtml(
-                marketProd?.history,
-                toriData,
-                productInfo.currentPrice,
-                lowestPrice,
-                theme,
-                this.lang,
-                this.chartTab,
-                'main'
-            );
+            // Lazy Collapsed Render: Skip building 300+ panel DOM nodes & SVG charts while sidebar is minimized to edge pill
+            if (this.isCollapsed) {
+                this._panelNeedsHydration = true;
+                const collapsedToastHtml = (latestUpdateVersion && !updateToastDismissed && !this.updateInstalling) ? `
+                    <div class="ufhpc-update-toast" id="ufhpc-update-toast">
+                        <div class="ufhpc-update-toast-top">
+                            <span class="ufhpc-update-toast-title">🔔 ${this.lang === 'en' ? `HintaTutka Update (v${escapeHtml(latestUpdateVersion)})` : `HintaTutka-päivitys saatavilla (v${escapeHtml(latestUpdateVersion)})`}</span>
+                            <button type="button" class="ufhpc-update-toast-close" id="ufhpc-update-toast-close" title="Sulje ilmoitus">✕</button>
+                        </div>
+                        <div class="ufhpc-update-toast-actions">
+                            <a class="ufhpc-update-toast-btn" id="ufhpc-toast-update-btn" href="${GITHUB_RAW_SCRIPT_URL}" target="_blank" rel="noopener noreferrer">
+                                🚀 ${this.lang === 'en' ? 'Install Update ↗' : 'Asenna päivitys ↗'}
+                            </a>
+                        </div>
+                    </div>
+                ` : '';
+
+                this.wrapperEl.innerHTML = `
+                    ${collapsedToastHtml}
+                    <div class="ufhpc-handle" id="ufhpc-toggle-handle" title="Click to toggle • Drag vertically to reposition">
+                        <div class="ufhpc-handle-bar"></div>
+                        ${(latestUpdateVersion || this.updateInstalling) ? '<div class="ufhpc-handle-update-badge" title="Päivitys!"></div>' : ''}
+                        <div class="ufhpc-handle-icon">${theme.icon}</div>
+                        <div class="ufhpc-handle-text">${escapeHtml(handleLabel)}</div>
+                        <div class="ufhpc-handle-chevron">❮</div>
+                    </div>
+                    <div class="ufhpc-panel is-lazy-shell ${this.isExpanded ? 'is-expanded' : ''}"></div>
+                `;
+                this.bindCommonEvents(productInfo);
+                return;
+            }
+            this._panelNeedsHydration = false;
 
             const alternatives = comparison?.alternatives || [];
             const variantSelectHtml = alternatives.length > 1 ? `
@@ -7284,6 +7863,16 @@
                     </div>
                 `;
             } else if (effectiveMainTab === 'history') {
+                const chartHtml = buildDualChartSectionHtml(
+                    marketProd?.history,
+                    toriData,
+                    productInfo.currentPrice,
+                    lowestPrice,
+                    theme,
+                    this.lang,
+                    this.chartTab,
+                    'main'
+                );
                 tabPaneContentHtml = chartHtml ? chartHtml : `
                     <div class="ufhpc-empty">
                         📈 ${this.lang === 'en' ? 'No price history points recorded for this item yet.' : 'Tuotteelle ei ole vielä kertynyt hintahistoriapisteitä.'}
@@ -7504,7 +8093,9 @@
                     } catch (_) {}
                 }
             }
-            this.bindDualChartEvents(marketProd?.history, toriData, productInfo.currentPrice, lowestPrice, 'main');
+            if (effectiveMainTab === 'history') {
+                this.bindDualChartEvents(marketProd?.history, toriData, productInfo.currentPrice, lowestPrice, 'main');
+            }
             if (this.isExpanded && this.compareComparison) {
                 const compProd = this.compareComparison.product;
                 const { lowestPrice: compLowest } = getFilteredOffersAndLowest(compProd, this.includeShipping, this.inStockOnly);
@@ -8156,6 +8747,19 @@
 
     async function runPriceChecker(retryCount = 0) {
         const runId = ++activeRunId;
+
+        if (isNonProductPath()) {
+            cleanupExistingUI();
+            return;
+        }
+
+        // Background-Tab Deferral: Pause all DOM scraping & external API calls in unopened background tabs
+        // until the user actually switches to this tab (prevents burst rate-limiting when middle-clicking 10+ tabs)
+        if (document.hidden || document.visibilityState === 'hidden') {
+            await waitForVisibleTab();
+            if (runId !== activeRunId) return;
+        }
+
         const productInfo = extractProductInfo();
 
         if (!productInfo || (!productInfo.name && productInfo.queries.length === 0)) {
@@ -8177,12 +8781,22 @@
         sidebar.mount();
         sidebar.renderLoading(productInfo);
 
-        const comparison = await fetchMarketComparison(productInfo, null, (partialComp) => {
-            if (runId !== activeRunId) return;
-            sidebar.lastProductInfo = productInfo;
-            sidebar.lastComparison = partialComp;
-            sidebar.refreshView();
-        });
+        // Zero-CLS Slot Reservation: Reserve fixed-height badge space immediately before network roundtrips
+        if (productInfo.priceElement) {
+            reserveInlineBadgeSlot(productInfo.priceElement, sidebar.lang);
+        }
+
+        const comparison = await fetchMarketComparison(
+            productInfo,
+            null,
+            (partialComp) => {
+                if (runId !== activeRunId) return;
+                sidebar.lastProductInfo = productInfo;
+                sidebar.lastComparison = partialComp;
+                sidebar.refreshView();
+            },
+            { deferStage2WhenMatched: sidebar.isCollapsed && !productInfo.isUsedSite }
+        );
         if (runId !== activeRunId) return;
 
         if (!productInfo.priceElement || !productInfo.currentPrice) {
@@ -8215,15 +8829,24 @@
         sidebar.lastComparison = comparison;
         sidebar.refreshView();
 
-        // Non-blocking background check against GitHub raw URL so any pushed update notifies users
-        checkForGithubUpdate().then((newVer) => {
-            if (newVer && runId === activeRunId) {
-                sidebar.refreshView();
-            }
-        });
+        // If user opened the sidebar while Stage 1 was in flight and Stage 2 was deferred, trigger Stage 2 now
+        if (!sidebar.isCollapsed && comparison?.stage2Deferred) {
+            sidebar.triggerDeferredStage2();
+        }
+
+        // Idle-scheduled background maintenance (version check + remote hot-patch selector sync)
+        scheduleIdleTask(() => {
+            if (runId !== activeRunId) return;
+            syncRemoteSelectorsInBackground();
+            checkForGithubUpdate().then((newVer) => {
+                if (newVer && runId === activeRunId) {
+                    sidebar.refreshView();
+                }
+            });
+        }, 1400);
 
         // If user had Expanded Compare Mode open, auto-populate sibling comparison
-        if (sidebar.isExpanded && !sidebar.compareComparison) {
+        if (!sidebar.isCollapsed && sidebar.isExpanded && !sidebar.compareComparison) {
             const baseTitle = comparison?.product?.title || productInfo.name || '';
             const suggestions = suggestComparisonQueries(baseTitle);
             if (suggestions.length > 0) {
@@ -8251,9 +8874,9 @@
     }
 
     if (document.readyState === 'complete') {
-        setTimeout(() => runPriceChecker(0), 400);
+        setTimeout(() => scheduleIdleTask(() => runPriceChecker(0), 500), 350);
     } else {
-        window.addEventListener('load', () => setTimeout(() => runPriceChecker(0), 400));
+        window.addEventListener('load', () => setTimeout(() => scheduleIdleTask(() => runPriceChecker(0), 500), 350));
     }
 
     // Zero-overhead SPA navigation watcher (History API hooks + lightweight fallback check)

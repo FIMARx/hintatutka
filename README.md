@@ -5,7 +5,7 @@
 **Suomen älykkäin reaaliaikainen hintatutka: Elektroniikka, Huonekalut, Ruoka, Urheilu, Apteekit, Tori.fi, Vinted & Huuto.net**  
 *The ultimate real-time price comparison, unit-price analyzer (`€/kg`, `€/l`), price watchlist, bargaining advisor, S-Bonus calculator & second-hand overlay for 81 Finnish & EU online stores.*
 
-[![Version](https://img.shields.io/badge/version-8.0-10b981?style=for-the-badge)](https://github.com/FIMARx/hintatutka)
+[![Version](https://img.shields.io/badge/version-8.1-10b981?style=for-the-badge)](https://github.com/FIMARx/hintatutka)
 [![Author](https://img.shields.io/badge/author-FIMARx-6366f1?style=for-the-badge)](https://github.com/FIMARx)
 [![Install](https://img.shields.io/badge/Install-HintaTutka.user.js-f43f5e?style=for-the-badge&logo=tampermonkey)](https://raw.githubusercontent.com/FIMARx/hintatutka/main/HintaTutka.user.js)
 [![Stores](https://img.shields.io/badge/stores-81%20supported-f59e0b?style=for-the-badge)](#)
@@ -115,7 +115,20 @@ HintaTutka toimii automaattisesti kaikilla kielipoluilla (`/fi/`, `/en/`, `/sv/`
 
 ## 🗺️ Kehityssuunnitelma & Versiohistoria / Roadmap & Changelog
 
-### 🚀 v8.0 Päivitys (Uusin / Latest)
+### 🛡️ v8.1 Päivitys (Uusin / Latest)
+- 🚦 **Cloudflare- & Rate-Limit -suojakilpi, taustavälilehtitauko & jaettu GM-välimuisti**:
+  - **Taustavälilehtien älytauko (`visibilityState`)**: Jos avaat kymmeniä tuotelinkkejä kerralla taustavälilehtiin, HintaTutka odottaa kunnes oikeasti avaat välilehden — **0 rinnakkaista verkkopyyntöpiikkiä**.
+  - **Kauppojen välinen jaettu L1/L2 GM-välimuisti**: Sama tuote Verkkokaupassa, Gigantissa, Powerissa ja Jimm'sissä haetaan verkon yli vain kerran ja latautuu muilla sivuilla `0 ms` viiveellä suoraan jaetusta välimuistista.
+  - **Globaali pyyntöjen tahdistus, satunnaisviive (Jitter) & automaattinen Circuit Breaker**: Tahdistaa saman palvelimen pyynnöt välilehtien välillä ja kytkee automaattisen jäähyn (`429` / Cloudflare Turnstile), jolloin IP-osoitettasi ei pommiteta lukkoon.
+  - **On-Demand Stage-2 haku suljettuna**: Kun sivupaneeli on pienennettynä reunaan ja Hinta.fi löytää jo vahvistetut kaupat, käytettyjen markkinapaikkojen lisähaut ajetaan vasta kun avaat paneelin (vähentää taustaliikennettä jopa ~85 %).
+- ⚡ **0-CLS hintamerkintä, `requestIdleCallback` & kevyt suljettu tila**:
+  - **Ei sivun pomppimista (Zero Late CLS)**: Varaa kiinteän `27 px` tilan (`contain: layout style`) heti hinnan tunnistushetkellä ja päivittää tekstin paikallaan ilman "Lisää ostoskoriin" -painikkeen myöhäistä siirtymistä.
+  - **Kevyt reuna-pilleri & laiska SVG-käyrän piirto**: Suljettuna paneeli renderöi vain kevyen reunapillerin ilman 300+ piilotettua DOM-elementtiä tai raskasta taustasumennusta, ja SVG-hintakäyrät lasketaan vasta `📈 Hintahistoria` -välilehdellä.
+- 🔧 **Etäpäivitettävä selektorirekisteri (`selectors.json`) & geometriavahti**:
+  - **Hot-Patch ilman uudelleenasennusta**: Hakee kevyen `selectors.json`-konfiguraation GitHubista 12 tunnin välein taustalla, jolloin mahdolliset verkkokauppojen ulkoasu-uudistukset korjaantuvat käyttäjille automaattisesti ilman skriptin uudelleenasennusta.
+  - **Itsetarkistava geometriavahti (`insertBadgeWithGeometryGuard`)**: Tarkistaa hintalaatikon leveyden ja `overflow: hidden` -rajaukset ennen ja jälkeen lisäyksen estäen kapeiden hintarivien venymisen.
+
+### 🌟 v8.0
 - 🔍 **Täysin uudistettu haku- ja täsmäytysmoottori (Next-Gen Search & Matching Engine)**:
   - **GS1 Mod-10 -viivakooditarkistus & monilähde-EAN-kaivu**: Kaivaa EAN/GTIN/UPC-viivakoodit aina riippumatta MPN-koodista (JSON-LD, DOM-mikrodata, tekniset taulukot ja `__NEXT_DATA__`) ja tarkistaa aidon GS1-tarkistussumman estäen kaupan sisäisten tuotenumeroiden sekoittumisen viivakoodeihin.
   - **Monikielinen FI/EN/SV-synonyymisanakirja & rakennetietotarkistus**: Yhdistää suomen-, englannin- ja ruotsinkieliset tuotenimet saumattomasti (esim. `air purifier` ↔ `ilmanpuhdistin`, `electric toothbrush` ↔ `sähköhammasharja`) ja estää väärien varianttien sekoittumisen (`128GB` vs `256GB`, `55"` vs `65"`, yksittäistuote vs `2-pack`/`4-pack` sekä `+`-kombotuotepaketit).
