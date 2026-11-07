@@ -5,7 +5,7 @@
 **Suomen älykkäin reaaliaikainen hintatutka: Elektroniikka, Huonekalut, Ruoka, Urheilu, Apteekit, Tori.fi, Vinted & Huuto.net**  
 *The ultimate real-time price comparison, unit-price analyzer (`€/kg`, `€/l`), price watchlist, bargaining advisor, S-Bonus calculator & second-hand overlay for 81 Finnish & EU online stores.*
 
-[![Version](https://img.shields.io/badge/version-7.3-10b981?style=for-the-badge)](https://github.com/FIMARx/hintatutka)
+[![Version](https://img.shields.io/badge/version-7.4-10b981?style=for-the-badge)](https://github.com/FIMARx/hintatutka)
 [![Author](https://img.shields.io/badge/author-FIMARx-6366f1?style=for-the-badge)](https://github.com/FIMARx)
 [![Install](https://img.shields.io/badge/Install-HintaTutka.user.js-f43f5e?style=for-the-badge&logo=tampermonkey)](https://raw.githubusercontent.com/FIMARx/hintatutka/main/HintaTutka.user.js)
 [![Stores](https://img.shields.io/badge/stores-81%20supported-f59e0b?style=for-the-badge)](#)
@@ -115,7 +115,22 @@ HintaTutka toimii automaattisesti kaikilla kielipoluilla (`/fi/`, `/en/`, `/sv/`
 
 ## 🗺️ Kehityssuunnitelma & Versiohistoria / Roadmap & Changelog
 
-### 🚀 v7.2 Päivitys (Uusin / Latest)
+### 🚀 v7.4 Päivitys (Uusin / Latest)
+- 💎 **Täysin uudistettu moderni ulkoasu (Modern Obsidian Glassmorphism UI)**:
+  - Uudelleenmuotoiltu, ylellinen tumma lasimorfia (`backdrop-filter: blur(28px)`), jossa valo heijastuu pehmeästi paneelin reunoilta ja tilakohtainen hehku (`emerald`, `rose`, `amber`, `purple`) ympäröi elementtejä.
+  - Laajennettu ja ilmava asettelu (leveys kasvatettu 396 px / 760 px) ja tarkempi fonttipino subpixel-antialiasingilla.
+  - Virtaviivaistetut mittarikortit, pyöristetyt segmentoidut navigointivälilehdet (iOS/Raycast-tyyli) ja pehmeästi animoidut kaupparivit.
+  - Alapalkin hakupainikkeissa tyhjät kohteet (`0 kpl`) himmennetään automaattisesti, jolloin aktiiviset löydöt (kuten `Tori (2)`) nousevat heti esille.
+- 🔄 **Saumaton päivityskulku & automaattinen uudelleenlataustunnistus (Update & Reload Flow)**:
+  - Kun käyttäjä klikkaa päivityspainiketta, HintaTutka siirtyy aktiiviseen asennustilaan ja näyttää bannerissa sykkivän `[↻ Lataa sivu uudelleen]` -toimintopainikkeen.
+  - Skripti kuuntelee selaimen `focus`-tapahtumaa: heti kun käyttäjä palaa Tampermonkeyn asennusvälilehdeltä kaupan sivulle, HintaTutka herää ja kehottaa viimeistelemään päivityksen sivulatauksella.
+  - Sivun latauduttua skripti havaitsee uuden version ja esittää juhlavan vihreän onnistumisilmoituksen: `"✨ HintaTutka päivitetty onnistuneesti versioon v7.4!"`.
+- 🐛 **Käytettyjen sivujen vakauskorjaus**: Korjattu muuttujien alustusjärjestys (`bargainHtml`), jotta Tinkausapuri toimii virheettömästi kaikilla käytettyjen tavaroiden sivustoilla.
+
+### 🌟 v7.3
+- 🏷️ **Välilehtipohjainen kompakti käyttöliittymä (Segmented Tabs)**: Tuotu Kaupat, Käytetyt ja Hintahistoria omiin selkeisiin välilehtiinsä, jolloin paneelin korkeus pysyy miellyttävänä ilman ylipitkää skrollausta.
+
+### 🌟 v7.2
 - 🏷️ **Automaattinen brändintunnistus & yhdistäminen (XXL, Intersport ym.)**: Korjattu tilanne, jossa XXL:n ja urheilukauppojen tuotteista puuttui brändinimi (esim. Haglöfs) H1-otsikon yläpuolella olevan logon vuoksi. Skripti tunnistaa nyt brändin Schema.orgista, metatiedoista tai otsikkolinkeistä ja liittää sen aina tuotenimeen, jolloin haut kilpailijoilla ja käytettyjen sivustoilla löytävät tarkan tuotteen välittömästi.
 - ⚡ **Hintaseuranta.fi & Hintaopas.fi -pikahaut**: Lisätty suorat pikahakupainikkeet Hintaseuranta.fi:hin ja Hintaopas.fi:hin, jotta erityisesti urheilu-, ulkoilu- ja vaatetuotteiden vertailu onnistuu yhdellä klikkauksella. Lisäksi Hintaseuranta.fi on lisätty suoraan tuettujen sivujen listalle.
 - 🏃 **Uudet tuetut kaupat (Yhteensä 81 kauppaa)**: Mukana nyt **Budget Sport**, **Haglöfs**, **Partioaitta** ja **Hintaseuranta.fi** suoralla hintatutkatuella ja pikapainikkeilla.

@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         HintaTutka
 // @namespace    https://github.com/FIMARx/hintatutka
-// @version      7.3
-// @description  Suomen älykkäin hintatutka: Uudistettu selkeä käyttöliittymä, välilehdet (Kaupat, Käytetyt, Hintahistoria), täysikokoinen otsikko, hintakäyrät, yksikköhinnat, hintavahti, tinkausapuri, S-bonus & suora haku 81 kaupassa
+// @version      7.4
+// @description  Suomen älykkäin hintatutka: Modernisoitu lasimorfinen käyttöliittymä, välilehdet (Kaupat, Käytetyt, Hintahistoria), interaktiivinen päivitys & sivun uudelleenlataus, täysikokoinen otsikko, hintakäyrät, yksikköhinnat, hintavahti, tinkausapuri, S-bonus & suora haku 81 kaupassa
 // @author       FIMARx
 // @homepageURL  https://github.com/FIMARx/hintatutka
 // @supportURL   https://github.com/FIMARx/hintatutka/issues
@@ -144,7 +144,7 @@
     // =========================================================================
     // CONFIGURATION & THRESHOLDS
     // =========================================================================
-    const SCRIPT_VERSION = '7.3';
+    const SCRIPT_VERSION = '7.4';
     const GITHUB_RAW_SCRIPT_URL = 'https://raw.githubusercontent.com/FIMARx/hintatutka/main/HintaTutka.user.js';
     const GITHUB_API_CONTENTS_URL = 'https://api.github.com/repos/FIMARx/hintatutka/contents/HintaTutka.user.js';
     const GITHUB_REPO_URL = 'https://github.com/FIMARx/hintatutka';
@@ -172,6 +172,8 @@
         storageKeyWatchlist: 'ufhpc_watchlist_items_v70',
         storageKeyChartTab: 'ufhpc_chart_tab_v55',
         storageKeyMainTab: 'ufhpc_main_tab_v73',
+        storageKeyPendingUpdate: 'ufhpc_pending_update_ver_v74',
+        storageKeyPendingUpdateTime: 'ufhpc_pending_update_time_v74',
         maxStoresShown: 8,
         maxToriShown: 4
     };
@@ -3794,8 +3796,10 @@
             :host {
                 all: initial;
                 color-scheme: dark;
-                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "SF Pro Display", Inter, sans-serif;
                 color: #f3f4f6;
+                -webkit-font-smoothing: antialiased;
+                -moz-osx-font-smoothing: grayscale;
             }
             * {
                 box-sizing: border-box;
@@ -3811,11 +3815,11 @@
                 display: flex;
                 align-items: center;
                 transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
-                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "SF Pro Display", Inter, sans-serif;
                 user-select: none;
             }
             .ufhpc-wrapper.is-collapsed {
-                transform: translate(calc(100% - 42px), -50%);
+                transform: translate(calc(100% - 44px), -50%);
             }
             .ufhpc-wrapper.is-dock-left {
                 right: auto;
@@ -3823,50 +3827,52 @@
                 flex-direction: row-reverse;
             }
             .ufhpc-wrapper.is-dock-left.is-collapsed {
-                transform: translate(calc(-100% + 42px), -50%);
+                transform: translate(calc(-100% + 44px), -50%);
             }
             .ufhpc-wrapper.is-dock-left .ufhpc-handle {
-                border-radius: 0 14px 14px 0;
+                border-radius: 0 16px 16px 0;
                 border-left: none;
                 border-right: 1px solid rgba(255, 255, 255, 0.12);
-                box-shadow: 6px 0 24px rgba(0, 0, 0, 0.45);
+                box-shadow: 10px 0 32px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.12);
             }
             .ufhpc-wrapper.is-dock-left .ufhpc-handle-bar {
                 left: auto;
                 right: 0;
             }
             .ufhpc-wrapper.is-dock-left .ufhpc-panel {
-                border-radius: 0 16px 16px 0;
+                border-radius: 0 18px 18px 0;
                 border-left: none;
-                border-right: 1px solid rgba(255, 255, 255, 0.12);
-                box-shadow: 10px 10px 40px rgba(0, 0, 0, 0.6);
+                border-right: 1px solid rgba(255, 255, 255, 0.1);
+                box-shadow: 20px 0 50px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.12);
             }
 
             /* Side Handle / Draggable Edge Tab */
             .ufhpc-handle {
-                width: 42px;
-                min-height: 162px;
-                background: rgba(15, 17, 24, 0.96);
-                backdrop-filter: blur(16px);
-                border: 1px solid rgba(255, 255, 255, 0.12);
+                width: 44px;
+                min-height: 168px;
+                background: rgba(13, 16, 25, 0.94);
+                backdrop-filter: blur(24px) saturate(180%);
+                -webkit-backdrop-filter: blur(24px) saturate(180%);
+                border: 1px solid rgba(255, 255, 255, 0.1);
                 border-right: none;
-                border-radius: 14px 0 0 14px;
+                border-radius: 16px 0 0 16px;
                 display: flex;
                 flex-direction: column;
                 align-items: center;
                 justify-content: space-between;
-                padding: 12px 6px;
+                padding: 13px 6px;
                 cursor: grab;
-                box-shadow: -6px 0 24px rgba(0, 0, 0, 0.45);
+                box-shadow: -10px 0 32px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.12);
                 position: relative;
                 overflow: hidden;
-                transition: background 0.2s ease, border-color 0.2s ease;
+                transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
             }
             .ufhpc-handle:active {
                 cursor: grabbing;
             }
             .ufhpc-handle:hover {
-                background: rgba(24, 27, 38, 0.98);
+                background: rgba(20, 24, 38, 0.98);
+                border-color: rgba(255, 255, 255, 0.18);
             }
             .ufhpc-handle-bar {
                 position: absolute;
@@ -3875,69 +3881,74 @@
                 bottom: 0;
                 width: 4px;
                 background: var(--status-color, #6366f1);
-                box-shadow: 0 0 12px var(--status-color, #6366f1);
+                box-shadow: 0 0 14px var(--status-color, #6366f1);
             }
             .ufhpc-handle-icon {
-                width: 24px;
-                height: 24px;
+                width: 26px;
+                height: 26px;
                 border-radius: 50%;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 font-size: 13px;
                 font-weight: 800;
-                background: var(--status-bg, rgba(99, 102, 241, 0.18));
+                background: var(--status-bg, rgba(99, 102, 241, 0.2));
                 color: var(--status-bright, #818cf8);
-                border: 1px solid var(--status-border, rgba(99, 102, 241, 0.4));
+                border: 1px solid var(--status-border, rgba(99, 102, 241, 0.45));
+                box-shadow: 0 0 12px var(--status-glow-color, rgba(99, 102, 241, 0.25));
             }
             .ufhpc-handle-text {
                 writing-mode: vertical-rl;
                 transform: rotate(180deg);
                 font-size: 11px;
-                font-weight: 700;
+                font-weight: 800;
                 letter-spacing: 0.08em;
                 text-transform: uppercase;
-                color: #e5e7eb;
+                color: #f3f4f6;
                 white-space: nowrap;
                 margin: 8px 0;
             }
             .ufhpc-handle-chevron {
                 font-size: 11px;
-                color: #9ca3af;
-                transition: transform 0.3s ease;
+                color: #94a3b8;
+                transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
             }
             .ufhpc-wrapper.is-collapsed .ufhpc-handle-chevron {
                 transform: rotate(180deg);
             }
 
-            /* Main Sidebar Panel (382px standard, 740px when expanded for side-by-side comparison) */
+            /* Main Sidebar Panel (396px standard, 760px when expanded for side-by-side comparison) */
             .ufhpc-panel {
-                width: 382px;
+                width: 396px;
                 max-width: calc(100vw - 48px);
                 max-height: 94vh;
                 overflow-y: auto;
-                background: rgba(14, 16, 23, 0.96);
-                backdrop-filter: blur(22px);
-                border: 1px solid rgba(255, 255, 255, 0.12);
+                background: rgba(13, 16, 25, 0.92);
+                backdrop-filter: blur(28px) saturate(190%);
+                -webkit-backdrop-filter: blur(28px) saturate(190%);
+                border: 1px solid rgba(255, 255, 255, 0.1);
                 border-right: none;
-                border-radius: 16px 0 0 16px;
-                box-shadow: -16px 0 45px rgba(0, 0, 0, 0.65);
-                padding: 13px 14px;
+                border-radius: 18px 0 0 18px;
+                box-shadow: -20px 0 50px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+                padding: 14px 15px;
                 display: flex;
                 flex-direction: column;
-                gap: 9px;
+                gap: 10px;
                 color: #f3f4f6;
                 transition: width 0.28s cubic-bezier(0.16, 1, 0.3, 1);
             }
             .ufhpc-panel.is-expanded {
-                width: 740px;
+                width: 760px;
             }
             .ufhpc-panel::-webkit-scrollbar {
                 width: 5px;
             }
             .ufhpc-panel::-webkit-scrollbar-thumb {
-                background: rgba(255, 255, 255, 0.18);
+                background: rgba(255, 255, 255, 0.16);
                 border-radius: 4px;
+            }
+            .ufhpc-panel::-webkit-scrollbar-thumb:hover {
+                background: rgba(255, 255, 255, 0.28);
             }
 
             /* 2-Column Grid for Expanded Compare View */
@@ -3952,7 +3963,7 @@
             .ufhpc-col {
                 display: flex;
                 flex-direction: column;
-                gap: 9px;
+                gap: 10px;
                 min-width: 0;
             }
             .ufhpc-col-compare {
@@ -3971,16 +3982,16 @@
                 display: flex;
                 align-items: center;
                 flex-wrap: wrap;
-                gap: 5px;
-                font-size: 10px;
+                gap: 6px;
+                font-size: 10.5px;
                 font-weight: 700;
                 text-transform: uppercase;
                 letter-spacing: 0.08em;
-                color: #9ca3af;
+                color: #94a3b8;
                 min-width: 0;
             }
             .ufhpc-product-title {
-                font-size: 13.5px;
+                font-size: 14px;
                 font-weight: 700;
                 color: #ffffff;
                 line-height: 1.35;
@@ -3990,103 +4001,108 @@
                 overflow: hidden;
                 user-select: text;
                 word-break: break-word;
+                letter-spacing: -0.01em;
             }
             .ufhpc-header-btns {
                 display: flex;
                 align-items: center;
-                gap: 4px;
+                gap: 5px;
                 flex-shrink: 0;
             }
             .ufhpc-icon-btn {
                 background: rgba(255, 255, 255, 0.06);
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                color: #9ca3af;
-                height: 25px;
-                min-width: 25px;
-                padding: 0 6px;
-                border-radius: 7px;
+                border: 1px solid rgba(255, 255, 255, 0.09);
+                color: #94a3b8;
+                height: 27px;
+                min-width: 27px;
+                padding: 0 7px;
+                border-radius: 8px;
                 cursor: pointer;
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
-                font-size: 11px;
+                font-size: 11.5px;
                 font-weight: 700;
-                transition: all 0.15s ease;
+                transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
                 white-space: nowrap;
+                box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
             }
             .ufhpc-icon-btn:hover {
                 background: rgba(255, 255, 255, 0.14);
                 color: #ffffff;
+                border-color: rgba(255, 255, 255, 0.18);
                 transform: translateY(-1px);
             }
             .ufhpc-icon-btn.is-active {
-                background: rgba(245, 158, 11, 0.2);
+                background: rgba(245, 158, 11, 0.22);
                 color: #fbbf24;
-                border-color: rgba(245, 158, 11, 0.45);
+                border-color: rgba(245, 158, 11, 0.5);
+                box-shadow: 0 0 10px rgba(245, 158, 11, 0.25);
             }
             .ufhpc-icon-btn.is-active-compare {
-                background: rgba(99, 102, 241, 0.22);
-                color: #a5b4fc;
-                border-color: rgba(99, 102, 241, 0.5);
+                background: rgba(99, 102, 241, 0.24);
+                color: #c7d2fe;
+                border-color: rgba(99, 102, 241, 0.55);
+                box-shadow: 0 0 10px rgba(99, 102, 241, 0.25);
             }
 
             /* Modern Segmented Navigation Tabs */
             .ufhpc-tabs {
                 display: flex;
-                background: rgba(0, 0, 0, 0.35);
+                background: rgba(0, 0, 0, 0.42);
                 border: 1px solid rgba(255, 255, 255, 0.08);
-                border-radius: 10px;
+                border-radius: 11px;
                 padding: 3px;
                 gap: 3px;
-                margin-top: 1px;
+                margin-top: 2px;
             }
             .ufhpc-tab {
                 flex: 1;
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
-                gap: 4px;
+                gap: 5px;
                 background: transparent;
                 border: 1px solid transparent;
-                color: #9ca3af;
+                color: #94a3b8;
                 font-size: 11px;
                 font-weight: 700;
-                padding: 6px 4px;
-                border-radius: 7px;
+                padding: 7px 5px;
+                border-radius: 8px;
                 cursor: pointer;
                 transition: all 0.15s ease;
                 white-space: nowrap;
                 user-select: none;
             }
             .ufhpc-tab:hover {
-                color: #e5e7eb;
+                color: #f1f5f9;
                 background: rgba(255, 255, 255, 0.06);
             }
             .ufhpc-tab.is-active-stores {
-                background: rgba(16, 185, 129, 0.18);
+                background: rgba(16, 185, 129, 0.2);
                 color: #34d399;
-                border-color: rgba(16, 185, 129, 0.38);
-                box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15);
+                border-color: rgba(16, 185, 129, 0.42);
+                box-shadow: 0 2px 10px rgba(16, 185, 129, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.1);
             }
             .ufhpc-tab.is-active-used {
-                background: rgba(244, 63, 94, 0.18);
+                background: rgba(244, 63, 94, 0.2);
                 color: #fda4af;
-                border-color: rgba(244, 63, 94, 0.38);
-                box-shadow: 0 2px 8px rgba(244, 63, 94, 0.15);
+                border-color: rgba(244, 63, 94, 0.42);
+                box-shadow: 0 2px 10px rgba(244, 63, 94, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.1);
             }
             .ufhpc-tab.is-active-history {
-                background: rgba(99, 102, 241, 0.18);
+                background: rgba(99, 102, 241, 0.2);
                 color: #a5b4fc;
-                border-color: rgba(99, 102, 241, 0.38);
-                box-shadow: 0 2px 8px rgba(99, 102, 241, 0.15);
+                border-color: rgba(99, 102, 241, 0.42);
+                box-shadow: 0 2px 10px rgba(99, 102, 241, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.1);
             }
             .ufhpc-tab-pane {
                 display: flex;
                 flex-direction: column;
-                gap: 8px;
-                max-height: 330px;
+                gap: 9px;
+                max-height: 350px;
                 overflow-y: auto;
-                padding-right: 2px;
+                padding-right: 3px;
             }
             .ufhpc-tab-pane::-webkit-scrollbar {
                 width: 4px;
@@ -4103,23 +4119,28 @@
                 gap: 5px;
             }
             .ufhpc-chip {
-                background: rgba(99, 102, 241, 0.14);
+                background: rgba(99, 102, 241, 0.15);
                 border: 1px solid rgba(99, 102, 241, 0.35);
-                color: #a5b4fc;
+                color: #c7d2fe;
                 font-size: 10.5px;
                 font-weight: 600;
-                padding: 3px 8px;
+                padding: 3.5px 9px;
                 border-radius: 999px;
                 cursor: pointer;
                 transition: all 0.15s ease;
             }
             .ufhpc-chip:hover {
-                background: rgba(99, 102, 241, 0.28);
+                background: rgba(99, 102, 241, 0.32);
                 color: #ffffff;
+                border-color: rgba(99, 102, 241, 0.55);
             }
             @keyframes ufhpc-update-pulse {
                 0%, 100% { box-shadow: 0 0 10px rgba(16, 185, 129, 0.35); }
                 50% { box-shadow: 0 0 22px rgba(16, 185, 129, 0.75); }
+            }
+            @keyframes ufhpc-reload-pulse {
+                0%, 100% { box-shadow: 0 0 12px rgba(59, 130, 246, 0.45); transform: scale(1); }
+                50% { box-shadow: 0 0 22px rgba(99, 102, 241, 0.85); transform: scale(1.02); }
             }
             .ufhpc-ver-link {
                 display: inline-flex;
@@ -4127,24 +4148,25 @@
                 gap: 3px;
                 white-space: nowrap;
                 flex-shrink: 0;
-                color: #818cf8;
+                color: #a5b4fc;
                 text-decoration: none;
-                padding: 2px 6px;
-                border-radius: 5px;
-                background: rgba(99, 102, 241, 0.14);
-                border: 1px solid rgba(99, 102, 241, 0.3);
+                padding: 2.5px 7px;
+                border-radius: 6px;
+                background: rgba(99, 102, 241, 0.15);
+                border: 1px solid rgba(99, 102, 241, 0.32);
                 transition: all 0.15s ease;
                 cursor: pointer;
-                font-size: 9.5px;
+                font-size: 10px;
                 font-weight: 800;
-                letter-spacing: 0.04em;
+                letter-spacing: 0.03em;
             }
             .ufhpc-ver-link:hover {
                 background: rgba(99, 102, 241, 0.3);
                 color: #ffffff;
+                transform: translateY(-1px);
             }
             .ufhpc-ver-link.has-update {
-                background: rgba(16, 185, 129, 0.25);
+                background: linear-gradient(135deg, rgba(16, 185, 129, 0.28), rgba(59, 130, 246, 0.28));
                 border-color: #34d399;
                 color: #6ee7b7;
                 animation: ufhpc-update-pulse 2s infinite;
@@ -4162,20 +4184,22 @@
                 height: 10px;
                 border-radius: 50%;
                 background: #10b981;
-                border: 2px solid #0f1118;
+                border: 2px solid #0d1019;
                 box-shadow: 0 0 10px #10b981;
                 animation: ufhpc-update-pulse 1.6s infinite;
             }
+
+            /* Update Banners */
             .ufhpc-update-banner {
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
-                gap: 8px;
-                padding: 9px 12px;
-                border-radius: 10px;
-                background: linear-gradient(135deg, rgba(16, 185, 129, 0.26), rgba(59, 130, 246, 0.24));
+                gap: 10px;
+                padding: 10px 13px;
+                border-radius: 12px;
+                background: linear-gradient(135deg, rgba(16, 185, 129, 0.24), rgba(59, 130, 246, 0.22));
                 border: 1px solid #34d399;
-                box-shadow: 0 0 18px rgba(16, 185, 129, 0.35);
+                box-shadow: 0 0 20px rgba(16, 185, 129, 0.35);
                 color: #ecfdf5;
                 font-size: 11.5px;
                 font-weight: 700;
@@ -4185,14 +4209,58 @@
             }
             .ufhpc-update-banner:hover {
                 border-color: #6ee7b7;
-                background: linear-gradient(135deg, rgba(16, 185, 129, 0.38), rgba(59, 130, 246, 0.36));
+                background: linear-gradient(135deg, rgba(16, 185, 129, 0.36), rgba(59, 130, 246, 0.34));
                 transform: translateY(-1px);
+            }
+            .ufhpc-update-banner.is-pending {
+                background: linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(99, 102, 241, 0.25));
+                border-color: #60a5fa;
+                box-shadow: 0 0 20px rgba(59, 130, 246, 0.35);
+                animation: none;
+            }
+            .ufhpc-update-banner-info {
+                display: flex;
+                flex-direction: column;
+                gap: 2px;
+                min-width: 0;
+                flex: 1;
+            }
+            .ufhpc-update-banner-title {
+                font-size: 12px;
+                font-weight: 800;
+                color: #93c5fd;
+            }
+            .ufhpc-update-banner-desc {
+                font-size: 10px;
+                color: #dbeafe;
+                line-height: 1.25;
+            }
+            .ufhpc-btn-reload-now {
+                background: linear-gradient(135deg, #3b82f6, #6366f1);
+                color: #ffffff;
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                padding: 6px 12px;
+                border-radius: 8px;
+                font-size: 11px;
+                font-weight: 800;
+                cursor: pointer;
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+                white-space: nowrap;
+                animation: ufhpc-reload-pulse 1.8s infinite;
+                transition: all 0.15s ease;
+                box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
+            }
+            .ufhpc-btn-reload-now:hover {
+                filter: brightness(1.15);
+                transform: scale(1.04);
             }
             .ufhpc-update-banner-cta {
                 background: #10b981;
                 color: #06281e;
-                padding: 3px 8px;
-                border-radius: 6px;
+                padding: 3.5px 9px;
+                border-radius: 7px;
                 font-size: 10.5px;
                 font-weight: 800;
                 white-space: nowrap;
@@ -4202,14 +4270,14 @@
                 top: 18px;
                 right: 18px;
                 z-index: 2147483647;
-                width: 330px;
+                width: 340px;
                 max-width: calc(100vw - 36px);
-                background: rgba(14, 17, 26, 0.97);
-                backdrop-filter: blur(18px);
+                background: rgba(13, 16, 25, 0.98);
+                backdrop-filter: blur(24px);
                 border: 1.5px solid #10b981;
-                border-radius: 13px;
-                box-shadow: 0 14px 40px rgba(0, 0, 0, 0.7), 0 0 24px rgba(16, 185, 129, 0.35);
-                padding: 12px 14px;
+                border-radius: 14px;
+                box-shadow: 0 16px 45px rgba(0, 0, 0, 0.75), 0 0 24px rgba(16, 185, 129, 0.35);
+                padding: 13px 15px;
                 display: flex;
                 flex-direction: column;
                 gap: 8px;
@@ -4233,15 +4301,16 @@
             .ufhpc-update-toast-close {
                 background: transparent;
                 border: none;
-                color: #9ca3af;
+                color: #94a3b8;
                 cursor: pointer;
                 font-size: 13px;
-                padding: 2px 5px;
-                border-radius: 5px;
+                padding: 2px 6px;
+                border-radius: 6px;
+                transition: all 0.15s ease;
             }
             .ufhpc-update-toast-close:hover {
                 color: #ffffff;
-                background: rgba(255, 255, 255, 0.1);
+                background: rgba(255, 255, 255, 0.12);
             }
             .ufhpc-update-toast-sub {
                 font-size: 11px;
@@ -4263,7 +4332,7 @@
                 text-decoration: none;
                 font-size: 11px;
                 font-weight: 800;
-                padding: 6px 12px;
+                padding: 6px 13px;
                 border-radius: 8px;
                 box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
                 transition: transform 0.15s ease;
@@ -4274,14 +4343,15 @@
 
             /* Verdict Banner */
             .ufhpc-verdict-card {
-                padding: 10px 13px;
-                border-radius: 12px;
-                background: var(--status-bg, rgba(99, 102, 241, 0.14));
-                border: 1px solid var(--status-border, rgba(99, 102, 241, 0.4));
-                box-shadow: var(--status-glow, none);
+                padding: 11px 14px;
+                border-radius: 13px;
+                background: linear-gradient(135deg, var(--status-bg, rgba(99, 102, 241, 0.15)) 0%, rgba(18, 21, 33, 0.7) 100%);
+                border: 1px solid var(--status-border, rgba(99, 102, 241, 0.45));
+                box-shadow: var(--status-glow, none), inset 0 1px 0 rgba(255, 255, 255, 0.1);
                 display: flex;
                 flex-direction: column;
-                gap: 3px;
+                gap: 4px;
+                transition: border-color 0.2s ease, box-shadow 0.2s ease;
             }
             .ufhpc-verdict-top {
                 display: flex;
@@ -4293,23 +4363,25 @@
                 display: inline-flex;
                 align-items: center;
                 gap: 6px;
-                font-size: 12px;
+                font-size: 12.5px;
                 font-weight: 800;
                 letter-spacing: 0.04em;
                 color: var(--status-bright, #818cf8);
             }
             .ufhpc-verdict-delta {
                 font-size: 11.5px;
-                font-weight: 700;
+                font-weight: 800;
                 color: #f9fafb;
-                background: rgba(0, 0, 0, 0.35);
+                background: rgba(0, 0, 0, 0.45);
+                border: 1px solid rgba(255, 255, 255, 0.12);
                 padding: 3px 8px;
-                border-radius: 6px;
+                border-radius: 7px;
                 white-space: nowrap;
+                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
             }
             .ufhpc-verdict-sub {
                 font-size: 11px;
-                color: #d1d5db;
+                color: #cbd5e1;
                 line-height: 1.35;
             }
 
@@ -4317,36 +4389,42 @@
             .ufhpc-metrics {
                 display: grid;
                 grid-template-columns: 1fr 1fr;
-                gap: 8px;
+                gap: 9px;
             }
             .ufhpc-metric-box {
                 background: rgba(255, 255, 255, 0.035);
                 border: 1px solid rgba(255, 255, 255, 0.08);
-                border-radius: 10px;
-                padding: 9px 11px;
+                border-radius: 12px;
+                padding: 10px 12px;
                 display: flex;
                 flex-direction: column;
-                gap: 2px;
+                gap: 3px;
+                box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+                transition: background 0.15s ease, border-color 0.15s ease;
+            }
+            .ufhpc-metric-box:hover {
+                background: rgba(255, 255, 255, 0.055);
+                border-color: rgba(255, 255, 255, 0.14);
             }
             .ufhpc-metric-label {
                 font-size: 10px;
-                font-weight: 600;
-                color: #9ca3af;
+                font-weight: 700;
+                color: #94a3b8;
                 text-transform: uppercase;
-                letter-spacing: 0.04em;
+                letter-spacing: 0.05em;
             }
             .ufhpc-metric-value {
-                font-size: 15.5px;
+                font-size: 16.5px;
                 font-weight: 800;
                 color: #f9fafb;
-                letter-spacing: -0.01em;
+                letter-spacing: -0.02em;
             }
             .ufhpc-metric-value.is-colored {
                 color: var(--status-bright, #f9fafb);
             }
             .ufhpc-metric-sub {
-                font-size: 10px;
-                color: #9ca3af;
+                font-size: 10.5px;
+                color: #94a3b8;
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
@@ -4356,11 +4434,11 @@
             .ufhpc-chart-box {
                 background: rgba(255, 255, 255, 0.025);
                 border: 1px solid rgba(255, 255, 255, 0.08);
-                border-radius: 11px;
-                padding: 9px 10px 6px 10px;
+                border-radius: 12px;
+                padding: 10px 11px 7px 11px;
                 display: flex;
                 flex-direction: column;
-                gap: 3px;
+                gap: 4px;
             }
             .ufhpc-chart-header {
                 display: flex;
@@ -4379,7 +4457,7 @@
                 text-overflow: ellipsis;
             }
             .ufhpc-chart-price {
-                font-size: 12.5px;
+                font-size: 13px;
                 font-weight: 800;
                 color: #34d399;
                 flex-shrink: 0;
@@ -4389,7 +4467,7 @@
             }
             .ufhpc-chart-sub {
                 font-size: 10.5px;
-                color: #9ca3af;
+                color: #94a3b8;
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
@@ -4404,11 +4482,11 @@
                 flex: 1;
                 background: rgba(255, 255, 255, 0.04);
                 border: 1px solid rgba(255, 255, 255, 0.08);
-                color: #9ca3af;
+                color: #94a3b8;
                 font-size: 10px;
                 font-weight: 700;
-                padding: 3.5px 6px;
-                border-radius: 6px;
+                padding: 4px 6px;
+                border-radius: 7px;
                 cursor: pointer;
                 transition: all 0.15s ease;
             }
@@ -4417,14 +4495,14 @@
                 background: rgba(255, 255, 255, 0.08);
             }
             .ufhpc-chart-tab.is-active {
-                background: rgba(16, 185, 129, 0.16);
+                background: rgba(16, 185, 129, 0.18);
                 color: #34d399;
-                border-color: rgba(16, 185, 129, 0.4);
+                border-color: rgba(16, 185, 129, 0.42);
             }
             .ufhpc-chart-tab.is-active-tori {
-                background: rgba(244, 63, 94, 0.16);
+                background: rgba(244, 63, 94, 0.18);
                 color: #fda4af;
-                border-color: rgba(244, 63, 94, 0.4);
+                border-color: rgba(244, 63, 94, 0.42);
             }
             .ufhpc-svg-wrap {
                 position: relative;
@@ -4453,7 +4531,7 @@
                 font-weight: 700;
                 text-transform: uppercase;
                 letter-spacing: 0.06em;
-                color: #9ca3af;
+                color: #94a3b8;
                 display: flex;
                 align-items: center;
                 gap: 5px;
@@ -4465,11 +4543,11 @@
             }
             .ufhpc-pill-btn {
                 background: rgba(255, 255, 255, 0.04);
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                color: #9ca3af;
+                border: 1px solid rgba(255, 255, 255, 0.09);
+                color: #94a3b8;
                 font-size: 10px;
                 font-weight: 600;
-                padding: 3px 7px;
+                padding: 3px 8px;
                 border-radius: 999px;
                 cursor: pointer;
                 transition: all 0.15s ease;
@@ -4479,19 +4557,24 @@
                 border-color: rgba(255, 255, 255, 0.22);
             }
             .ufhpc-pill-btn.is-active {
-                background: rgba(16, 185, 129, 0.16);
+                background: rgba(16, 185, 129, 0.18);
                 color: #34d399;
                 border-color: rgba(16, 185, 129, 0.45);
             }
             .ufhpc-pill-btn.is-active-tori {
-                background: rgba(244, 63, 94, 0.16);
+                background: rgba(244, 63, 94, 0.18);
                 color: #fb7185;
                 border-color: rgba(244, 63, 94, 0.45);
             }
             .ufhpc-pill-btn.is-active-vinted {
-                background: rgba(9, 177, 186, 0.18);
+                background: rgba(9, 177, 186, 0.2);
                 color: #2dd4bf;
                 border-color: rgba(9, 177, 186, 0.45);
+            }
+            .ufhpc-pill-btn.is-active-huuto {
+                background: rgba(245, 158, 11, 0.25);
+                color: #fbbf24;
+                border-color: rgba(245, 158, 11, 0.55);
             }
 
             /* Store Comparison Rows */
@@ -4504,39 +4587,41 @@
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
-                gap: 8px;
-                padding: 6.5px 10px;
-                border-radius: 8px;
-                background: rgba(255, 255, 255, 0.03);
+                gap: 9px;
+                padding: 7px 11px;
+                border-radius: 9px;
+                background: rgba(255, 255, 255, 0.032);
                 border: 1px solid rgba(255, 255, 255, 0.06);
                 text-decoration: none;
                 color: #e5e7eb;
                 transition: all 0.15s ease;
+                box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
             }
             .ufhpc-store-row:hover {
                 background: rgba(255, 255, 255, 0.08);
-                border-color: rgba(255, 255, 255, 0.18);
+                border-color: rgba(255, 255, 255, 0.16);
                 transform: translateX(-2px);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
             }
             .ufhpc-store-row.is-current-store {
                 border-color: var(--status-border, rgba(99, 102, 241, 0.5));
-                background: var(--status-bg, rgba(99, 102, 241, 0.1));
+                background: var(--status-bg, rgba(99, 102, 241, 0.12));
             }
             .ufhpc-store-row.is-club-offer {
                 border-color: rgba(192, 132, 252, 0.45);
-                background: linear-gradient(90deg, rgba(168, 85, 247, 0.14), rgba(245, 158, 11, 0.06));
+                background: linear-gradient(90deg, rgba(168, 85, 247, 0.15), rgba(245, 158, 11, 0.07));
             }
             .ufhpc-club-tag {
                 display: inline-flex;
                 align-items: center;
                 flex-shrink: 0;
                 white-space: nowrap;
-                padding: 1px 5px;
+                padding: 1.5px 5.5px;
                 border-radius: 5px;
                 font-size: 8.5px;
                 font-weight: 800;
                 letter-spacing: 0.02em;
-                background: linear-gradient(135deg, rgba(168, 85, 247, 0.3), rgba(245, 158, 11, 0.25));
+                background: linear-gradient(135deg, rgba(168, 85, 247, 0.32), rgba(245, 158, 11, 0.28));
                 color: #f3e8ff;
                 border: 1px solid rgba(192, 132, 252, 0.55);
                 box-shadow: 0 0 10px rgba(168, 85, 247, 0.25);
@@ -4546,8 +4631,8 @@
                 align-items: center;
                 flex-shrink: 0;
                 white-space: nowrap;
-                padding: 1px 5px;
-                border-radius: 4px;
+                padding: 1.5px 5.5px;
+                border-radius: 5px;
                 font-size: 8.5px;
                 font-weight: 700;
                 background: rgba(16, 185, 129, 0.18);
@@ -4557,7 +4642,7 @@
             .ufhpc-store-left {
                 display: flex;
                 align-items: center;
-                gap: 6px;
+                gap: 7px;
                 min-width: 0;
             }
             .ufhpc-stock-dot {
@@ -4565,14 +4650,15 @@
                 height: 7px;
                 border-radius: 50%;
                 flex-shrink: 0;
-                background: #6b7280;
+                background: #64748b;
             }
             .ufhpc-stock-dot.instock {
                 background: #10b981;
-                box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
+                box-shadow: 0 0 8px rgba(16, 185, 129, 0.65);
             }
             .ufhpc-stock-dot.order {
                 background: #f59e0b;
+                box-shadow: 0 0 6px rgba(245, 158, 11, 0.5);
             }
             .ufhpc-store-name {
                 font-size: 12px;
@@ -4589,7 +4675,7 @@
                 flex-shrink: 0;
             }
             .ufhpc-store-price {
-                font-size: 12.5px;
+                font-size: 13px;
                 font-weight: 700;
                 color: #ffffff;
             }
@@ -4598,40 +4684,49 @@
             }
             .ufhpc-store-ship {
                 font-size: 9.5px;
-                color: #9ca3af;
+                color: #94a3b8;
             }
 
-            /* Used on Tori.fi Section */
+            /* Used on Tori.fi & Vinted & Huuto Section */
             .ufhpc-tori-row {
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
-                gap: 8px;
-                padding: 6.5px 9px;
-                border-radius: 8px;
-                background: rgba(244, 63, 94, 0.045);
-                border: 1px solid rgba(244, 63, 94, 0.14);
+                gap: 9px;
+                padding: 7px 10px;
+                border-radius: 9px;
+                background: rgba(244, 63, 94, 0.05);
+                border: 1px solid rgba(244, 63, 94, 0.15);
                 text-decoration: none;
                 color: #e5e7eb;
                 transition: all 0.15s ease;
             }
             .ufhpc-tori-row:hover {
-                background: rgba(244, 63, 94, 0.1);
-                border-color: rgba(244, 63, 94, 0.32);
+                background: rgba(244, 63, 94, 0.12);
+                border-color: rgba(244, 63, 94, 0.35);
                 transform: translateX(-2px);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
             }
             .ufhpc-tori-row.is-vinted-row {
-                background: rgba(9, 177, 186, 0.045);
+                background: rgba(9, 177, 186, 0.05);
                 border-color: rgba(9, 177, 186, 0.18);
             }
             .ufhpc-tori-row.is-vinted-row:hover {
-                background: rgba(9, 177, 186, 0.12);
-                border-color: rgba(9, 177, 186, 0.35);
+                background: rgba(9, 177, 186, 0.13);
+                border-color: rgba(9, 177, 186, 0.38);
+            }
+            .ufhpc-tori-row.is-huuto-row {
+                background: rgba(245, 158, 11, 0.05);
+                border-color: rgba(245, 158, 11, 0.18);
+            }
+            .ufhpc-tori-row.is-huuto-row:hover {
+                background: rgba(245, 158, 11, 0.13);
+                border-color: rgba(245, 158, 11, 0.38);
             }
             .ufhpc-tori-thumb {
-                width: 30px;
-                height: 30px;
-                border-radius: 6px;
+                width: 32px;
+                height: 32px;
+                border-radius: 7px;
                 object-fit: cover;
                 background: rgba(255, 255, 255, 0.06);
                 flex-shrink: 0;
@@ -4656,7 +4751,7 @@
                 align-items: center;
                 gap: 5px;
                 font-size: 9.5px;
-                color: #9ca3af;
+                color: #94a3b8;
                 min-width: 0;
             }
             .ufhpc-tori-loc {
@@ -4697,8 +4792,13 @@
                 color: #5eead4;
                 border-color: rgba(9, 177, 186, 0.3);
             }
+            .ufhpc-tori-tag.huuto {
+                background: rgba(245, 158, 11, 0.18);
+                color: #fbbf24;
+                border-color: rgba(245, 158, 11, 0.35);
+            }
             .ufhpc-tori-price {
-                font-size: 12.5px;
+                font-size: 13px;
                 font-weight: 800;
                 color: #fda4af;
             }
@@ -4707,21 +4807,22 @@
             .ufhpc-variant-select {
                 width: 100%;
                 color-scheme: dark;
-                background-color: #161924;
+                background-color: #141724;
                 border: 1px solid rgba(255, 255, 255, 0.14);
-                border-radius: 7px;
-                padding: 6px 8px;
+                border-radius: 8px;
+                padding: 7px 9px;
                 color: #f3f4f6;
                 font-size: 11px;
                 font-weight: 500;
                 outline: none;
                 cursor: pointer;
+                transition: border-color 0.15s ease;
             }
             .ufhpc-variant-select:focus {
                 border-color: #6366f1;
             }
             .ufhpc-variant-select option {
-                background-color: #161924;
+                background-color: #141724;
                 color: #f3f4f6;
                 padding: 6px;
             }
@@ -4735,30 +4836,33 @@
             }
             .ufhpc-search-input {
                 flex: 1;
-                background: rgba(0, 0, 0, 0.35);
+                background: rgba(0, 0, 0, 0.42);
                 border: 1px solid rgba(255, 255, 255, 0.12);
-                border-radius: 7px;
-                padding: 6px 9px;
+                border-radius: 8px;
+                padding: 7px 10px;
                 color: #f3f4f6;
                 font-size: 11.5px;
                 outline: none;
+                transition: border-color 0.15s ease, box-shadow 0.15s ease;
             }
             .ufhpc-search-input:focus {
                 border-color: #6366f1;
+                box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
             }
             .ufhpc-search-btn {
                 background: rgba(255, 255, 255, 0.08);
                 border: 1px solid rgba(255, 255, 255, 0.14);
                 color: #e5e7eb;
-                border-radius: 7px;
-                padding: 0 10px;
+                border-radius: 8px;
+                padding: 0 12px;
                 font-size: 11.5px;
-                font-weight: 600;
+                font-weight: 700;
                 cursor: pointer;
-                transition: background 0.15s;
+                transition: all 0.15s ease;
             }
             .ufhpc-search-btn:hover {
                 background: rgba(255, 255, 255, 0.16);
+                color: #ffffff;
             }
 
             /* Live Autocomplete Dropdown Menu */
@@ -4767,16 +4871,16 @@
                 left: 0;
                 right: 0;
                 top: calc(100% + 4px);
-                background: #141722;
+                background: #121522;
                 border: 1px solid rgba(99, 102, 241, 0.45);
-                border-radius: 9px;
-                box-shadow: 0 14px 32px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.06);
+                border-radius: 10px;
+                box-shadow: 0 16px 36px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.06);
                 z-index: 50;
                 max-height: 220px;
                 overflow-y: auto;
                 display: none;
                 flex-direction: column;
-                padding: 4px;
+                padding: 5px;
                 gap: 2px;
             }
             .ufhpc-ac-menu.is-upward {
@@ -4791,8 +4895,8 @@
                 align-items: center;
                 justify-content: space-between;
                 gap: 8px;
-                padding: 6px 8px;
-                border-radius: 6px;
+                padding: 7px 9px;
+                border-radius: 7px;
                 cursor: pointer;
                 background: transparent;
                 border: none;
@@ -4803,7 +4907,7 @@
             }
             .ufhpc-ac-item:hover,
             .ufhpc-ac-item.is-highlighted {
-                background: rgba(99, 102, 241, 0.22);
+                background: rgba(99, 102, 241, 0.24);
             }
             .ufhpc-ac-left {
                 display: flex;
@@ -4822,13 +4926,13 @@
             }
             .ufhpc-ac-meta {
                 font-size: 9.5px;
-                color: #9ca3af;
+                color: #94a3b8;
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
             }
             .ufhpc-ac-price {
-                font-size: 11.5px;
+                font-size: 12px;
                 font-weight: 800;
                 color: #34d399;
                 flex-shrink: 0;
@@ -4837,7 +4941,7 @@
             /* External Action Buttons */
             .ufhpc-actions {
                 display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(68px, 1fr));
+                grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
                 gap: 6px;
             }
             .ufhpc-btn {
@@ -4845,110 +4949,105 @@
                 align-items: center;
                 justify-content: center;
                 gap: 4px;
-                padding: 7px 6px;
-                border-radius: 8px;
+                padding: 7.5px 7px;
+                border-radius: 9px;
                 font-size: 11px;
                 font-weight: 700;
                 text-decoration: none;
                 transition: all 0.15s ease;
                 white-space: nowrap;
+                box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            }
+            .ufhpc-btn:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+            }
+            .ufhpc-btn.is-zero {
+                opacity: 0.55;
+            }
+            .ufhpc-btn.is-zero:hover {
+                opacity: 0.95;
             }
             .ufhpc-btn-hinta {
-                background: rgba(16, 185, 129, 0.14);
+                background: rgba(16, 185, 129, 0.15);
                 color: #34d399;
-                border: 1px solid rgba(16, 185, 129, 0.35);
+                border: 1px solid rgba(16, 185, 129, 0.38);
             }
             .ufhpc-btn-hinta:hover {
-                background: rgba(16, 185, 129, 0.24);
+                background: rgba(16, 185, 129, 0.25);
+                color: #6ee7b7;
             }
             .ufhpc-btn-hintaopas {
-                background: rgba(59, 130, 246, 0.14);
+                background: rgba(59, 130, 246, 0.15);
                 color: #60a5fa;
-                border: 1px solid rgba(59, 130, 246, 0.35);
+                border: 1px solid rgba(59, 130, 246, 0.38);
             }
             .ufhpc-btn-hintaopas:hover {
-                background: rgba(59, 130, 246, 0.24);
+                background: rgba(59, 130, 246, 0.25);
+                color: #93c5fd;
             }
             .ufhpc-btn-hintaseuranta {
-                background: rgba(14, 165, 233, 0.14);
+                background: rgba(14, 165, 233, 0.15);
                 color: #38bdf8;
-                border: 1px solid rgba(14, 165, 233, 0.35);
+                border: 1px solid rgba(14, 165, 233, 0.38);
             }
             .ufhpc-btn-hintaseuranta:hover {
-                background: rgba(14, 165, 233, 0.25);
+                background: rgba(14, 165, 233, 0.26);
                 color: #7dd3fc;
             }
             .ufhpc-btn-intersport {
-                background: rgba(37, 99, 235, 0.15);
+                background: rgba(37, 99, 235, 0.16);
                 color: #60a5fa;
-                border: 1px solid rgba(37, 99, 235, 0.38);
+                border: 1px solid rgba(37, 99, 235, 0.4);
             }
             .ufhpc-btn-intersport:hover {
                 background: rgba(37, 99, 235, 0.28);
                 color: #93c5fd;
             }
             .ufhpc-btn-budgetsport {
-                background: rgba(234, 88, 12, 0.15);
+                background: rgba(234, 88, 12, 0.16);
                 color: #fb923c;
-                border: 1px solid rgba(234, 88, 12, 0.38);
+                border: 1px solid rgba(234, 88, 12, 0.4);
             }
             .ufhpc-btn-budgetsport:hover {
                 background: rgba(234, 88, 12, 0.28);
                 color: #fdba74;
             }
             .ufhpc-btn-tori {
-                background: rgba(244, 63, 94, 0.14);
+                background: rgba(244, 63, 94, 0.15);
                 color: #fb7185;
-                border: 1px solid rgba(244, 63, 94, 0.35);
+                border: 1px solid rgba(244, 63, 94, 0.38);
             }
             .ufhpc-btn-tori:hover {
-                background: rgba(244, 63, 94, 0.24);
+                background: rgba(244, 63, 94, 0.25);
+                color: #fda4af;
             }
             .ufhpc-btn-vinted {
-                background: rgba(9, 177, 186, 0.14);
+                background: rgba(9, 177, 186, 0.15);
                 color: #2dd4bf;
-                border: 1px solid rgba(9, 177, 186, 0.38);
+                border: 1px solid rgba(9, 177, 186, 0.4);
             }
             .ufhpc-btn-vinted:hover {
-                background: rgba(9, 177, 186, 0.25);
+                background: rgba(9, 177, 186, 0.26);
                 color: #5eead4;
             }
             .ufhpc-btn-huuto {
-                background: rgba(245, 158, 11, 0.14);
+                background: rgba(245, 158, 11, 0.15);
                 color: #fbbf24;
-                border: 1px solid rgba(245, 158, 11, 0.35);
+                border: 1px solid rgba(245, 158, 11, 0.38);
             }
             .ufhpc-btn-huuto:hover {
-                background: rgba(245, 158, 11, 0.25);
+                background: rgba(245, 158, 11, 0.26);
                 color: #fde68a;
-            }
-
-            .ufhpc-pill-btn.is-active-huuto {
-                background: rgba(245, 158, 11, 0.25);
-                color: #fbbf24;
-                border-color: rgba(245, 158, 11, 0.55);
-            }
-            .ufhpc-tori-row.is-huuto-row {
-                background: rgba(245, 158, 11, 0.045);
-                border-color: rgba(245, 158, 11, 0.18);
-            }
-            .ufhpc-tori-row.is-huuto-row:hover {
-                background: rgba(245, 158, 11, 0.12);
-                border-color: rgba(245, 158, 11, 0.35);
-            }
-            .ufhpc-tori-tag.huuto {
-                background: rgba(245, 158, 11, 0.18);
-                color: #fbbf24;
-                border-color: rgba(245, 158, 11, 0.35);
             }
 
             /* Bargaining Advisor Box */
             .ufhpc-bargain-box {
                 margin-top: 10px;
-                padding: 10px 12px;
+                padding: 11px 13px;
                 background: rgba(99, 102, 241, 0.08);
                 border: 1px dashed rgba(129, 140, 248, 0.45);
-                border-radius: 10px;
+                border-radius: 11px;
                 display: flex;
                 flex-direction: column;
                 gap: 6px;
@@ -4969,18 +5068,18 @@
                 font-size: 11px;
                 color: #e2e8f0;
                 font-style: italic;
-                background: rgba(0, 0, 0, 0.25);
-                padding: 6px 8px;
-                border-radius: 6px;
+                background: rgba(0, 0, 0, 0.3);
+                padding: 7px 9px;
+                border-radius: 7px;
                 line-height: 1.35;
             }
             .ufhpc-btn-copy-offer {
                 align-self: flex-start;
-                background: rgba(99, 102, 241, 0.22);
+                background: rgba(99, 102, 241, 0.24);
                 color: #c7d2fe;
                 border: 1px solid rgba(129, 140, 248, 0.4);
-                border-radius: 6px;
-                padding: 4px 9px;
+                border-radius: 7px;
+                padding: 4px 10px;
                 font-size: 10px;
                 font-weight: 700;
                 cursor: pointer;
@@ -4994,10 +5093,10 @@
             /* Store Bonus Box */
             .ufhpc-bonus-box {
                 margin-top: 8px;
-                padding: 7px 10px;
+                padding: 8px 11px;
                 background: rgba(16, 185, 129, 0.08);
                 border: 1px solid rgba(16, 185, 129, 0.3);
-                border-radius: 8px;
+                border-radius: 9px;
                 font-size: 11px;
                 color: #d1fae5;
                 line-height: 1.35;
@@ -5007,14 +5106,14 @@
             .ufhpc-watchlist-modal {
                 position: absolute;
                 inset: 0;
-                background: rgba(14, 16, 23, 0.98);
-                backdrop-filter: blur(20px);
+                background: rgba(13, 16, 25, 0.98);
+                backdrop-filter: blur(24px);
                 z-index: 100;
                 padding: 16px;
                 display: flex;
                 flex-direction: column;
                 gap: 12px;
-                border-radius: 16px;
+                border-radius: 18px;
                 overflow-y: auto;
             }
             .ufhpc-watchlist-header {
@@ -5036,7 +5135,7 @@
             .ufhpc-watchlist-card {
                 background: rgba(255, 255, 255, 0.04);
                 border: 1px solid rgba(255, 255, 255, 0.08);
-                border-radius: 8px;
+                border-radius: 9px;
                 padding: 9px 11px;
                 display: flex;
                 flex-direction: column;
@@ -5089,8 +5188,9 @@
                 font-size: 10px;
                 font-weight: 700;
                 padding: 5px 12px;
-                border-radius: 6px;
+                border-radius: 7px;
                 cursor: pointer;
+                transition: all 0.15s ease;
             }
             .ufhpc-btn-clear-watchlist:hover {
                 background: rgba(239, 68, 68, 0.25);
@@ -5101,27 +5201,34 @@
                 position: fixed;
                 bottom: 24px;
                 right: 24px;
-                background: rgba(15, 23, 42, 0.95);
+                background: rgba(13, 16, 25, 0.96);
                 border: 1px solid rgba(56, 189, 248, 0.5);
                 color: #f8fafc;
-                padding: 10px 16px;
-                border-radius: 10px;
+                padding: 11px 18px;
+                border-radius: 12px;
                 font-size: 12px;
                 font-weight: 700;
-                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+                box-shadow: 0 14px 40px rgba(0, 0, 0, 0.65), 0 0 20px rgba(56, 189, 248, 0.25);
                 z-index: 2147483647;
-                backdrop-filter: blur(12px);
+                backdrop-filter: blur(16px);
                 pointer-events: none;
-                transition: opacity 0.25s ease;
+                transition: opacity 0.25s ease, transform 0.25s ease;
+            }
+            .ufhpc-toast-msg.is-celebration {
+                background: rgba(10, 25, 20, 0.98);
+                border: 1.5px solid #10b981;
+                color: #ecfdf5;
+                box-shadow: 0 16px 45px rgba(0, 0, 0, 0.75), 0 0 30px rgba(16, 185, 129, 0.45);
+                animation: ufhpc-update-pulse 2s infinite;
             }
 
             .ufhpc-empty {
                 font-size: 11px;
-                color: #9ca3af;
-                padding: 8px;
+                color: #94a3b8;
+                padding: 9px;
                 text-align: center;
                 background: rgba(255, 255, 255, 0.02);
-                border-radius: 8px;
+                border-radius: 9px;
                 border: 1px dashed rgba(255, 255, 255, 0.1);
             }
         `;
@@ -5198,6 +5305,27 @@
             this.compareQuery = '';
             this.compareComparison = null;
             this.compareLoading = false;
+
+            // Live Update & Reload Confirmation Tracking
+            this.updateInstalling = false;
+            this.showUpdateCelebration = false;
+            this.celebrateVersion = null;
+            const pendingVer = localStorage.getItem(CONFIG.storageKeyPendingUpdate);
+            const pendingTime = parseInt(localStorage.getItem(CONFIG.storageKeyPendingUpdateTime) || '0', 10);
+            const isRecentPending = (Date.now() - pendingTime) < 1000 * 60 * 15; // 15 min window
+
+            if (pendingVer && isRecentPending) {
+                if (!isNewerVersion(pendingVer, SCRIPT_VERSION)) {
+                    // Running script is now equal to or newer than what was pending! Update confirmed!
+                    this.showUpdateCelebration = true;
+                    this.celebrateVersion = SCRIPT_VERSION;
+                    localStorage.removeItem(CONFIG.storageKeyPendingUpdate);
+                    localStorage.removeItem(CONFIG.storageKeyPendingUpdateTime);
+                } else {
+                    // Update initiated, page still awaiting reload
+                    this.updateInstalling = true;
+                }
+            }
         }
 
         mount() {
@@ -5218,24 +5346,56 @@
             this.shadow.appendChild(styleEl);
             this.shadow.appendChild(this.wrapperEl);
             document.body.appendChild(this.hostEl);
+
+            // Listen for window focus: when user returns from Tampermonkey install tab!
+            window.addEventListener('focus', () => {
+                const pending = localStorage.getItem(CONFIG.storageKeyPendingUpdate);
+                const time = parseInt(localStorage.getItem(CONFIG.storageKeyPendingUpdateTime) || '0', 10);
+                if (pending && (Date.now() - time) < 1000 * 60 * 15) {
+                    if (!this.updateInstalling) {
+                        this.updateInstalling = true;
+                        this.refreshView();
+                    }
+                    this.showToast(this.lang === 'en'
+                        ? '💡 Finished update in Tampermonkey? Reload this page to activate!'
+                        : '💡 Viimeistele päivitys: klikkaa alta "Lataa sivu uudelleen" tai paina F5!');
+                }
+            });
+
+            if (this.showUpdateCelebration) {
+                setTimeout(() => {
+                    this.showToast(this.lang === 'en'
+                        ? `✨ HintaTutka updated successfully to v${this.celebrateVersion}!`
+                        : `✨ HintaTutka päivitetty onnistuneesti versioon v${this.celebrateVersion}!`, true);
+                }, 600);
+            }
         }
 
-        showToast(msg) {
+        showToast(msg, isCelebration = false) {
             if (!this.shadow) return;
             const existing = this.shadow.querySelector('.ufhpc-toast-msg');
             if (existing) existing.remove();
 
             const toast = document.createElement('div');
-            toast.className = 'ufhpc-toast-msg';
+            toast.className = `ufhpc-toast-msg ${isCelebration ? 'is-celebration' : ''}`;
             toast.textContent = msg;
             this.shadow.appendChild(toast);
 
             setTimeout(() => {
                 if (toast && toast.parentNode) {
                     toast.style.opacity = '0';
+                    toast.style.transform = 'translateY(6px)';
                     setTimeout(() => toast.remove(), 260);
                 }
-            }, 3000);
+            }, isCelebration ? 4500 : 3000);
+        }
+
+        markUpdateInitiated(targetVer) {
+            const ver = targetVer || latestUpdateVersion || '7.4';
+            localStorage.setItem(CONFIG.storageKeyPendingUpdate, ver);
+            localStorage.setItem(CONFIG.storageKeyPendingUpdateTime, Date.now().toString());
+            this.updateInstalling = true;
+            this.refreshView();
         }
 
         getWatchlist() {
@@ -5879,56 +6039,16 @@
             `));
 
             const usedActionBtnsHtml = `
-                <a class="ufhpc-btn ufhpc-btn-tori" href="${escapeHtml(toriSearchUrl)}" target="_blank" rel="noopener noreferrer">
+                <a class="ufhpc-btn ufhpc-btn-tori ${toriCount === 0 ? 'is-zero' : ''}" href="${escapeHtml(toriSearchUrl)}" target="_blank" rel="noopener noreferrer">
                     Tori (${toriCount}) ↗
                 </a>
-                <a class="ufhpc-btn ufhpc-btn-vinted" href="${escapeHtml(vintedSearchUrl)}" target="_blank" rel="noopener noreferrer">
+                <a class="ufhpc-btn ufhpc-btn-vinted ${vintedCount === 0 ? 'is-zero' : ''}" href="${escapeHtml(vintedSearchUrl)}" target="_blank" rel="noopener noreferrer">
                     Vinted (${vintedCount}) ↗
                 </a>
-                <a class="ufhpc-btn ufhpc-btn-huuto" href="${escapeHtml(huutoSearchUrl)}" target="_blank" rel="noopener noreferrer">
+                <a class="ufhpc-btn ufhpc-btn-huuto ${huutoCount === 0 ? 'is-zero' : ''}" href="${escapeHtml(huutoSearchUrl)}" target="_blank" rel="noopener noreferrer">
                     Huuto (${huutoCount}) ↗
                 </a>
             `;
-
-            let effectiveMainTab = this.mainTab;
-            if (productInfo.isUsedSite && effectiveMainTab !== 'history') {
-                effectiveMainTab = 'used';
-            } else if (!effectiveMainTab) {
-                if (offers.length > 0) {
-                    effectiveMainTab = 'stores';
-                } else if (toriData.items && toriData.items.length > 0) {
-                    effectiveMainTab = 'used';
-                } else {
-                    effectiveMainTab = 'stores';
-                }
-            }
-
-            const totalUsedCount = (toriData.items?.length || 0);
-
-            let tabPaneContentHtml = '';
-            if (effectiveMainTab === 'stores') {
-                tabPaneContentHtml = `
-                    ${variantSelectHtml}
-                    ${storesHtml}
-                    <div class="ufhpc-actions">
-                        ${actionBtnsHtml}
-                    </div>
-                `;
-            } else if (effectiveMainTab === 'used') {
-                tabPaneContentHtml = `
-                    ${bargainHtml}
-                    ${toriHtml}
-                    <div class="ufhpc-actions">
-                        ${usedActionBtnsHtml}
-                    </div>
-                `;
-            } else if (effectiveMainTab === 'history') {
-                tabPaneContentHtml = chartHtml ? chartHtml : `
-                    <div class="ufhpc-empty">
-                        📈 ${this.lang === 'en' ? 'No price history points recorded for this item yet.' : 'Tuotteelle ei ole vielä kertynyt hintahistoriapisteitä.'}
-                    </div>
-                `;
-            }
 
             // Bargaining Advisor on Used Item Pages
             let bargainHtml = '';
@@ -5982,6 +6102,46 @@
                 `;
             }
 
+            let effectiveMainTab = this.mainTab;
+            if (productInfo.isUsedSite && effectiveMainTab !== 'history') {
+                effectiveMainTab = 'used';
+            } else if (!effectiveMainTab) {
+                if (offers.length > 0) {
+                    effectiveMainTab = 'stores';
+                } else if (toriData.items && toriData.items.length > 0) {
+                    effectiveMainTab = 'used';
+                } else {
+                    effectiveMainTab = 'stores';
+                }
+            }
+
+            const totalUsedCount = (toriData.items?.length || 0);
+
+            let tabPaneContentHtml = '';
+            if (effectiveMainTab === 'stores') {
+                tabPaneContentHtml = `
+                    ${variantSelectHtml}
+                    ${storesHtml}
+                    <div class="ufhpc-actions">
+                        ${actionBtnsHtml}
+                    </div>
+                `;
+            } else if (effectiveMainTab === 'used') {
+                tabPaneContentHtml = `
+                    ${bargainHtml}
+                    ${toriHtml}
+                    <div class="ufhpc-actions">
+                        ${usedActionBtnsHtml}
+                    </div>
+                `;
+            } else if (effectiveMainTab === 'history') {
+                tabPaneContentHtml = chartHtml ? chartHtml : `
+                    <div class="ufhpc-empty">
+                        📈 ${this.lang === 'en' ? 'No price history points recorded for this item yet.' : 'Tuotteelle ei ole vielä kertynyt hintahistoriapisteitä.'}
+                    </div>
+                `;
+            }
+
             const watchlist = this.getWatchlist();
             const isSaved = this.isCurrentInWatchlist(marketProd?.title || productInfo.name);
 
@@ -6015,14 +6175,29 @@
                 ? this.buildComparisonColumnHtml(t, theme, lowestPrice, toriData)
                 : '';
 
-            const updateBannerHtml = latestUpdateVersion ? `
-                <a class="ufhpc-update-banner" href="${GITHUB_RAW_SCRIPT_URL}" target="_blank" rel="noopener noreferrer" title="Click to install the latest HintaTutka update from GitHub">
-                    <span>🚀 ${this.lang === 'en' ? `New update available! (v${SCRIPT_VERSION} → v${escapeHtml(latestUpdateVersion)})` : `Uusi päivitys saatavilla! (v${SCRIPT_VERSION} → v${escapeHtml(latestUpdateVersion)})`}</span>
-                    <span class="ufhpc-update-banner-cta">${this.lang === 'en' ? 'Update now ↗' : 'Päivitä nyt ↗'}</span>
-                </a>
-            ` : '';
+            let updateBannerHtml = '';
+            if (this.updateInstalling) {
+                updateBannerHtml = `
+                    <div class="ufhpc-update-banner is-pending">
+                        <div class="ufhpc-update-banner-info">
+                            <div class="ufhpc-update-banner-title">🔄 ${this.lang === 'en' ? 'Update opened in browser!' : 'Päivitys avattu selaimeen!'}</div>
+                            <div class="ufhpc-update-banner-desc">${this.lang === 'en' ? 'Click "Update" in Tampermonkey, then reload this tab:' : 'Paina "Päivitä" Tampermonkeyssa ja lataa tämä sivu uudelleen:'}</div>
+                        </div>
+                        <button type="button" class="ufhpc-btn-reload-now" id="ufhpc-btn-reload-now" title="${this.lang === 'en' ? 'Reload this page to activate the update' : 'Lataa sivu uudelleen ottaaksesi uuden version käyttöön'}">
+                            ↻ ${this.lang === 'en' ? 'Reload Page Now' : 'Lataa sivu uudelleen'}
+                        </button>
+                    </div>
+                `;
+            } else if (latestUpdateVersion) {
+                updateBannerHtml = `
+                    <a class="ufhpc-update-banner" id="ufhpc-update-banner-link" href="${GITHUB_RAW_SCRIPT_URL}" target="_blank" rel="noopener noreferrer" title="Click to install the latest HintaTutka update from GitHub">
+                        <span>🚀 ${this.lang === 'en' ? `New update available! (v${SCRIPT_VERSION} → v${escapeHtml(latestUpdateVersion)})` : `Uusi päivitys saatavilla! (v${SCRIPT_VERSION} → v${escapeHtml(latestUpdateVersion)})`}</span>
+                        <span class="ufhpc-update-banner-cta">${this.lang === 'en' ? 'Update now ↗' : 'Päivitä nyt ↗'}</span>
+                    </a>
+                `;
+            }
 
-            const updateToastHtml = (latestUpdateVersion && !updateToastDismissed) ? `
+            const updateToastHtml = (latestUpdateVersion && !updateToastDismissed && !this.updateInstalling) ? `
                 <div class="ufhpc-update-toast" id="ufhpc-update-toast">
                     <div class="ufhpc-update-toast-top">
                         <span class="ufhpc-update-toast-title">🔔 ${this.lang === 'en' ? `HintaTutka Update (v${escapeHtml(latestUpdateVersion)})` : `HintaTutka-päivitys saatavilla (v${escapeHtml(latestUpdateVersion)})`}</span>
@@ -6034,7 +6209,7 @@
                             : `Uusi versio (v${SCRIPT_VERSION} → v${escapeHtml(latestUpdateVersion)}) on julkaistu GitHubissa! Päivitä skripti yhdellä klikkauksella:`}
                     </div>
                     <div class="ufhpc-update-toast-actions">
-                        <a class="ufhpc-update-toast-btn" href="${GITHUB_RAW_SCRIPT_URL}" target="_blank" rel="noopener noreferrer">
+                        <a class="ufhpc-update-toast-btn" id="ufhpc-toast-update-btn" href="${GITHUB_RAW_SCRIPT_URL}" target="_blank" rel="noopener noreferrer">
                             🚀 ${this.lang === 'en' ? 'Install Update ↗' : 'Asenna päivitys ↗'}
                         </a>
                     </div>
@@ -6045,7 +6220,7 @@
                 ${updateToastHtml}
                 <div class="ufhpc-handle" id="ufhpc-toggle-handle" title="Click to toggle • Drag vertically to reposition">
                     <div class="ufhpc-handle-bar"></div>
-                    ${latestUpdateVersion ? '<div class="ufhpc-handle-update-badge" title="Uusi päivitys saatavilla!"></div>' : ''}
+                    ${(latestUpdateVersion || this.updateInstalling) ? '<div class="ufhpc-handle-update-badge" title="Päivitys!"></div>' : ''}
                     <div class="ufhpc-handle-icon">${theme.icon}</div>
                     <div class="ufhpc-handle-text">${escapeHtml(handleLabel)}</div>
                     <div class="ufhpc-handle-chevron">❮</div>
@@ -6057,7 +6232,7 @@
                         <div class="ufhpc-brand-top">
                             <span>⚡ ${escapeHtml(storeName)}</span>
                             ${comparison?.matchedQuery ? `<span>• ${escapeHtml(comparison.matchedQuery.type)}</span>` : ''}
-                            <a class="ufhpc-ver-link ${latestUpdateVersion ? 'has-update' : ''}" id="ufhpc-version-check-btn" href="${GITHUB_RAW_SCRIPT_URL}" target="_blank" rel="noopener noreferrer" title="HintaTutka v${SCRIPT_VERSION} (GitHub: FIMARx/hintatutka) — Klikkaa tarkistaaksesi päivitykset">${latestUpdateVersion ? `🚀 v${SCRIPT_VERSION} → v${escapeHtml(latestUpdateVersion)}` : `v${SCRIPT_VERSION} ↻`}</a>
+                            <a class="ufhpc-ver-link ${(latestUpdateVersion || this.updateInstalling) ? 'has-update' : ''}" id="ufhpc-version-check-btn" href="${GITHUB_RAW_SCRIPT_URL}" target="_blank" rel="noopener noreferrer" title="HintaTutka v${SCRIPT_VERSION} (GitHub: FIMARx/hintatutka) — Klikkaa tarkistaaksesi päivitykset">${latestUpdateVersion ? `🚀 v${SCRIPT_VERSION} → v${escapeHtml(latestUpdateVersion)}` : `v${SCRIPT_VERSION} ↻`}</a>
                         </div>
                         <div class="ufhpc-header-btns">
                             <button class="ufhpc-icon-btn ${isSaved ? 'is-active' : ''}" id="ufhpc-watchlist-toggle-btn" title="${escapeHtml(isSaved ? t.watchlistRemoved : t.watchlistBtn)}">
@@ -6364,11 +6539,36 @@
                 });
             }
 
+            const updateBannerLink = this.shadow.getElementById('ufhpc-update-banner-link');
+            if (updateBannerLink) {
+                updateBannerLink.addEventListener('click', () => {
+                    this.markUpdateInitiated(latestUpdateVersion);
+                });
+            }
+
+            const toastUpdateBtn = this.shadow.getElementById('ufhpc-toast-update-btn');
+            if (toastUpdateBtn) {
+                toastUpdateBtn.addEventListener('click', () => {
+                    this.markUpdateInitiated(latestUpdateVersion);
+                });
+            }
+
+            const reloadNowBtn = this.shadow.getElementById('ufhpc-btn-reload-now');
+            if (reloadNowBtn) {
+                reloadNowBtn.addEventListener('click', () => {
+                    window.location.reload();
+                });
+            }
+
             const versionCheckBtn = this.shadow.getElementById('ufhpc-version-check-btn');
             if (versionCheckBtn) {
                 versionCheckBtn.addEventListener('click', async (e) => {
                     if (latestUpdateVersion) {
-                        // Already detected an update: let the link open GITHUB_RAW_SCRIPT_URL directly
+                        this.markUpdateInitiated(latestUpdateVersion);
+                        return;
+                    }
+                    if (this.updateInstalling) {
+                        window.location.reload();
                         return;
                     }
                     e.preventDefault();
@@ -6376,7 +6576,7 @@
                     const newVer = await checkForGithubUpdate(true);
                     if (newVer) {
                         updateToastDismissed = false;
-                        this.refreshView();
+                        this.markUpdateInitiated(newVer);
                         window.open(GITHUB_RAW_SCRIPT_URL, '_blank', 'noopener,noreferrer');
                     } else {
                         versionCheckBtn.classList.add('is-up-to-date');
