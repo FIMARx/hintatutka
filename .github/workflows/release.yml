@@ -1,0 +1,48 @@
+name: Auto-Publish Release Assets
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'HintaTutka.user.js'
+      - 'extension-mv3/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract SCRIPT_VERSION
+        id: ver
+        run: |
+          VERSION=$(grep -m1 "const SCRIPT_VERSION =" HintaTutka.user.js | sed -E "s/.*'([^']+)'.*/\1/")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Package Manifest V3 Extension ZIP
+        run: |
+          cd extension-mv3
+          zip -r ../HintaTutka-MV3-Extension.zip . -x "*.DS_Store"
+
+      - name: Create GitHub Release if new version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.ver.outputs.tag }}"
+          VER="${{ steps.ver.outputs.version }}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists — preserving cumulative asset download counts."
+          else
+            gh release create "$TAG" \
+              HintaTutka.user.js \
+              HintaTutka-MV3-Extension.zip \
+              --title "HintaTutka $TAG" \
+              --notes "Automated release of **HintaTutka $TAG** (Userscript + Native Manifest V3 Browser Extension)."
+          fi

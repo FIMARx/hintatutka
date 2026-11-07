@@ -80,8 +80,63 @@ export default {
                 ok: true,
                 service: 'hintatutka-serverless-proxy',
                 version: '9.0',
-                endpoints: ['/proxy?url=<encoded_https_url>', '/selectors', '/health']
+                endpoints: ['/proxy?url=<encoded_https_url>', '/selectors', '/stats-card.svg', '/health']
             });
+        }
+
+        if (reqUrl.pathname === '/stats-card.svg') {
+            const cache = caches.default;
+            const cacheKey = new Request('https://hintatutka-edge.local/stats-card-v90', { method: 'GET' });
+            const cached = await cache.match(cacheKey);
+            if (cached) return cached;
+
+            let totalDownloads = 0;
+            let scriptDownloads = 0;
+            let extDownloads = 0;
+            let latestTag = 'v9.0';
+            try {
+                const relRes = await fetch('https://api.github.com/repos/FIMARx/hintatutka/releases?per_page=30', {
+                    headers: { 'Accept': 'application/vnd.github+json', 'User-Agent': 'HintaTutka-Edge-Worker/9.0' }
+                });
+                if (relRes.ok) {
+                    const releases = await relRes.json();
+                    if (Array.isArray(releases) && releases.length > 0) {
+                        latestTag = releases[0].tag_name || latestTag;
+                        for (const rel of releases) {
+                            for (const asset of (rel.assets || [])) {
+                                const c = Number(asset.download_count) || 0;
+                                totalDownloads += c;
+                                if (String(asset.name).endsWith('.user.js')) scriptDownloads += c;
+                                else if (String(asset.name).endsWith('.zip')) extDownloads += c;
+                            }
+                        }
+                    }
+                }
+            } catch (_) {}
+
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="520" height="148" viewBox="0 0 520 148" role="img" aria-label="HintaTutka Downloads: ${totalDownloads}">
+  <rect width="520" height="148" rx="14" fill="#0b1324" stroke="#1e293b" stroke-width="2"/>
+  <text x="22" y="32" font-family="Inter,Segoe UI,sans-serif" font-size="14" font-weight="800" fill="#f8fafc">⚡ HintaTutka Live Download Telemetry (${latestTag})</text>
+  <rect x="22" y="48" width="148" height="78" rx="10" fill="#064e3b" fill-opacity="0.38" stroke="#10b981" stroke-opacity="0.5"/>
+  <text x="36" y="72" font-family="Inter,Segoe UI,sans-serif" font-size="10" font-weight="700" fill="#a7f3d0">TOTAL DOWNLOADS</text>
+  <text x="36" y="108" font-family="Inter,Segoe UI,sans-serif" font-size="28" font-weight="900" fill="#6ee7b7">${totalDownloads}</text>
+  <rect x="186" y="48" width="148" height="78" rx="10" fill="#1e293b" stroke="#334155"/>
+  <text x="200" y="72" font-family="Inter,Segoe UI,sans-serif" font-size="10" font-weight="700" fill="#fda4af">USERSCRIPT (.JS)</text>
+  <text x="200" y="108" font-family="Inter,Segoe UI,sans-serif" font-size="26" font-weight="900" fill="#f8fafc">${scriptDownloads}</text>
+  <rect x="350" y="48" width="148" height="78" rx="10" fill="#1e293b" stroke="#334155"/>
+  <text x="364" y="72" font-family="Inter,Segoe UI,sans-serif" font-size="10" font-weight="700" fill="#c4b5fd">MV3 EXTENSION</text>
+  <text x="364" y="108" font-family="Inter,Segoe UI,sans-serif" font-size="26" font-weight="900" fill="#f8fafc">${extDownloads}</text>
+</svg>`;
+            const res = new Response(svg, {
+                status: 200,
+                headers: {
+                    'Content-Type': 'image/svg+xml; charset=utf-8',
+                    'Cache-Control': 'public, max-age=180, s-maxage=300',
+                    ...CORS_HEADERS
+                }
+            });
+            ctx.waitUntil(cache.put(cacheKey, res.clone()));
+            return res;
         }
 
         if (reqUrl.pathname === '/selectors') {
