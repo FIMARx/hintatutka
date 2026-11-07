@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         HintaTutka
 // @namespace    https://github.com/FIMARx/hintatutka
-// @version      9.2
-// @description  Suomen älykkäin hintatutka (v9.2): EU/Saksa ALV+toimitus -vertailu, Flip-arbitraasi (Tori/Vinted/Huuto), Klubi-totuusmittari, kausiennuste & 81 kauppaa
+// @version      9.3
+// @description  Suomen älykkäin hintatutka (v9.3): EU/Saksa ALV+toimitus -vertailu, Flip-arbitraasi (Tori/Vinted/Huuto), Klubi-totuusmittari, kausiennuste & 81 kauppaa
 // @author       FIMARx
 // @icon         https://raw.githubusercontent.com/FIMARx/hintatutka/main/extension-mv3/icons/icon128.png
 // @homepageURL  https://github.com/FIMARx/hintatutka
@@ -150,7 +150,7 @@
     // =========================================================================
     // CONFIGURATION & THRESHOLDS
     // =========================================================================
-    const SCRIPT_VERSION = '9.2';
+    const SCRIPT_VERSION = '9.3';
     const BRAND_LOGO_SVG_MINI = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 58 58" width="15" height="15" style="flex-shrink:0;display:block;"><defs><linearGradient id="htMiniBg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#065f46"/><stop offset="100%" stop-color="#0f172a"/></linearGradient><linearGradient id="htMiniBolt" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#a7f3d0"/><stop offset="100%" stop-color="#10b981"/></linearGradient></defs><rect x="1.5" y="1.5" width="55" height="55" rx="14.5" fill="url(#htMiniBg)" stroke="#10b981" stroke-opacity="0.78" stroke-width="2.4"/><circle cx="29" cy="29" r="19.5" fill="none" stroke="#34d399" stroke-opacity="0.36" stroke-width="1.8" stroke-dasharray="4 3"/><path d="M32.5 11L18.5 31H29.5L25.5 47L40.5 26.5H29.5L32.5 11Z" fill="url(#htMiniBolt)"/></svg>`;
     const IS_MV3_EXTENSION = Boolean(
         globalThis.__HT_MV3_EXTENSION__ ||
@@ -243,7 +243,19 @@
         { match: 'e-ville.com', name: 'e-ville.com', selectors: ['.product-price', '.price', '[itemprop="price"]'] },
         { match: 'satshop.fi', name: 'SatShop.fi', selectors: ['.price-box .price', '.product-price', '[itemprop="price"]'] },
         { match: 'dustin', name: 'Dustin', selectors: ['[data-testid*="price"]', '.c-price', '[itemprop="price"]'] },
-        { match: 'amazon.de', name: 'Amazon.de', selectors: ['#corePriceDisplay_desktop_feature_div .a-price .a-offscreen', '#corePrice_feature_div .a-price .a-offscreen', '.a-price.aok-align-center .a-offscreen'] },
+        {
+            match: 'amazon.de',
+            name: 'Amazon.de',
+            selectors: [
+                '#corePriceDisplay_desktop_feature_div .priceToPay',
+                '#corePrice_feature_div .priceToPay',
+                '#corePriceDisplay_desktop_feature_div .apex-pricetopay-value',
+                '#apex_desktop .priceToPay',
+                '#corePriceDisplay_desktop_feature_div .a-price:not(.a-text-price)',
+                '#corePrice_feature_div .a-price:not(.a-text-price)',
+                '.a-price.priceToPay'
+            ]
+        },
         // Sports & Outdoor Equipment
         { match: 'xxl.fi', name: 'XXL', categoryHint: 'sports', selectors: ['[data-testid*="price" i]', '.price-item', '.product-price', '[itemprop="price"]'] },
         { match: 'varuste.net', name: 'Varuste.net', categoryHint: 'sports', selectors: ['.item_price', '.price', '[itemprop="price"]'] },
@@ -862,10 +874,10 @@
             .replace(/,–/g, ',00')
             .replace(/\s+/g, ' ')
             .trim()
+            // Collapse spaces around comma/dot decimals FIRST (e.g. Amazon split spans "1,043 . 02" -> "1,043.02", Clas Ohlson "94 , 90" -> "94,90")
+            .replace(/(\d)\s*([,.])\s*(\d{2})(?!\d)/g, '$1$2$3')
             // Normalize US/UK comma-thousands with dot-cents (e.g. Amazon.de en-GB "€1,181.28" -> "1181,28")
             .replace(/\b(\d{1,3}),(\d{3})\.(\d{2})\b/g, '$1$2,$3')
-            // Collapse spaces around comma/dot decimals (e.g. Clas Ohlson / IKEA split spans "94 , 90" -> "94,90")
-            .replace(/(\d)\s*([,.])\s*(\d{2})(?!\d)/g, '$1$2$3')
             // Handle superscript/split cents separated by space (e.g. Power "270 30", HobbyHall "819 00", "1 295 39")
             .replace(/^(\d{1,3}(?:[ .]\d{3})*|\d{1,4})\s+(\d{2})$/, '$1,$2');
 
@@ -884,6 +896,17 @@
         if (attrVal) {
             const p = parsePriceNumber(attrVal);
             if (p) return p;
+        }
+        // 0b. Amazon.de / Reinvent split price (.a-price-whole + .a-price-fraction where .a-offscreen may be blank)
+        const amzWhole = node.querySelector?.('.a-price-whole');
+        const amzFrac = node.querySelector?.('.a-price-fraction');
+        if (amzWhole) {
+            const wholeDigits = (amzWhole.textContent || '').replace(/[^\d]/g, '');
+            const fracDigits = amzFrac ? (amzFrac.textContent || '').replace(/[^\d]/g, '') : '00';
+            if (wholeDigits) {
+                const amzVal = parseFloat(`${wholeDigits}.${(fracDigits || '00').slice(0, 2).padEnd(2, '0')}`);
+                if (Number.isFinite(amzVal) && amzVal > 0) return amzVal;
+            }
         }
         // 1. Explicit semantic cent/decimal/superscript child elements (e.g. 819<sup>00</sup>, .pip-price__decimals, [class*="cent"])
         const supSelector = 'sup, small, [class*="cent" i], [class*="decimal" i], [class*="fraction" i], [class*="superscript" i]';
@@ -1193,47 +1216,143 @@
         return false;
     }
 
-    // Extracts structured hardware/product specs so variants (128GB vs 256GB, 55" vs 65", 1-pack vs 2-pack, standalone vs + bundle) never collide
+    function extractCoreProductTitle(rawStr) {
+        let s = normalizeSwappedModelOrder(rawStr || '')
+            .replace(/^(?:Myydään|M|O|Ostetaan|Tuote)\s*:\s*/i, '');
+        // Strip Amazon / marketplace marketing description clauses after ':' or ';' when prefix has >= 2 words
+        const colonIdx = s.search(/\s*[:;]\s*/);
+        if (colonIdx >= 6) {
+            const prefix = s.slice(0, colonIdx).trim();
+            if (prefix.split(/\s+/).length >= 2) {
+                s = prefix;
+            }
+        }
+        return s;
+    }
+
+    // Extracts structured hardware/product specs so variants (iPhone 18 vs 17 vs 17e, Pro vs Pro Max, 128GB vs 256GB, 55" vs 65", 1-pack vs 2-pack) never collide
     function extractStructuredSpecs(str) {
         const norm = normalizeSwappedModelOrder(str || '')
             .toLowerCase()
             .replace(/\b(\d+)\s*gt\b/gi, '$1gb')
             .replace(/\b(\d+)\s*tt\b/gi, '$1tb');
 
-        const storageSet = new Set();
-        for (const m of norm.matchAll(/\b(\d{1,4})\s*(gb|tb)\b/gi)) {
-            const num = parseInt(m[1], 10);
-            const unit = m[2].toLowerCase();
-            if ((unit === 'gb' && num >= 32 && num <= 4096) || (unit === 'tb' && num >= 1 && num <= 32)) {
-                storageSet.add(`${num}${unit}`);
+        const coreNorm = extractCoreProductTitle(str || '')
+            .toLowerCase()
+            .replace(/\b(\d+)\s*gt\b/gi, '$1gb')
+            .replace(/\b(\d+)\s*tt\b/gi, '$1tb')
+            // Normalize "Galaxy S25+" -> "galaxy s25 plus" without touching combo "+" bundles
+            .replace(/\b([a-z]{1,4}\d{1,3})\+(?![a-z0-9])/gi, '$1 plus')
+            .replace(/\bps\s*([45])\b/gi, 'playstation $1')
+            .replace(/\b(\d{1,2})(?:st|nd|rd|th)\s*(?:gen|generation)\b/gi, '$1')
+            .replace(/\b(\d{1,2})\.\s*sukupolv\w*\b/gi, '$1')
+            .replace(/\bgen(?:eration)?\s*(\d{1,2})\b/gi, '$1');
+
+        const normalizeStorageToken = (num, unit) => {
+            if (unit === 'gb' && (num === 1000 || num === 1024)) return '1tb';
+            if (unit === 'gb' && (num === 2000 || num === 2048)) return '2tb';
+            if (unit === 'gb' && (num === 4000 || num === 4096)) return '4tb';
+            return `${num}${unit}`;
+        };
+
+        const collectStorageFrom = (src) => {
+            const set = new Set();
+            // Handle "8/256gb" or "12/512gb" RAM/Storage notation (capture storage part, ignore RAM prefix)
+            const ramStorCleaned = src.replace(/\b(\d{1,2})\s*\/\s*(\d{2,4})\s*(gb|tb)\b/gi, (_, _ram, stor, u) => ` ${stor}${u} `);
+            for (const m of ramStorCleaned.matchAll(/\b(\d{1,4})\s*(gb|tb)\b/gi)) {
+                const num = parseInt(m[1], 10);
+                const unit = m[2].toLowerCase();
+                if ((unit === 'gb' && num >= 32 && num <= 4096) || (unit === 'tb' && num >= 1 && num <= 32)) {
+                    set.add(normalizeStorageToken(num, unit));
+                }
             }
+            return set;
+        };
+
+        let storageSet = collectStorageFrom(coreNorm);
+        if (storageSet.size === 0) {
+            storageSet = collectStorageFrom(norm);
         }
 
         const screenInches = new Set();
-        for (const m of norm.matchAll(/(?:^|\s)(\d{2}(?:[.,]\d)?)\s*(?:"|''|”|tuumaa|tuuman|inch|-inch)(?!\w)/gi)) {
+        for (const m of coreNorm.matchAll(/(?:^|\s)(\d{2}(?:[.,]\d)?)\s*(?:"|''|”|tuumaa|tuuman|inch|-inch)(?!\w)/gi)) {
             const val = parseFloat(m[1].replace(',', '.'));
             if (val >= 11 && val <= 100) screenInches.add(String(val));
         }
 
         let packCount = 1;
-        const packMatch = norm.match(/\b([2-9]|1[0-6])\s*(?:-?\s*pack|\s*kpl|\s*pkt|-pakkaus)\b/i);
+        const packMatch = coreNorm.match(/\b([2-9]|1[0-6])\s*(?:-?\s*pack|\s*kpl|\s*pkt|-pakkaus)\b/i)
+            || norm.match(/\b([2-9]|1[0-6])\s*(?:-?\s*pack|\s*kpl|\s*pkt|-pakkaus)\b/i);
         if (packMatch) {
             packCount = parseInt(packMatch[1], 10);
-        } else if (/\b(?:tuplapakkaus|twin\s*pack|duo\s*pack|2\s*x\s+[a-z])/i.test(norm)) {
+        } else if (/\b(?:tuplapakkaus|twin\s*pack|duo\s*pack|2\s*x\s+[a-z])/i.test(coreNorm)) {
             packCount = 2;
         }
 
         // Detect multi-device '+' combo bundles (e.g. "Sonicare 9000 + Power Flosser 3000" or "Fly More Combo"), ignoring S24+ / Wi-Fi 6E+
-        const isComboBundle = /\s\+\s+[a-z0-9]{2,}/i.test(norm) || /\b(?:fly\s+more\s+combo|creator\s+combo|bundle\s+pack)\b/i.test(norm);
+        const isComboBundle = /\s\+\s+[a-z0-9]{2,}/i.test(coreNorm) || /\b(?:fly\s+more\s+combo|creator\s+combo|bundle\s+pack)\b/i.test(coreNorm);
+
+        // Strip non-SKU display & appliance category phrases before tier & generation extraction (e.g. "air purifier" != "iPhone Air")
+        const tierScanStr = coreNorm
+            .replace(/\b(?:super\s+retina|super\s*speed|ultra\s+wide|ultra\s+hd|ultra[-\s]+short|pro\s*motion|pro-ject|a\d{2}\s+pro|one\s*\+|oneplus|air\s+(?:purifiers?|fryers?|conditioners?|conditioning|coolers?|compressors?|humidifiers?|filters?|dusters?|pumps?)|hot\s+air|compressed\s+air|mini[-\s]*(?:itx|pc|led|dp|displayport|hdmi|usb|jack|pci)|max\.?\s*\d+\s*(?:w|bar|kg|l|mm|cm|rpm|db))\b/gi, ' ');
 
         const tierSet = new Set();
-        for (const mod of ['pro', 'max', 'ultra', 'plus', 'mini', 'air', 'fe', 'lite', 'slim', 'oled', 'ti', 'super', 'xtx', 'xt', 'x3d']) {
-            if (new RegExp(`(?<![a-z0-9])${mod}(?![a-z0-9])`, 'i').test(norm)) {
+        for (const mod of ['pro', 'max', 'ultra', 'plus', 'mini', 'air', 'fe', 'lite', 'ti', 'super', 'xtx', 'xt', 'x3d']) {
+            if (new RegExp(`(?<![a-z0-9])${mod}(?![a-z0-9])`, 'i').test(tierScanStr)) {
                 tierSet.add(mod);
             }
         }
+        // Console-specific OLED tier (Switch OLED vs Switch, Steam Deck OLED vs LCD)
+        if (/\b(?:switch|steam\s*deck)\b/i.test(coreNorm) && /\boled\b/i.test(coreNorm)) {
+            tierSet.add('oled');
+        }
+        // Pixel Pro XL tier (Pixel 9 Pro XL vs Pixel 9 Pro)
+        if (/\bpixel\b/i.test(coreNorm) && /\bxl\b/i.test(coreNorm)) {
+            tierSet.add('xl');
+        }
 
-        return { storageSet, screenInches, packCount, isComboBundle, tierSet };
+        // Extract clean model/generation identifiers (e.g. "18" vs "17" vs "17e", "9" vs "9a", "s25" vs "s24", "5080" vs "4080", "9800x3d" vs "7800x3d")
+        const genScanStr = tierScanStr
+            .replace(/\b\d{1,2}\s*\/\s*\d{2,4}\s*(?:gb|tb)\b/gi, ' ')
+            .replace(/\b\d{1,2}\s*[x×*]\s*\d+(?:[.,]\d+)?\s*(?:gb|tb|mb|kg|g|l|dl|cl|ml|cm|mm|m|kpl|w)\b/gi, ' ')
+            .replace(/\b\d{2,3}\s*[x×]\s*\d{2,3}(?:\s*[x×]\s*\d{2,3})?\s*(?:cm|mm)?\b/gi, ' ')
+            .replace(/(?:^|\s)\d{1,2}(?:[.,]\d)?\s*(?:"|''|”|tuumaa|tuuman|inch|-inch)(?!\w)/gi, ' ')
+            .replace(/\b(?:[2-9]|1[0-6])\s*(?:-?\s*pack|\s*kpl|\s*pkt|-pakkaus)\b/gi, ' ')
+            .replace(/\b(?:wi-?fi\s*\d[a-z]?|bt\s*\d(?:\.\d)?|bluetooth\s*\d(?:\.\d)?|pcie?\s*\d(?:\.\d)?|usb[-\s]*[abc234]?(?:\.\d)?(?:x\d)?|thunderbolt\s*\d|tb[345]|hdmi\s*\d(?:\.\d[a-z]?)?|dp\s*[12](?:\.\d[a-z]?)?|sata\s*[236]|rj-?45|m\.?2|u\.?2|am[45]|fm2\+?|s?tr[45]x?|lga[-\s]*\d{3,4}|atx\s*\d(?:\.\d)?|ddr[345]x?|lpddr\d+x?|gddr\d+x?|cl\d{2}|ipx?\d{1,2}|cat\s*\d[a-z]?|[45]g|[48]k|(?:koko|size|eu)\s*\d{2,3})\b/gi, ' ')
+            .replace(/\b\d+(?:[.,]\d+)?\s*(?:gb|tb|mb|v|w|kw|hz|mhz|ghz|kg|g|mm|cm|m|ml|cl|dl|l|mah|ah|lm|lux|db|rpm|fps|mp|mpx|nits?|%|pack|kpl|pkt)\b/gi, ' ')
+            .replace(/\b(?:199\d|20[0-3]\d)\b/g, ' ');
+
+        const genTokens = new Set();
+        for (const rawTok of genScanStr.split(/[\s/\-,()+:;|[\]_]+/)) {
+            const tok = rawTok.trim();
+            if (!tok) continue;
+            // 1. Pure 1-4 digit model/generation numbers (e.g. 17, 18, 4, 5, 300, 990, 4080, 5080)
+            if (/^\d{1,4}$/.test(tok)) {
+                const n = parseInt(tok, 10);
+                if (n >= 1 && n <= 9999) genTokens.add(String(n));
+                continue;
+            }
+            // 2. Number + 1-letter subvariant (e.g. 16e, 17e, 8a, 9a, 13t, 14t, 12r)
+            if (/^\d{1,3}[a-z]$/.test(tok) && !/^(?:\d+[vwhgmklp]|[23]d|[45]g|[48]k)$/i.test(tok)) {
+                genTokens.add(tok);
+                continue;
+            }
+            // 3. Short series prefix + 1-2 digit gen + optional subvariant (e.g. s24, s25, a56, a57, m3, m4, g8, c4, io9, io10)
+            if (/^[a-z]{1,2}\d{1,2}[a-z]?$/.test(tok) && !/^(?:v\d+|x\d+|ip\d+|bt\d+|m2|u2|am[45]|tb[345]|dp[12]|eu\d+)$/i.test(tok)) {
+                genTokens.add(tok);
+                continue;
+            }
+            // 4. CPU / Audio / GPU series tokens (e.g. 7800x3d, 9800x3d, 14700k, 14900k, 1000xm4, 1000xm5, rtx4080, rtx5080)
+            if (/^(?:\d{3,5}(?:x3d|x|xt|k|kf|ks|f|g|hx|hs|u|h|xm\d)|(?:rtx|gtx|rx)\d{3,4})$/.test(tok)) {
+                genTokens.add(tok);
+            }
+        }
+
+        return { storageSet, screenInches, packCount, isComboBundle, tierSet, genTokens };
+    }
+
+    function isAppleRegionalPartNumber(code) {
+        return /^[MNPF][A-Z0-9]{4}(?:QN|ZD|ZM|DN|LL|TY|NF|KN|KS)(?:\/[A-Z])?$/i.test(String(code || '').trim());
     }
 
     function evaluateSpecCompatibility(targetStr, candStr) {
@@ -1242,7 +1361,12 @@
         let delta = 0;
         let hasHardConflict = false;
 
-        // 1. Storage capacity check (e.g. 128GB vs 256GB vs 512GB)
+        const tCodes = extractModelCodes(targetStr).filter(x => !isAppleRegionalPartNumber(x));
+        const cCodes = extractModelCodes(candStr).filter(x => !isAppleRegionalPartNumber(x));
+        const sharesExactMpn = tCodes.length > 0 && cCodes.length > 0 &&
+            tCodes.some(tc => cCodes.some(cc => tc === cc || (tc.split(/[-/]/)[0].length >= 5 && tc.split(/[-/]/)[0] === cc.split(/[-/]/)[0])));
+
+        // 1. Storage capacity check (e.g. 128GB vs 256GB vs 512GB vs 1TB/1000GB)
         if (t.storageSet.size > 0 && c.storageSet.size > 0) {
             const overlap = [...t.storageSet].some(s => c.storageSet.has(s));
             if (overlap) {
@@ -1278,16 +1402,56 @@
             delta += 25;
         }
 
-        return { delta, hasHardConflict };
+        // 5. Tier modifier parity (Pro vs Pro Max vs Plus vs Ultra vs Air vs Mini vs Base; Ti vs Super)
+        if (!sharesExactMpn) {
+            const tTierOnly = [...t.tierSet].filter(m => !c.tierSet.has(m));
+            const cTierOnly = [...c.tierSet].filter(m => !t.tierSet.has(m));
+            if (tTierOnly.length > 0 || cTierOnly.length > 0) {
+                delta -= 105;
+                hasHardConflict = true;
+            } else if (t.tierSet.size > 0) {
+                delta += 24;
+            }
+        }
+
+        // 6. Generation & sub-variant number parity (iPhone 18 vs 17 vs 17e, Pixel 9 vs 9a, S25 vs S24, 5080 vs 4080, 9800X3D vs 7800X3D)
+        if (!sharesExactMpn) {
+            const tGenOnly = [...t.genTokens].filter(g => !c.genTokens.has(g));
+            const cGenOnly = [...c.genTokens].filter(g => !t.genTokens.has(g));
+            const sharedGen = [...t.genTokens].filter(g => c.genTokens.has(g));
+
+            const candWords = extractCoreProductTitle(candStr || '').trim().split(/\s+/).filter(Boolean);
+            const targWords = extractCoreProductTitle(targetStr || '').trim().split(/\s+/).filter(Boolean);
+            const isPureMpnCand = candWords.length <= 3 && cCodes.length > 0 && tCodes.length === 0;
+            const isPureMpnTarg = targWords.length <= 3 && tCodes.length > 0 && cCodes.length === 0;
+
+            if (tGenOnly.length > 0 && cGenOnly.length > 0) {
+                delta -= 115;
+                hasHardConflict = true;
+            } else if ((t.genTokens.size > 0 && c.genTokens.size === 0 && !isPureMpnCand) ||
+                       (c.genTokens.size > 0 && t.genTokens.size === 0 && !isPureMpnTarg)) {
+                delta -= 105;
+                hasHardConflict = true;
+            } else if (sharedGen.length > 0) {
+                delta += 28;
+            }
+        }
+
+        return { delta, bonusScore: Math.max(0, delta), hasHardConflict };
     }
 
     function extractConciseModelQuery(name) {
-        const simplified = simplifyProductNameForSearch(name)
+        const coreInput = extractCoreProductTitle(name);
+        const simplified = simplifyProductNameForSearch(coreInput)
             .replace(/\b(\d+)\s*Gt\b/gi, '$1GB')
-            .replace(/\b(\d+)\s*Tt\b/gi, '$1TB');
+            .replace(/\b(\d+)\s*Tt\b/gi, '$1TB')
+            // Collapse "256 GB" -> "256GB" so storage stays a single compact token
+            .replace(/\b(\d{2,4})\s+(GB|TB)\b/gi, '$1$2');
         if (!simplified) return '';
         const cat = detectProductCategory(name);
-        const words = simplified
+        // Strip regional color Apple SKUs (e.g. "- MJXN4QN/A") before building universal search queries
+        const withoutAppleSku = simplified.replace(/\s*-\s*[MNPF][A-Z0-9]{4}(?:QN|ZD|ZM|DN|LL|TY|NF|KN|KS)(?:\/[A-Z])?\b/gi, ' ');
+        const words = withoutAppleSku
             .replace(/[,/()[\]]/g, ' ')
             // Strip furniture dimensions like "140x65 cm" or "120 x 80 cm" when building concise model query
             .replace(/\b\d{2,3}\s*[xX×]\s*\d{2,3}(?:\s*[xX×]\s*\d{2,3})?\s*(?:cm|mm)?\b/gi, ' ')
@@ -1298,16 +1462,16 @@
                     // For groceries, keep brand, product name, and weight/volume (e.g. "Juhla Mokka 500 g")
                     return !/^(laktoositon|gluteeniton|luomu|suomalainen|kotimainen|uutuus|tarjous|erä)$/i.test(w);
                 }
-                return !/^(GDDR\dX?|PCIe|AM4|AM5|LGA\d+|ATX|mATX|ITX|Wi-?Fi|Bluetooth|5G|4G|LTE|RGB|ARGB|Black|White|Silver|Gold|Blue|Green|Pink|Purple|Gray|Grey|Musta|Valkoinen|Hopea|Sininen|Vihreä|Harmaa|kultainen|mustatitaani|luonnontitaani|valkotitaani|tammi|koivu|mänty|valkolakattu|petsattu|Edition|Series|Gaming|OC|Takuu|Takuulla|Kuitti|Uudenveroinen|Hyväkuntoinen|Drone|Drooni|\d+kg|\d+kpl)$/i.test(w);
+                return !/^(GDDR\dX?|PCIe|AM4|AM5|LGA\d+|ATX|mATX|ITX|Wi-?Fi|Bluetooth|5G|4G|LTE|Dual|SIM|RGB|ARGB|Black|White|Silver|Gold|Blue|Green|Pink|Purple|Gray|Grey|Red|Wine|Burgundy|Glacier|Polar|Midnight|Starlight|Sage|Lavender|Orange|Musta|Valkoinen|Hopea|Sininen|Vihreä|Harmaa|Punainen|Viininpunainen|Jäätikkö|Salvia|Laventeli|Oranssi|kultainen|mustatitaani|luonnontitaani|valkotitaani|tammi|koivu|mänty|valkolakattu|petsattu|Phone|Edition|Series|Gaming|OC|Takuu|Takuulla|Kuitti|Uudenveroinen|Hyväkuntoinen|Drone|Drooni|\d+kg|\d+kpl)$/i.test(w);
             });
 
-        const mCodes = extractModelCodes(name);
+        const mCodes = extractModelCodes(name).filter(c => !isAppleRegionalPartNumber(c));
         if (mCodes.length > 0) {
             const code = mCodes[0];
             const hasCode = words.slice(0, 6).some(w => w.toUpperCase().includes(code.toUpperCase().split(/[-/]/)[0]));
             if (!hasCode) {
-                // Retain brand/line prefix (e.g. "Philips Sonicare 9000") and guarantee model code is preserved
-                return words.slice(0, 3).concat(code).join(' ').trim();
+                // Retain brand/line/tier prefix (up to 5 words) and guarantee model code is preserved
+                return words.slice(0, 5).concat(code).join(' ').trim();
             }
         }
 
@@ -1939,12 +2103,15 @@
         }
 
         if (info.name) {
-            const simplified = simplifyProductNameForSearch(info.name);
+            const simplified = simplifyProductNameForSearch(extractCoreProductTitle(info.name));
             const simplifiedGb = simplified
                 .replace(/\b(\d+)\s*Gt\b/gi, '$1GB')
                 .replace(/\b(\d+)\s*Tt\b/gi, '$1TB');
-            addQuery('Model', simplifiedGb);
             const concise = extractConciseModelQuery(info.name);
+            if (concise && concise.split(/\s+/).length >= 2 && (simplifiedGb.split(/\s+/).length > 7 || /[:;]/.test(info.name))) {
+                addQuery('Model', concise);
+            }
+            addQuery('Model', simplifiedGb);
             if (concise && concise.split(/\s+/).length >= 2) {
                 addQuery('Model', concise);
             }
@@ -1953,7 +2120,7 @@
                 addQuery('Model', mq);
             }
             addQuery('Model', simplified);
-            addQuery('Title', info.name);
+            addQuery('Title', extractCoreProductTitle(info.name));
         }
 
         return {
@@ -2015,7 +2182,7 @@
         const boxWalker = document.createTreeWalker(box, NodeFilter.SHOW_ELEMENT);
         let pNode = boxWalker.currentNode;
         while (pNode) {
-            if (!pNode.closest('#ufhpc-root, del, s, strike, [class*="old-price" i], [class*="was-price" i], [class*="ex-vat" i], [class*="without-vat" i]') && pNode.children.length <= 5) {
+            if (!pNode.closest('#ufhpc-root, del, s, strike, [data-a-strike="true"], .a-text-price, .basisPrice, [class*="basisPrice" i], [class*="old-price" i], [class*="was-price" i], [class*="ex-vat" i], [class*="without-vat" i]') && pNode.children.length <= 5) {
                 const rawText = (pNode.innerText || '').trim();
                 const tightParentTxt = (pNode.parentElement && (pNode.parentElement.innerText || '').length <= 70)
                     ? pNode.parentElement.innerText
@@ -2098,7 +2265,7 @@
 
         const isInvalidPriceNode = (el) => {
             if (!el || !el.isConnected) return true;
-            if (el.closest('#ufhpc-root, del, s, strike, [class*="old-price" i], [class*="original-price" i], [class*="strikethrough" i], [class*="was-price" i], [class*="ex-vat" i], [class*="without-vat" i], [class*="unit-price" i], [class*="comparison-price" i]')) {
+            if (el.closest('#ufhpc-root, del, s, strike, [data-a-strike="true"], .a-text-price, .basisPrice, [class*="basisPrice" i], [class*="old-price" i], [class*="original-price" i], [class*="strikethrough" i], [class*="was-price" i], [class*="ex-vat" i], [class*="without-vat" i], [class*="unit-price" i], [class*="comparison-price" i]')) {
                 return true;
             }
             const rect = el.getBoundingClientRect();
@@ -2750,8 +2917,8 @@
             if (/^[a-zäöå]{2,}$/i.test(w1) && /^\d{1,2}[a-z]?$/i.test(w2)) {
                 const w1Esc = w1.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                 const w2Esc = w2.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                // Allow "mini 4", "mini4", or human-swapped "mini pro 4", while rejecting reversed "rs 4 mini"
-                const pairRx = new RegExp(`\\b${w1Esc}\\s+(?:(?:pro|max|ultra|plus|air|ti|super)\\s+)?${w2Esc}[a-z]?\\b`, 'i');
+                // Allow "mini 4", "mini4", or human-swapped "mini pro 4", while rejecting reversed "rs 4 mini" and subvariants ("17e" vs "17")
+                const pairRx = new RegExp(`\\b${w1Esc}\\s+(?:(?:pro|max|ultra|plus|air|ti|super)\\s+)?${w2Esc}\\b`, 'i');
                 const joinedRx = new RegExp(`\\b${w1Esc}${w2Esc}\\b`, 'i');
                 if (!pairRx.test(normHeading) && !joinedRx.test(normHeading)) {
                     return false;
@@ -2759,13 +2926,16 @@
             }
         }
 
+        const nonTierPhraseRx = /\b(?:air\s+(?:purifiers?|fryers?|conditioners?|coolers?|compressors?|humidifiers?|filters?)|mini\s+(?:itx|led|dp|displayport|hdmi|usb|jack)|super\s+retina|ultra\s+(?:wide|hd)|one\s*\+|oneplus)\b/gi;
+        const cleanQueryTier = normQuery.replace(nonTierPhraseRx, ' ');
+        const cleanHeadingTierTokens = new Set(normHeading.replace(nonTierPhraseRx, ' ').split(/\s+/).filter(Boolean));
         const tierModifiers = ['pro', 'max', 'ultra', 'plus', 'mini', 'air', 'ti', 'super', 'xtx', 'xt', 'x3d', 'oled', 'fe', 'lite', 'ddr4', 'ddr5'];
-        const refString = `${normQuery} ${normalizeSwappedModelOrder(targetTitle || '').toLowerCase()}`;
+        const refString = `${cleanQueryTier} ${normalizeSwappedModelOrder(targetTitle || '').toLowerCase().replace(nonTierPhraseRx, ' ')}`;
         for (const mod of tierModifiers) {
             const modRx = new RegExp(`(?<![a-z0-9])${mod}(?![a-z0-9])`, 'i');
-            const queryHasMod = modRx.test(normQuery);
+            const queryHasMod = modRx.test(cleanQueryTier);
             const targetHasMod = queryHasMod || modRx.test(refString);
-            const headingHasMod = headingTokens.has(mod);
+            const headingHasMod = cleanHeadingTierTokens.has(mod);
 
             if (allowExtraTierModifiers) {
                 // In fallback mode (e.g. user searched partial "DJI Mini 4" without typing "Pro"),
@@ -2881,8 +3051,8 @@
 
                 // Pass 1: Strict tier modifier matching
                 let items = filterDocs(false);
-                // Pass 2: If user searched a partial query like "DJI Mini 4" without "Pro", allow extra tier suffixes
-                if (items.length === 0) {
+                // Pass 2: Only when user manually typed a partial customQuery without a resolved marketProduct (e.g. "DJI Mini 4"), allow extra tier suffixes
+                if (items.length === 0 && customQuery && !marketProduct) {
                     items = filterDocs(true);
                 }
 
@@ -2956,7 +3126,9 @@
 
                     let brand = '';
                     let condition = '';
-                    const priceMatches = [...rawTitle.matchAll(/([0-9]+(?:[.,][0-9]{2})?)\s*€/g)].map(x => parseFloat(x[1].replace(',', '.')));
+                    const priceMatches = [...rawTitle.matchAll(/((?:\d{1,3}(?:[\s\u00a0\u202f.]|&nbsp;))*\d+(?:[.,]\d{2})?)\s*€/g)]
+                        .map(x => parsePriceNumber(x[1].replace(/&nbsp;/gi, ' ')))
+                        .filter(Boolean);
                     const price = priceMatches[0] || null;
                     if (!price || price <= 0) continue;
 
@@ -3149,41 +3321,85 @@
     }
 
     const STOP_WORDS_FOR_MATCHING = new Set([
-        'the', 'and', 'for', 'with', 'pro', 'max', 'plus', 'mini', 'air', 'new', 'uusi',
+        'the', 'and', 'for', 'with', 'new', 'uusi',
         'valkoinen', 'musta', 'harmaa', 'hopea', 'sininen', 'vihreä', 'punainen', 'kulta', 'beige', 'ruskea',
+        'viininpunainen', 'jäätikkö', 'salvia', 'laventeli', 'oranssi', 'pinkki', 'violetti', 'keltainen', 'titaani', 'mustatitaani', 'luonnontitaani', 'valkotitaani',
         'white', 'black', 'grey', 'gray', 'silver', 'blue', 'green', 'red', 'gold',
-        'edestä', 'päältä', 'täytettävä', 'kpl', 'pkt', 'sarja', 'malli', 'edition', 'series',
+        'wine', 'burgundy', 'glacier', 'polar', 'midnight', 'starlight', 'sage', 'lavender', 'orange', 'pink', 'purple', 'yellow', 'titanium',
+        'edestä', 'päältä', 'täytettävä', 'kpl', 'pkt', 'sarja', 'malli', 'edition', 'series', 'dual', 'sim',
         // Marketing descriptors that must not disqualify concise database titles
+        'phone', 'smartphone', 'puhelin', 'älypuhelin', 'mobiltelefon',
         'electric', 'toothbrush', 'sähköhammasharja', 'hammasharja', 'cleaner', 'flosser', 'cordless',
-        'interdental', 'hammasvälepuhdistin', 'hammasväli', 'puhdistin', 'laite', 'tuote', 'valaisin',
+        'interdental', 'hammasvälepuhdistin', 'hammasväli', 'puhdistin', 'ilmanpuhdistin', 'purifier', 'laite', 'tuote', 'valaisin',
         'työvalaisin', 'akku', 'runko', 'paketti', 'tuplapakkaus', 'setti', 'bundle', 'original', 'aito'
     ]);
 
     function extractMeaningfulTokens(str) {
         if (!str) return [];
-        return normalizeSwappedModelOrder(str)
+        const core = extractCoreProductTitle(str);
+        return normalizeSwappedModelOrder(core)
             .toLowerCase()
-            .replace(/\b\d+(?:[.,]\d+)?\s*(?:kg|g|l|dl|cl|ml|cm|mm|m|kpl|w|hz)\b/gi, ' ')
+            .replace(/\b([a-z]{1,4}\d{1,3})\+(?![a-z0-9])/gi, '$1 plus')
+            .replace(/\b(\d{1,2})\s*\/\s*(\d{2,4})\s*(gb|gt|tb|tt)\b/gi, ' $2$3 ')
+            .replace(/\b(\d{1,4})\s*(gb|gt)\b/gi, (_, n) => {
+                const num = parseInt(n, 10);
+                if (num === 1000 || num === 1024) return ' 1tb ';
+                if (num === 2000 || num === 2048) return ' 2tb ';
+                if (num === 4000 || num === 4096) return ' 4tb ';
+                return ` ${num}gb `;
+            })
+            .replace(/\b(\d{1,2})\s*(tb|tt)\b/gi, ' $1tb ')
+            .replace(/\b\d+(?:[.,]\d+)?\s*(?:kg|g|l|dl|cl|ml|cm|mm|m|kpl|w|hz|mhz|ghz|mp|mpx|mah)\b/gi, ' ')
             .split(/[\s/\-,()+:;|[\]]+/)
             .filter(t => (t.length >= 2 || /^\d+$/.test(t)) && !STOP_WORDS_FOR_MATCHING.has(t));
     }
 
     function doesItemMatchQueryWords(itemTitle, queryStr) {
         if (!itemTitle || !queryStr) return false;
-        // 1. If both share an exact alphanumeric model code, it is an instant match!
-        const targetCodes = extractModelCodes(queryStr);
-        const itemCodes = extractModelCodes(itemTitle);
+        // 1. If both share an exact non-regional alphanumeric model code, it is an instant match!
+        const targetCodes = extractModelCodes(queryStr).filter(c => !isAppleRegionalPartNumber(c));
+        const itemCodes = extractModelCodes(itemTitle).filter(c => !isAppleRegionalPartNumber(c));
         if (targetCodes.length > 0 && itemCodes.length > 0) {
-            const hasCodeMatch = targetCodes.some(tc => itemCodes.some(ic => tc === ic || tc.split(/[-/]/)[0] === ic.split(/[-/]/)[0]));
+            const hasCodeMatch = targetCodes.some(tc => itemCodes.some(ic => tc === ic || (tc.split(/[-/]/)[0].length >= 5 && tc.split(/[-/]/)[0] === ic.split(/[-/]/)[0])));
             if (hasCodeMatch) return true;
+        }
+
+        // Guard against generation/series replacements (e.g. iPhone 17 vs iPhone 18, iPhone 17e vs 17, Pixel 9a vs 9, S24 vs S25)
+        const qSpecs = extractStructuredSpecs(queryStr);
+        const iSpecs = extractStructuredSpecs(itemTitle);
+        const qGenOnly = [...qSpecs.genTokens].filter(g => !iSpecs.genTokens.has(g));
+        const iGenOnly = [...iSpecs.genTokens].filter(g => !qSpecs.genTokens.has(g));
+        if (qGenOnly.length > 0 && iGenOnly.length > 0) {
+            return false;
+        }
+        const candWords = extractCoreProductTitle(itemTitle).trim().split(/\s+/).filter(Boolean);
+        const isPureMpnCand = candWords.length <= 2 && itemCodes.length > 0;
+        if (qSpecs.genTokens.size > 0 && iSpecs.genTokens.size === 0 && !isPureMpnCand) {
+            return false;
         }
 
         const qTokens = extractMeaningfulTokens(queryStr);
         const itemTokens = extractMeaningfulTokens(itemTitle);
         if (qTokens.length === 0 || itemTokens.length === 0) return false;
 
-        const normTitle = normalizeSwappedModelOrder(itemTitle || '').toLowerCase();
-        const normQuery = normalizeSwappedModelOrder(queryStr || '').toLowerCase();
+        const normTitle = normalizeSwappedModelOrder(extractCoreProductTitle(itemTitle))
+            .toLowerCase()
+            .replace(/\b(\d{1,4})\s*(?:gb|gt)\b/gi, (_, n) => {
+                const num = parseInt(n, 10);
+                if (num === 1000 || num === 1024) return '1tb';
+                if (num === 2000 || num === 2048) return '2tb';
+                return `${num}gb`;
+            })
+            .replace(/\b(\d{1,2})\s*(?:tb|tt)\b/gi, '$1tb');
+        const normQuery = normalizeSwappedModelOrder(extractCoreProductTitle(queryStr))
+            .toLowerCase()
+            .replace(/\b(\d{1,4})\s*(?:gb|gt)\b/gi, (_, n) => {
+                const num = parseInt(n, 10);
+                if (num === 1000 || num === 1024) return '1tb';
+                if (num === 2000 || num === 2048) return '2tb';
+                return `${num}gb`;
+            })
+            .replace(/\b(\d{1,2})\s*(?:tb|tt)\b/gi, '$1tb');
         const itemTokenSet = new Set(itemTokens);
         const queryTokenSet = new Set(qTokens);
 
@@ -3208,7 +3424,8 @@
         const itemRatio = matchedItem / itemTokens.length;
 
         if (matchedQ === 0 && matchedItem === 0) return false;
-        return (firstQMatched && qRatio >= 0.55) || itemRatio >= 0.75;
+        const validItemSubset = (itemTokens.length >= 2 || qTokens.length === 1) && itemRatio >= 0.75 && qRatio >= 0.45;
+        return (firstQMatched && qRatio >= 0.55) || validItemSubset;
     }
 
     function scoreSearchCandidate(candidate, targetName, currentPrice) {
@@ -3253,9 +3470,11 @@
                 score -= 55;
             }
 
-            // Structured spec compatibility (storage GB/TB, screen size, pack count, '+' combo bundle)
+            // Structured spec compatibility (generation, tier Pro/Max/Ultra/Plus, storage GB/TB, screen size, pack count, '+' combo bundle)
             const specCompat = evaluateSpecCompatibility(targetName, candidate.name);
-            if (!hasExactModelMatch || specCompat.delta > 0) {
+            if (!hasExactModelMatch && specCompat.hasHardConflict) {
+                score -= 220;
+            } else if (!hasExactModelMatch || specCompat.delta > 0) {
                 score += specCompat.delta;
             }
 
@@ -3499,7 +3718,7 @@
             'PRO', 'MAX', 'PLUS', 'MINI', 'SLIM', 'ULTRA', 'LITE', 'SE', 'CORE', 'SERIES',
             'IPV4', 'IPV6', 'HDR10', 'RJ45', 'CAT6', 'CAT6A', 'CAT7'
         ]);
-        const specUnitRx = /^(?:\d+(?:[.,]\d+)?(?:V|W|KW|HZ|MHZ|GHZ|GB|GT|TB|TT|MB|KG|G|MM|CM|M|ML|CL|DL|L|MAH|AH|LM|LUX|DB|RPM|FPS|P|K|NM|BAR|PSI|XL|KPL|PACK)|IPX?\d{1,2}|WIFI-?\d[A-Z]?|BT\d(?:\.\d)?|HDMI\d(?:\.\d)?|20[12]\d)$/;
+        const specUnitRx = /^(?:\d+(?:[.,]\d+)?(?:V|W|KW|HZ|MHZ|GHZ|GB|GT|TB|TT|MB|KG|G|MM|CM|M|ML|CL|DL|L|MAH|AH|LM|LUX|DB|RPM|FPS|MP|MPX|NIT|NITS|BIT|BITS|CH|SIM|ESIM|GEN|P|K|NM|BAR|PSI|XL|KPL|PACK)|IPX?\d{1,2}|WIFI-?\d[A-Z]?|BT\d(?:\.\d)?|HDMI\d(?:\.\d)?|20[1-3]\d)$/;
 
         for (const m of rawMatches) {
             const cleaned = m.replace(/^[-/]+|[-/]+$/g, '');
@@ -3550,12 +3769,18 @@
             return false;
         }
 
-        // 2. If target has specific alphanumeric model codes (e.g. HX3886/43, R18ALF-0, EW5F4248N1, EPO30331UG), require model code match
-        const targetCodes = extractModelCodes(targetName);
-        if (targetCodes.length > 0) {
-            const candUpper = `${candidate.name} ${candidate.sku || ''} ${candidate.url || ''}`.toUpperCase();
-            const candCodes = extractModelCodes(candUpper);
-            return targetCodes.some(code => {
+        // 2. If target has specific non-regional alphanumeric model codes (e.g. HX3886/43, R18ALF-0, EW5F4248N1, EPO30331UG), require model code match
+        // (For Apple regional color SKUs like MJXN4QN/A, only require code parity if the candidate ALSO lists an Apple SKU; otherwise fall through to strict spec+token check)
+        const rawTargetCodes = extractModelCodes(targetName);
+        const nonRegionalTargetCodes = rawTargetCodes.filter(c => !isAppleRegionalPartNumber(c));
+        const candUpper = `${candidate.name} ${candidate.sku || ''} ${candidate.url || ''}`.toUpperCase();
+        const candCodes = extractModelCodes(candUpper);
+        const targetCodesToEnforce = nonRegionalTargetCodes.length > 0
+            ? nonRegionalTargetCodes
+            : (candCodes.some(c => isAppleRegionalPartNumber(c)) ? rawTargetCodes : []);
+
+        if (targetCodesToEnforce.length > 0) {
+            return targetCodesToEnforce.some(code => {
                 const baseCode = code.split(/[-/]/)[0];
                 return candUpper.includes(code) || (baseCode.length >= 4 && candUpper.includes(baseCode)) ||
                        candCodes.some(cc => cc === code || cc.split(/[-/]/)[0] === baseCode);
@@ -3567,10 +3792,19 @@
         const tTokens = extractMeaningfulTokens(targetName);
         const cTokens = extractMeaningfulTokens(candidate.name);
         const cTokenSet = new Set(cTokens);
+        const normCandForOverlap = normalizeSwappedModelOrder(extractCoreProductTitle(candidate.name))
+            .toLowerCase()
+            .replace(/\b(\d{1,4})\s*(?:gb|gt)\b/gi, (_, n) => {
+                const num = parseInt(n, 10);
+                if (num === 1000 || num === 1024) return '1tb';
+                if (num === 2000 || num === 2048) return '2tb';
+                return `${num}gb`;
+            })
+            .replace(/\b(\d{1,2})\s*(?:tb|tt)\b/gi, '$1tb');
         if (tTokens.length < 2) return false;
         let matched = 0;
         for (const t of tTokens) {
-            if (tokenMatchesTextOrSynonym(t, candTitle, cTokenSet)) matched++;
+            if (tokenMatchesTextOrSynonym(t, normCandForOverlap, cTokenSet)) matched++;
         }
         return (matched / tTokens.length) >= 0.70;
     }
@@ -3591,11 +3825,13 @@
                 const name = m[2];
                 const block = m[3];
                 const hrefMatch = block.match(/data-test-id="product-card-link"\s+href="([^"]+)"/);
-                const clubMatch = block.match(/Asiakasomistajahinta<\/span>(?:<!--[\s\S]*?-->|\s)*([0-9]+,[0-9]{2})/);
-                const normMatch = block.match(/Hinta ilman S-Etukorttia:<\/span>(?:<!--[\s\S]*?-->|\s)*([0-9]+,[0-9]{2})/);
-                const allPrices = [...block.matchAll(/([0-9]+,[0-9]{2})\s*(?:&nbsp;|\u00a0|\s)*€/g)].map(x => parseFloat(x[1].replace(',', '.')));
-                const clubPrice = clubMatch ? parseFloat(clubMatch[1].replace(',', '.')) : null;
-                const normalPrice = normMatch ? parseFloat(normMatch[1].replace(',', '.')) : null;
+                const clubMatch = block.match(/Asiakasomistajahinta<\/span>(?:<!--[\s\S]*?-->|<[^>]+>|\s|&nbsp;)*((?:\d{1,3}(?:[\s\u00a0\u202f.]|&nbsp;))*\d+,\d{2})/);
+                const normMatch = block.match(/Hinta ilman S-Etukorttia:<\/span>(?:<!--[\s\S]*?-->|<[^>]+>|\s|&nbsp;)*((?:\d{1,3}(?:[\s\u00a0\u202f.]|&nbsp;))*\d+,\d{2})/);
+                const allPrices = [...block.matchAll(/((?:\d{1,3}(?:[\s\u00a0\u202f.]|&nbsp;))*\d+,\d{2})\s*(?:&nbsp;|\u00a0|\u202f|\s)*€/g)]
+                    .map(x => parsePriceNumber(x[1].replace(/&nbsp;/gi, ' ')))
+                    .filter(Boolean);
+                const clubPrice = clubMatch ? parsePriceNumber(clubMatch[1].replace(/&nbsp;/gi, ' ')) : null;
+                const normalPrice = normMatch ? parsePriceNumber(normMatch[1].replace(/&nbsp;/gi, ' ')) : null;
                 const price = clubPrice || allPrices[0] || null;
                 if (!price) continue;
 
@@ -3891,12 +4127,12 @@
                     if (metaMatch) price = parsePriceNumber(metaMatch[1]);
 
                     if (!price) {
-                        const jsonPriceMatch = pHtml.match(/"price"\s*:\s*"?([0-9]{1,4}(?:[.,][0-9]{1,2})?)"?/i);
+                        const jsonPriceMatch = pHtml.match(/"price"\s*:\s*"?([0-9]{1,5}(?:[.,][0-9]{1,2})?)"?/i);
                         if (jsonPriceMatch) price = parsePriceNumber(jsonPriceMatch[1]);
                     }
                     if (!price) {
-                        const alvMatch = pHtml.match(/([0-9]{1,4}[,.][0-9]{2})\s*(?:<[^>]+>\s*)*\(sis\.?\s*alv/i);
-                        if (alvMatch) price = parsePriceNumber(alvMatch[1]);
+                        const alvMatch = pHtml.match(/((?:\d{1,3}(?:[\s\u00a0\u202f.]|&nbsp;))*\d+[,.]\d{2})\s*(?:<[^>]+>\s*)*\(sis\.?\s*alv/i);
+                        if (alvMatch) price = parsePriceNumber(alvMatch[1].replace(/&nbsp;/gi, ' '));
                     }
 
                     if (price && isSameExactProduct({ name: slugName, sku, price, url: prodUrl }, targetName, targetEan, refPrice)) {
@@ -4013,10 +4249,10 @@
 
     async function fetchDirectFinnishRetailers(productInfo, marketProduct, customQuery = null) {
         if (isScraperDisabled('direct_fi')) return [];
-        const targetName = customQuery || marketProduct?.title || productInfo?.name || '';
+        const targetName = customQuery || productInfo?.name || marketProduct?.title || '';
         const targetEan = customQuery ? (/^\d{8,14}$/.test(customQuery.trim()) ? customQuery.trim() : null) : productInfo?.ean;
         const refPrice = marketProduct?.lowestPrice || productInfo?.currentPrice || null;
-        const modelCodes = extractModelCodes(targetName);
+        const modelCodes = extractModelCodes(targetName).filter(c => !isAppleRegionalPartNumber(c));
         const primaryQuery = targetEan || modelCodes[0] || extractConciseModelQuery(targetName) || targetName;
         const modelOrNameQuery = modelCodes[0] || extractConciseModelQuery(targetName) || primaryQuery;
 
@@ -4140,7 +4376,24 @@
 
     function parseHintaProductDoc(doc, productUrl) {
         const titleEl = doc.querySelector('.hv-content-hd-h, h1');
-        const title = titleEl ? titleEl.textContent.trim() : 'Tuote';
+        let title = titleEl ? titleEl.textContent.trim() : 'Tuote';
+
+        // Hinta.fi strips storage capacity from <h1> (e.g. "Apple iPhone 18 Pro") while preserving it in <title> ("Apple iPhone 18 Pro 256GB Musta - Hinta 1509 €")
+        const rawDocTitle = (doc.title || '').split(/\s+-\s+Hinta|\s*\|\s*Hinta/i)[0].trim();
+        if (rawDocTitle && title && rawDocTitle.toLowerCase().startsWith(title.toLowerCase())) {
+            const h1Specs = extractStructuredSpecs(title);
+            if (h1Specs.storageSet.size === 0) {
+                const storMatch = rawDocTitle.slice(title.length).match(/\b(\d{2,4})\s*(GB|TB|Gt|Tt)\b/i);
+                if (storMatch) {
+                    const num = parseInt(storMatch[1], 10);
+                    const rawUnit = storMatch[2].toUpperCase().replace('GT', 'GB').replace('TT', 'TB');
+                    const prettyStor = (rawUnit === 'GB' && (num === 1000 || num === 1024)) ? '1TB'
+                        : (rawUnit === 'GB' && (num === 2000 || num === 2048)) ? '2TB'
+                        : `${num}${rawUnit}`;
+                    title = `${title} ${prettyStor}`;
+                }
+            }
+        }
 
         const priceBoxes = doc.querySelectorAll('.hv-prh_price');
         const lowestPrice = priceBoxes[0] ? parsePriceNumber(priceBoxes[0].textContent) : null;
@@ -4187,6 +4440,7 @@
                     url: rawHref ? (rawHref.startsWith('http') ? rawHref : `https://hinta.fi${rawHref}`) : productUrl,
                     stockStatus,
                     stockLabel: availEl?.getAttribute('title')?.replace(/Saatavuus:\s*/i, '') || '',
+                    productTitle: prodText,
                     isClubOffer: isClubInHinta,
                     clubLabel
                 });
@@ -4593,7 +4847,9 @@
             const shouldQueryHintaseuranta = effectiveCategory !== 'grocery' &&
                 !host.includes('hintaseuranta.fi') &&
                 (!marketResult || (marketResult.product?.offers?.length || 0) < 3);
-            const shouldQueryEuCrossBorder = effectiveCategory !== 'furniture' && effectiveCategory !== 'grocery';
+            const shouldQueryEuCrossBorder = effectiveCategory !== 'furniture' &&
+                effectiveCategory !== 'grocery' &&
+                !host.includes('amazon.de');
 
             const [directOffers, hsResult, toriData, euCrossBorder] = await Promise.all([
                 shouldQueryDirectRetailers
@@ -4788,13 +5044,14 @@
     // =========================================================================
     // CROSS-BORDER EU SHIPPING & FINNISH VAT LANDED-COST OPTIMIZER (AMAZON.DE + EU HUBS)
     // =========================================================================
-    function calculateFinnishLandedCost(dePriceEur, category = 'general') {
+    function calculateFinnishLandedCost(dePriceEur, category = 'general', alreadyFiVat = false) {
         if (!Number.isFinite(dePriceEur) || dePriceEur <= 0) return null;
         // Germany standard MwSt 19% -> Finland standard ALV 25.5% (Books: DE 7% -> FI 14%)
+        // When Amazon.de already geolocated/set delivery to Finland ("Deliver to Finland"), displayed price already includes 25.5% FI VAT!
         const isBooks = category === 'books';
         const deVatPct = isBooks ? 7 : 19;
         const fiVatPct = isBooks ? 14 : 25.5;
-        const vatMultiplier = (1 + fiVatPct / 100) / (1 + deVatPct / 100);
+        const vatMultiplier = alreadyFiVat ? 1 : ((1 + fiVatPct / 100) / (1 + deVatPct / 100));
         const fiVatPrice = Math.round(dePriceEur * vatMultiplier * 100) / 100;
         const vatDiffEur = Math.round((fiVatPrice - dePriceEur) * 100) / 100;
         // Amazon.de free standard shipping to Finland on eligible orders >= 99 €
@@ -4810,7 +5067,8 @@
             isFreeShipping,
             landedTotalEur,
             deVatPct,
-            fiVatPct
+            fiVatPct,
+            alreadyFiVat: Boolean(alreadyFiVat)
         };
     }
 
@@ -4841,13 +5099,30 @@
 
     function parseAmazonDeSearchHtml(html, targetNameForScoring = '', isEanSearch = false, referencePrice = null, category = 'general') {
         if (!html || typeof html !== 'string' || html.length < 2500) return null;
+
+        // If Amazon explicitly states there are zero results for this EAN/query before showing fallback recommendations, abort immediately
+        const firstCardPos = html.indexOf('data-component-type="s-search-result"');
+        if (firstCardPos === -1) return null;
+        const preResultsBanner = html.slice(Math.max(0, firstCardPos - 45000), firstCardPos);
+        if (/No\s+results\s+for|Keine\s+Ergebnisse\s+f(?:ü|&uuml;)r/i.test(preResultsBanner)) {
+            return null;
+        }
+
+        const alreadyFiVat = /id="glow-ingress-line2"[^>]*>\s*(?:Finland|Finnland|Suomi)\b|Deliver\s+to\s+Finland|Lieferung\s+nach\s+Finnland/i.test(html.slice(0, 180000));
         const blocks = html.split('data-component-type="s-search-result"').slice(1, 15);
         if (blocks.length === 0) return null;
 
         const targetHasBundle = /\b(?:bundle|kit|tuplapakkaus|2-pack|\+)\b/i.test(targetNameForScoring || '');
+        const amzAccessoryRx = /\b(?:screen\s+protector|schutzglas|panzerglas|schutzfolie|tempered\s+glass|camera\s+lens\s+protector|kameraschutz|protective\s+case|silicone\s+case|clear\s+case|leather\s+case|wallet\s+case|fabric\s+case|handyhülle|schutzhülle|hülle\s+für|case\s+for|case\s+with\s+magsafe|cover\s+for|ersatzarmband|replacement\s+band)\b/i;
+        const targetIsAmzAccessory = amzAccessoryRx.test(targetNameForScoring || '') || /\b(?:suojakuori|panssarilasi|suojalasi|kotelo|case|cover|screen\s+protector)\b/i.test(targetNameForScoring || '');
+        const h2NoiseRx = /^(?:More\s+results|Weitere\s+Ergebnisse|Energy\s+Label|Energielabel|Sponsored|Gesponsert|Results|Ergebnisse|Customers\s+frequently\s+viewed|Related\s+searches)$/i;
         const candidates = [];
 
-        for (const block of blocks) {
+        for (const rawBlock of blocks) {
+            // Truncate card before any trailing "More results / Weitere Ergebnisse" divider injected inside the last organic card
+            const moreDividerIdx = rawBlock.search(/<h2[^>]*>\s*(?:<[^>]+>\s*)*(?:More\s+results|Weitere\s+Ergebnisse)\b/i);
+            const block = moreDividerIdx > 0 ? rawBlock.slice(0, moreDividerIdx) : rawBlock;
+
             const asinMatch = block.match(/data-asin="([A-Z0-9]{10})"/i)
                 || block.match(/\/dp\/([A-Z0-9]{10})(?:[/?#"]|$)/i);
             if (!asinMatch) continue;
@@ -4858,10 +5133,28 @@
                 continue;
             }
 
-            const h2Match = block.match(/<h2[^>]*>([\s\S]*?)<\/h2>/i);
-            if (!h2Match) continue;
-            const title = decodeBasicHtmlEntities(h2Match[1].replace(/<[^>]+>/g, ' '));
-            if (!title || title.length < 5) continue;
+            // Amazon search cards emit a 1-word brand <h2> ("Apple") followed by the real product title <h2> ("iPhone 18 Pro Max 256GB - Polar")
+            const h2Texts = [...block.matchAll(/<h2[^>]*>([\s\S]*?)<\/h2>/gi)]
+                .map(m => decodeBasicHtmlEntities(m[1].replace(/<[^>]+>/g, ' ')))
+                .filter(t => t && t.length >= 2 && !h2NoiseRx.test(t));
+            if (h2Texts.length === 0) continue;
+
+            let title = '';
+            if (h2Texts.length >= 2 && h2Texts[0].split(/\s+/).length <= 2 && h2Texts[0].length <= 24 && h2Texts[1].length >= 5) {
+                const brandPart = h2Texts[0];
+                const prodPart = h2Texts[1];
+                title = prodPart.toLowerCase().startsWith(brandPart.toLowerCase())
+                    ? prodPart
+                    : `${brandPart} ${prodPart}`;
+            } else {
+                title = h2Texts.reduce((best, cur) => (cur.length > best.length ? cur : best), '');
+            }
+            if (!title || title.length < 5 || title.split(/\s+/).length < 2) continue;
+
+            // Reject phone cases / screen protectors unless target itself is an accessory
+            if (!targetIsAmzAccessory && amzAccessoryRx.test(title)) {
+                continue;
+            }
 
             // Reject multi-component upgrade bundles unless target itself is a bundle
             if (!targetHasBundle && /\b(?:upgrade\s*bundle|aufrüstkit|bundle\s*mit|cpu\s*\+\s*mainboard)\b/i.test(title)) {
@@ -4873,8 +5166,15 @@
                 .replace(/<span[^>]*data-a-strike="true"[^>]*>[\s\S]*?<\/span>\s*<\/span>/gi, '')
                 .replace(/<span[^>]*class="[^"]*\ba-text-price\b[^"]*"[^>]*>[\s\S]*?<\/span>/gi, '');
 
-            const offscreenMatch = withoutStrike.match(/class="a-offscreen"[^>]*>([^<]+)</i);
-            let dePrice = offscreenMatch ? parsePriceNumber(decodeBasicHtmlEntities(offscreenMatch[1])) : null;
+            const offscreenMatches = [...withoutStrike.matchAll(/class="a-offscreen"[^>]*>([^<]+)</gi)];
+            let dePrice = null;
+            for (const om of offscreenMatches) {
+                const parsedOff = parsePriceNumber(decodeBasicHtmlEntities(om[1]));
+                if (parsedOff && parsedOff >= 2) {
+                    dePrice = parsedOff;
+                    break;
+                }
+            }
             if (!dePrice) {
                 const wholeMatch = withoutStrike.match(/class="a-price-whole"[^>]*>([\d.,\s]+)/i);
                 const fracMatch = withoutStrike.match(/class="a-price-fraction"[^>]*>(\d{2})/i);
@@ -4897,20 +5197,19 @@
                 if (compat.hasHardConflict) continue;
                 matchScore += (compat.bonusScore || 0);
 
-                if (!isEanSearch && !doesItemMatchQueryWords(title, targetNameForScoring)) {
+                // Always verify product model/generation words EVEN on EAN searches (prevents Amazon silent organic fallbacks!)
+                if (!doesItemMatchQueryWords(title, targetNameForScoring)) {
                     continue;
                 }
-                if (doesItemMatchQueryWords(title, targetNameForScoring)) {
-                    matchScore += 35;
-                }
+                matchScore += 35;
             }
 
-            const landed = calculateFinnishLandedCost(dePrice, category);
+            const landed = calculateFinnishLandedCost(dePrice, category, alreadyFiVat);
             if (!landed) continue;
 
             candidates.push({
                 asin,
-                title,
+                title: extractCoreProductTitle(title),
                 store: 'Amazon.de',
                 url: `https://www.amazon.de/dp/${asin}?language=en_GB`,
                 matchScore,
@@ -4928,7 +5227,7 @@
     }
 
     async function fetchAmazonDeCrossBorder(productInfo, marketProduct = null, customQuery = null, category = 'general') {
-        const targetTitle = customQuery || marketProduct?.title || productInfo?.name || '';
+        const targetTitle = customQuery || productInfo?.name || marketProduct?.title || '';
         const validEan = (!customQuery && productInfo?.ean && isValidBarcodeChecksum(productInfo.ean))
             ? String(productInfo.ean).trim()
             : '';
@@ -5281,9 +5580,22 @@
         const currentStoreId = normalizeStoreIdentity(currentStoreObj.name);
         const pageClub = productInfo?.clubOffer || null;
 
+        // Guard against mis-mapped store feed rows inside Hinta.fi (e.g. a 128GB or wrong-tier row accidentally attached to a 256GB Pro page)
+        let rawOffersList = Array.isArray(marketProduct.offers) ? marketProduct.offers : [];
+        if (productInfo?.name && !productInfo.isUsedSite && rawOffersList.length > 1) {
+            const specFiltered = rawOffersList.filter(o => {
+                const rowTitle = (o.productTitle || '').trim();
+                if (!rowTitle || rowTitle.split(/\s+/).length < 3) return true;
+                return !evaluateSpecCompatibility(productInfo.name, rowTitle).hasHardConflict;
+            });
+            if (specFiltered.length > 0) {
+                rawOffersList = specFiltered;
+            }
+        }
+
         // Deduplicate stores by canonical store identity (keeping lowest price per store)
         const dedupedByStore = new Map();
-        for (const rawOffer of (Array.isArray(marketProduct.offers) ? marketProduct.offers : [])) {
+        for (const rawOffer of rawOffersList) {
             const clone = { ...rawOffer };
             const storeId = normalizeStoreIdentity(clone.store);
             if (
@@ -8781,7 +9093,10 @@
                             <a class="ufhpc-eu-row" href="${escapeHtml(euData.url)}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(euData.title)}">
                                 <div style="min-width:0;flex:1;">
                                     <div class="ufhpc-eu-prod">Amazon.de: ${escapeHtml(euData.title)}</div>
-                                    <div class="ufhpc-eu-math">DE ${formatEur(euData.dePriceEur)} → FI ALV ${formatEur(euData.fiVatPrice)} (${escapeHtml(shipShort)})</div>
+                                    <div class="ufhpc-eu-math">${euData.alreadyFiVat
+                                        ? (this.lang === 'en' ? `Incl. 25.5% FI VAT (${escapeHtml(shipShort)})` : `Sis. Suomen ALV 25,5% (${escapeHtml(shipShort)})`)
+                                        : `DE ${formatEur(euData.dePriceEur)} → FI ALV ${formatEur(euData.fiVatPrice)} (${escapeHtml(shipShort)})`
+                                    }</div>
                                 </div>
                                 <div class="ufhpc-eu-total">${formatEur(euData.landedTotalEur)} ↗</div>
                             </a>

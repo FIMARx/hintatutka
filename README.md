@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/hero-banner.svg" width="100%" alt="HintaTutka v9.2 — Finnish & EU Real-Time Price Intelligence" />
+<img src="assets/hero-banner.svg" width="100%" alt="HintaTutka v9.3 — Finnish & EU Real-Time Price Intelligence" />
 
 <br />
 
@@ -122,7 +122,12 @@ HintaTutka works across all localized store paths (`/fi/`, `/en/`, `/sv/`) and S
 
 ## 🗺️ Changelog
 
-### 🚀 v9.2 (Latest)
+### 🚀 v9.3 (Latest)
+- **🎯 Strict Generation & Tier-Modifier Parity (`iPhone 18` vs `18 Pro` vs `18 Pro Max` vs `17` / `17e`)**: Enforces hard conflict rejection across generations, sub-variants (`17` vs `17e`, `Pixel 9` vs `9a`), and model tiers (`Pro`, `Max`, `Ultra`, `Plus`, `Air`, `Mini`, `Ti`, `Super`, `X3D`), plus `1000 GB ↔ 1 TB` normalization and Hinta.fi `<title>` storage enrichment.
+- **💶 Thousands-Separator Price Parser Fix (`≥ 1 000 €`)**: Fixed space/`&nbsp;` thousands-separator truncation on Prisma, Vinted, and Clas Ohlson (`1 659,00 €` / `1 509,00 €` no longer truncating to `659,00 €` / `509,00 €`).
+- **🇩🇪 Amazon.de Multi-`<h2>` Title, EAN Fallback & `.priceToPay` Active Price Fix**: Combines brand + product `<h2>` headers (fixing `"Apple"` 1-word matches), enforces model/generation verification on EAN fallback results, detects `Deliver to Finland` to prevent double 25.5% VAT calculation, and reads `.priceToPay` (`€1,043.02`) instead of strikethrough `RRP` (`€1,159.03`).
+
+### 🚀 v9.2
 - **⚡ Critical Loading Fix (`isValidBarcodeChecksum`)**: Fixed an uncaught `ReferenceError` when rendering products with GS1 EAN barcodes (`buildEuHubLinks` / `fetchAmazonDeCrossBorder`) that froze the Tampermonkey sidebar and inline `◈ Tarkistetaan...` badge on loading.
 - **🛡️ Anti-Hang Watchdog & Stage-2 Timeouts**: Hardened `executeRawGmGet` (`onabort` + JS watchdog timer), `acquirePoliteHostSlot` (12s auto-releasing slot lease), Stage-2 parallel scraper timeouts, and `runPriceChecker` error recovery so stalled network calls can never freeze the UI.
 - **🎨 Squircle Radar-Bolt Brand Logo**: Added standalone vector [`assets/logo.svg`](assets/logo.svg), 64× supersampled `icon16`/`32`/`48`/`128.png` extension icons, `popup.html` brand header, Tampermonkey `@icon` metadata, and inline sidebar emblem.
