@@ -5,7 +5,7 @@
 **Suomen älykkäin reaaliaikainen hintatutka: Elektroniikka, Huonekalut, Ruoka, Urheilu, Apteekit, Tori.fi, Vinted & Huuto.net**  
 *The ultimate real-time price comparison, unit-price analyzer (`€/kg`, `€/l`), price watchlist, bargaining advisor, S-Bonus calculator & second-hand overlay for 81 Finnish & EU online stores.*
 
-[![Version](https://img.shields.io/badge/version-7.7-10b981?style=for-the-badge)](https://github.com/FIMARx/hintatutka)
+[![Version](https://img.shields.io/badge/version-7.8-10b981?style=for-the-badge)](https://github.com/FIMARx/hintatutka)
 [![Author](https://img.shields.io/badge/author-FIMARx-6366f1?style=for-the-badge)](https://github.com/FIMARx)
 [![Install](https://img.shields.io/badge/Install-HintaTutka.user.js-f43f5e?style=for-the-badge&logo=tampermonkey)](https://raw.githubusercontent.com/FIMARx/hintatutka/main/HintaTutka.user.js)
 [![Stores](https://img.shields.io/badge/stores-81%20supported-f59e0b?style=for-the-badge)](#)
@@ -115,7 +115,16 @@ HintaTutka toimii automaattisesti kaikilla kielipoluilla (`/fi/`, `/en/`, `/sv/`
 
 ## 🗺️ Kehityssuunnitelma & Versiohistoria / Roadmap & Changelog
 
-### 🚀 v7.7 Päivitys (Uusin / Latest)
+### 🚀 v7.8 Päivitys (Uusin / Latest)
+- 🔗 **Korjattu Hintaseuranta.fi ja Hintaopas.fi -hakureititys**:
+  - **Hintaseuranta.fi**: Siirrytty palvelimen vaatimaan polkupohjaiseen `/haku/{hakusana}` -muotoon aiemman `?q=` -parametrin sijasta. Tämä korjaa virheen, jossa haku ohjautui virhesivulle *"Hakusana puuttuu"*.
+  - **Hintaopas.fi**: Korjattu hakuparametri muotoon `/search?query={hakusana}` vanhentuneen `search?search=` -polun sijasta, jolloin haku ei enää päädy *"Virhe 404: Tämä sivu ei ole enää käytössä"* -ilmoitukseen.
+- 🔘 **Harmaannetut toissijaiset & varmistamattomat vertailupainikkeet (Dimmed / Grey Buttons)**:
+  - Kun Hinta.fi löytää tuotteen (kuten `Hinta.fi (3) ↗`), se korostuu kirkkaan vihreänä vahvistettujen hintojen ensisijaisena lähteenä.
+  - Toissijaiset ja varmistamattomat vertailulinkit (`Hintaseuranta ↗`, `Hintaopas ↗`) esitetään tyylikkäästi himmennettynä lasinharmaalla (`.is-secondary`), jolloin käyttäjä erottaa heti varmistetut tulokset kokeiltavista hakuvaihtoehdoista.
+  - Jos Hinta.fi:stä ei löydy tuotetta (`Hinta.fi (0)`), painike harmaannetaan (`.is-zero`), jolloin huomio siirtyy luontevasti vaihtoehtoisiin vertailupalveluihin.
+
+### 🌟 v7.7
 - 🧠 **Itseoppiva Hakumuisti (Adaptive Self-Learning Search Memory Brain)**:
   - **Oppii käyttäjän tekemistä hauista & valinnoista**: Kun käyttäjä tarkentaa hakua alareunan hakukentästä, valitsee tuotteen vaihtoehtolistasta tai klikkaa live-autocompleten ehdotusta, HintaTutka **tallentaa ja oppii** kyseisen tuotesivun URL:in, EAN-viivakoodin ja nimen vastaavuuden suoraan valittuun Hinta.fi-tuotteeseen.
   - **Välitön täsmäosuma jatkossa ilman arvailua**: Kun samaa tuotetta selataan uudelleen tai sama EAN/malli tulee vastaan missä tahansa kaupassa, HintaTutka lataa opitun tuotteen heti ja asettaa sen ykkösprioriteetiksi.

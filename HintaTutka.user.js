@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         HintaTutka
 // @namespace    https://github.com/FIMARx/hintatutka
-// @version      7.7
-// @description  Suomen älykkäin hintatutka: Itseoppiva hakumuisti (oppii ja muistaa tuotteet käyttäjän hauista & valinnoista), älykäs mallikoodi- ja brändihaku, tyylikäs hintamerkintöjen kohdistus, modernisoitu käyttöliittymä, välilehdet (Kaupat, Käytetyt, Hintahistoria), interaktiivinen päivitys, hintakäyrät, yksikköhinnat, hintavahti, tinkausapuri, S-bonus & suora haku 81 kaupassa
+// @version      7.8
+// @description  Suomen älykkäin hintatutka: Korjatut Hintaseuranta- ja Hintaopas-täsmähaudat, harmaannetut toissijaiset vertailupainikkeet, itseoppiva hakumuisti, älykäs mallikoodi- ja brändihaku, tyylikäs hintamerkintöjen kohdistus, modernisoitu käyttöliittymä, välilehdet (Kaupat, Käytetyt, Hintahistoria), hintakäyrät, yksikköhinnat, hintavahti, tinkausapuri, S-bonus & suora haku 81 kaupassa
 // @author       FIMARx
 // @homepageURL  https://github.com/FIMARx/hintatutka
 // @supportURL   https://github.com/FIMARx/hintatutka/issues
@@ -144,7 +144,7 @@
     // =========================================================================
     // CONFIGURATION & THRESHOLDS
     // =========================================================================
-    const SCRIPT_VERSION = '7.7';
+    const SCRIPT_VERSION = '7.8';
     const GITHUB_RAW_SCRIPT_URL = 'https://raw.githubusercontent.com/FIMARx/hintatutka/main/HintaTutka.user.js';
     const GITHUB_API_CONTENTS_URL = 'https://api.github.com/repos/FIMARx/hintatutka/contents/HintaTutka.user.js';
     const GITHUB_REPO_URL = 'https://github.com/FIMARx/hintatutka';
@@ -5396,10 +5396,27 @@
                 box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
             }
             .ufhpc-btn.is-zero {
-                opacity: 0.55;
+                background: rgba(255, 255, 255, 0.03) !important;
+                color: #64748b !important;
+                border: 1px solid rgba(255, 255, 255, 0.08) !important;
+                opacity: 0.50;
             }
             .ufhpc-btn.is-zero:hover {
-                opacity: 0.95;
+                opacity: 0.90;
+                color: #cbd5e1 !important;
+                border-color: rgba(255, 255, 255, 0.20) !important;
+            }
+            .ufhpc-btn.is-secondary {
+                background: rgba(255, 255, 255, 0.04) !important;
+                color: #94a3b8 !important;
+                border: 1px solid rgba(255, 255, 255, 0.12) !important;
+                opacity: 0.65;
+            }
+            .ufhpc-btn.is-secondary:hover {
+                background: rgba(255, 255, 255, 0.12) !important;
+                color: #f1f5f9 !important;
+                border-color: rgba(255, 255, 255, 0.24) !important;
+                opacity: 1;
             }
             .ufhpc-btn-hinta {
                 background: rgba(16, 185, 129, 0.15);
@@ -6070,8 +6087,8 @@
                     </div>
                     <div class="ufhpc-actions">
                         <a class="ufhpc-btn ufhpc-btn-hinta" href="https://hinta.fi/haku?q=${fallbackQuery}" target="_blank" rel="noopener">Hinta.fi ↗</a>
-                        <a class="ufhpc-btn ufhpc-btn-hintaseuranta" href="https://hintaseuranta.fi/haku?q=${fallbackQuery}" target="_blank" rel="noopener">Hintaseuranta ↗</a>
-                        <a class="ufhpc-btn ufhpc-btn-hintaopas" href="https://hintaopas.fi/search?search=${fallbackQuery}" target="_blank" rel="noopener">Hintaopas ↗</a>
+                        <a class="ufhpc-btn ufhpc-btn-hintaseuranta" href="https://hintaseuranta.fi/haku/${fallbackQuery}" target="_blank" rel="noopener">Hintaseuranta ↗</a>
+                        <a class="ufhpc-btn ufhpc-btn-hintaopas" href="https://hintaopas.fi/search?query=${fallbackQuery}" target="_blank" rel="noopener">Hintaopas ↗</a>
                         <a class="ufhpc-btn ufhpc-btn-tori" href="https://www.tori.fi/recommerce/forsale/search?q=${toriQuery}" target="_blank" rel="noopener">Tori ↗</a>
                         <a class="ufhpc-btn ufhpc-btn-vinted" href="https://www.vinted.fi/catalog?search_text=${toriQuery}" target="_blank" rel="noopener">Vinted ↗</a>
                         <a class="ufhpc-btn ufhpc-btn-huuto" href="https://www.huuto.net/haku?words=${toriQuery}" target="_blank" rel="noopener">Huuto ↗</a>
@@ -6432,52 +6449,58 @@
                     ? (unitInfo.quantityStr ? `Pakkauskoko: ${unitInfo.quantityStr}` : storeName)
                     : (toriData.stats ? (this.lang === 'en' ? `Used median: ${formatEur(toriData.stats.medianPrice, 0)}` : `Käytettyjen mediaani: ${formatEur(toriData.stats.medianPrice, 0)}`) : low30dSub));
 
+            const isHintaMatched = Boolean(marketProd && offers.length > 0);
+            const hintaStoreCount = offers.length;
+            const hintaBtnLabel = isHintaMatched ? `Hinta.fi (${hintaStoreCount}) ↗` : `Hinta.fi (0) ↗`;
+            const hintaBtnClass = isHintaMatched ? '' : 'is-zero';
+            const fallbackSecondaryClass = isHintaMatched ? 'is-secondary' : '';
+
             const vintedSearchUrl = `https://www.vinted.fi/catalog?search_text=${encodeURIComponent(toriData.vintedQuery || toriData.query || extractConciseModelQuery(productInfo.name) || searchTermRaw)}`;
 
             const actionBtnsHtml = productInfo.category === 'grocery' ? `
                 <a class="ufhpc-btn ufhpc-btn-hinta" href="https://www.s-kaupat.fi/haku?q=${encodedSearch}" target="_blank" rel="noopener noreferrer">
                     S-kaupat ↗
                 </a>
-                <a class="ufhpc-btn ufhpc-btn-hintaopas" href="https://www.k-ruoka.fi/kauppa/tuotehaku?haku=${encodedSearch}" target="_blank" rel="noopener noreferrer">
+                <a class="ufhpc-btn ufhpc-btn-hintaopas is-secondary" href="https://www.k-ruoka.fi/kauppa/tuotehaku?haku=${encodedSearch}" target="_blank" rel="noopener noreferrer">
                     K-Ruoka ↗
                 </a>
-                <a class="ufhpc-btn ufhpc-btn-tori" href="https://www.fiksuruoka.fi/search?q=${encodedSearch}" target="_blank" rel="noopener noreferrer">
+                <a class="ufhpc-btn ufhpc-btn-tori is-secondary" href="https://www.fiksuruoka.fi/search?q=${encodedSearch}" target="_blank" rel="noopener noreferrer">
                     Fiksuruoka ↗
                 </a>
             ` : (productInfo.category === 'furniture' ? `
                 <a class="ufhpc-btn ufhpc-btn-hinta" href="https://www.ikea.com/fi/fi/search/?q=${encodedSearch}" target="_blank" rel="noopener noreferrer">
                     IKEA ↗
                 </a>
-                <a class="ufhpc-btn ufhpc-btn-hintaseuranta" href="https://hintaseuranta.fi/haku?q=${encodedSearch}" target="_blank" rel="noopener noreferrer">
+                <a class="ufhpc-btn ufhpc-btn-hintaseuranta ${fallbackSecondaryClass}" href="https://hintaseuranta.fi/haku/${encodedSearch}" target="_blank" rel="noopener noreferrer">
                     Hintaseuranta ↗
                 </a>
-                <a class="ufhpc-btn ufhpc-btn-hintaopas" href="https://hintaopas.fi/search?search=${encodedSearch}" target="_blank" rel="noopener noreferrer">
+                <a class="ufhpc-btn ufhpc-btn-hintaopas ${fallbackSecondaryClass}" href="https://hintaopas.fi/search?query=${encodedSearch}" target="_blank" rel="noopener noreferrer">
                     Hintaopas ↗
                 </a>
             ` : (productInfo.category === 'sports' ? `
-                <a class="ufhpc-btn ufhpc-btn-hintaseuranta" href="https://hintaseuranta.fi/haku?q=${encodedSearch}" target="_blank" rel="noopener noreferrer">
-                    Hintaseuranta ↗
+                <a class="ufhpc-btn ufhpc-btn-hinta ${hintaBtnClass}" href="${escapeHtml(hintaUrl)}" target="_blank" rel="noopener noreferrer">
+                    ${hintaBtnLabel}
                 </a>
-                <a class="ufhpc-btn ufhpc-btn-hintaopas" href="https://hintaopas.fi/search?search=${encodedSearch}" target="_blank" rel="noopener noreferrer">
-                    Hintaopas ↗
-                </a>
-                <a class="ufhpc-btn ufhpc-btn-intersport" href="https://www.intersport.fi/fi/haku/?q=${encodedSearch}" target="_blank" rel="noopener noreferrer">
+                <a class="ufhpc-btn ufhpc-btn-intersport is-secondary" href="https://www.intersport.fi/fi/haku/?q=${encodedSearch}" target="_blank" rel="noopener noreferrer">
                     Intersport ↗
                 </a>
-                <a class="ufhpc-btn ufhpc-btn-budgetsport" href="https://www.budgetsport.fi/haku/?q=${encodedSearch}" target="_blank" rel="noopener noreferrer">
+                <a class="ufhpc-btn ufhpc-btn-budgetsport is-secondary" href="https://www.budgetsport.fi/haku/?q=${encodedSearch}" target="_blank" rel="noopener noreferrer">
                     Budget Sport ↗
                 </a>
-                <a class="ufhpc-btn ufhpc-btn-hinta" href="${escapeHtml(hintaUrl)}" target="_blank" rel="noopener noreferrer">
-                    Hinta.fi ↗
-                </a>
-            ` : `
-                <a class="ufhpc-btn ufhpc-btn-hinta" href="${escapeHtml(hintaUrl)}" target="_blank" rel="noopener noreferrer">
-                    Hinta.fi ↗
-                </a>
-                <a class="ufhpc-btn ufhpc-btn-hintaseuranta" href="https://hintaseuranta.fi/haku?q=${encodedSearch}" target="_blank" rel="noopener noreferrer">
+                <a class="ufhpc-btn ufhpc-btn-hintaseuranta ${fallbackSecondaryClass}" href="https://hintaseuranta.fi/haku/${encodedSearch}" target="_blank" rel="noopener noreferrer">
                     Hintaseuranta ↗
                 </a>
-                <a class="ufhpc-btn ufhpc-btn-hintaopas" href="https://hintaopas.fi/search?search=${encodedSearch}" target="_blank" rel="noopener noreferrer">
+                <a class="ufhpc-btn ufhpc-btn-hintaopas ${fallbackSecondaryClass}" href="https://hintaopas.fi/search?query=${encodedSearch}" target="_blank" rel="noopener noreferrer">
+                    Hintaopas ↗
+                </a>
+            ` : `
+                <a class="ufhpc-btn ufhpc-btn-hinta ${hintaBtnClass}" href="${escapeHtml(hintaUrl)}" target="_blank" rel="noopener noreferrer">
+                    ${hintaBtnLabel}
+                </a>
+                <a class="ufhpc-btn ufhpc-btn-hintaseuranta ${fallbackSecondaryClass}" href="https://hintaseuranta.fi/haku/${encodedSearch}" target="_blank" rel="noopener noreferrer" title="Hae Hintaseurannasta">
+                    Hintaseuranta ↗
+                </a>
+                <a class="ufhpc-btn ufhpc-btn-hintaopas ${fallbackSecondaryClass}" href="https://hintaopas.fi/search?query=${encodedSearch}" target="_blank" rel="noopener noreferrer" title="Hae Hintaoppaasta">
                     Hintaopas ↗
                 </a>
             `));
