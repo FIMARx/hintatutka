@@ -154,7 +154,13 @@ HintaTutka works across all localized store paths (`/fi/`, `/en/`, `/sv/`) and S
 
 ## 🗺️ Changelog
 
-### 🚀 v9.4 (Latest)
+### 🚀 v9.5 (Latest)
+- **🧪 DigiKaveri-Grade Testing Suite & Real-Time Store Canaries**: Built on native `node:test` (22 unit, precision, parser, algorithm & cache tests + live network canaries) with automated CI on push, PR, and daily schedule (`cron: '0 6 * * *'`).
+- **🛡️ Motherboard Form-Factor Token Shield (`B850M` vs `B850`)**: Upgraded generation token regex to capture 3-digit chipsets (`B850M`, `B850`, `B650M`, `X870E`, `Z890`) and flag hard spec conflicts between micro-ATX and standard ATX boards.
+- **💶 Finnish Unicode Word Boundary Fix (`erissä 29,90 €`)**: Replaced ASCII `\b` with unicode-safe boundary `(?![a-zA-Z0-9äöåÄÖÅ])` across `invalidPriceTextRx` and `exVatOrInstallmentRx` to reject installment text.
+- **⚡ Dynamic Legacy Cache Purging**: Upgraded `purgeLegacyCaches()` to dynamically evict all legacy `ufhpc_` versions (`ufhpc_v94_` and below) to `ufhpc_v95_`.
+
+### 🚀 v9.4
 - **🛡️ Cross-Border EU Cache Invalidation & Stale Model Eviction**: Bumped cache keys to `v94`, purged obsolete GM/session storage entries from previous sessions, and added automatic validation of cached EU results against current target product specs (evicting stale cross-generation entries like `iPhone 17` when browsing `iPhone 18 Pro`).
 - **🔒 Render-Time EU Card Suppression Guard**: Added a fail-safe render-time compatibility check in `renderResult` ensuring that if an EU cross-border item has a hard spec conflict or word mismatch, the card is suppressed and falls back to clean 1-click manual search hub links (`Amazon.de ↗`, `Geizhals.eu ↗`, `Idealo.de ↗`).
 
