@@ -5,7 +5,7 @@
 **Suomen älykkäin reaaliaikainen hintatutka: Elektroniikka, Huonekalut, Ruoka, Urheilu, Apteekit, Tori.fi, Vinted & Huuto.net**  
 *The ultimate real-time price comparison, unit-price analyzer (`€/kg`, `€/l`), price watchlist, bargaining advisor, S-Bonus calculator & second-hand overlay for 81 Finnish & EU online stores.*
 
-[![Version](https://img.shields.io/badge/version-7.8-10b981?style=for-the-badge)](https://github.com/FIMARx/hintatutka)
+[![Version](https://img.shields.io/badge/version-8.0-10b981?style=for-the-badge)](https://github.com/FIMARx/hintatutka)
 [![Author](https://img.shields.io/badge/author-FIMARx-6366f1?style=for-the-badge)](https://github.com/FIMARx)
 [![Install](https://img.shields.io/badge/Install-HintaTutka.user.js-f43f5e?style=for-the-badge&logo=tampermonkey)](https://raw.githubusercontent.com/FIMARx/hintatutka/main/HintaTutka.user.js)
 [![Stores](https://img.shields.io/badge/stores-81%20supported-f59e0b?style=for-the-badge)](#)
@@ -115,7 +115,20 @@ HintaTutka toimii automaattisesti kaikilla kielipoluilla (`/fi/`, `/en/`, `/sv/`
 
 ## 🗺️ Kehityssuunnitelma & Versiohistoria / Roadmap & Changelog
 
-### 🚀 v7.8 Päivitys (Uusin / Latest)
+### 🚀 v8.0 Päivitys (Uusin / Latest)
+- 🔍 **Täysin uudistettu haku- ja täsmäytysmoottori (Next-Gen Search & Matching Engine)**:
+  - **GS1 Mod-10 -viivakooditarkistus & monilähde-EAN-kaivu**: Kaivaa EAN/GTIN/UPC-viivakoodit aina riippumatta MPN-koodista (JSON-LD, DOM-mikrodata, tekniset taulukot ja `__NEXT_DATA__`) ja tarkistaa aidon GS1-tarkistussumman estäen kaupan sisäisten tuotenumeroiden sekoittumisen viivakoodeihin.
+  - **Monikielinen FI/EN/SV-synonyymisanakirja & rakennetietotarkistus**: Yhdistää suomen-, englannin- ja ruotsinkieliset tuotenimet saumattomasti (esim. `air purifier` ↔ `ilmanpuhdistin`, `electric toothbrush` ↔ `sähköhammasharja`) ja estää väärien varianttien sekoittumisen (`128GB` vs `256GB`, `55"` vs `65"`, yksittäistuote vs `2-pack`/`4-pack` sekä `+`-kombotuotepaketit).
+  - **Suora Hintaseuranta.fi-hintapoiminta & korjattu Huuto.net API**: Hakee nyt automaattisesti kauppojen hinnat myös suoraan **Hintaseuranta.fi**:stä täydennyksenä (erityisesti urheilu-, vaate- ja kodintuotteille) sekä korjaa **Huuto.net**-rajapintahaun reaaliaikaiset osumat.
+- 💶 **Tarkempi hinnanluku & reilumpi hintatuomio (Precision Price & Verdict Engine)**:
+  - **Jaettujen senttien (Split-Cent) tuki**: Lukee täsmällisesti yläindeksiin tai erillisiin flex-elementteihin jaetut sentit (esim. Powerin `270` + `30` → `270,30 €` ja IKEAn erotellut desimaalit).
+  - **ALV 0% / verottomien ja ehdollisten hintojen suodatus**: Ohittaa automaattisesti yritysmyynnin verottomat hinnat (`Hinta ilman ALV`, `ALV 0%`, `Excl. VAT`, `veroton`), vaihtohyvitykset ja liittymäasiakashinnat sekoittamatta niitä kuluttajahintaan.
+  - **Tukey IQR -poikkeamasuodatus käytetyille & reilu toimitusvertailu**: Suodattaa Tori/Vinted/Huuto-tilastoista pois `1 €` "tarjoa"-haamuilmoitukset sekä ylihintaiset ääriarvot, yhdistää tuplakauppanimet (`normalizeStoreIdentity`) ja huomioi myös nykyisen kaupan toimituskulun kun `🚚 +Toimitus` on valittuna.
+- ⚡ **2-vaiheinen progressiivinen renderöinti & kevennetty SPA-ydin (Core Engine v8.0)**:
+  - **Välitön ensivaiheen piirto**: Näyttää Hinta.fi-tulokset välittömästi (~300 ms) ja täydentää suorat kauppatarkistukset, Hintaseurannan ja käytettyjen markkinat rinnakkain taustalla säilyttäen hakukentän fokuksen ja skrollauskohdan.
+  - **Pyyntöjen yhdistäminen, LRU-välimuisti & nollakuorman SPA-seuranta**: Yhdistää päällekkäiset verkkopyynnöt (`inFlightRequests`), vapauttaa automaattisesti vanhimmat välimuistimerkinnät tilan täyttyessä ja korvaa raskaan koko sivun `MutationObserver`-tarkkailun kevyillä `History API` -koukuilla.
+
+### 🌟 v7.8
 - 🔗 **Korjattu Hintaseuranta.fi ja Hintaopas.fi -hakureititys**:
   - **Hintaseuranta.fi**: Siirrytty palvelimen vaatimaan polkupohjaiseen `/haku/{hakusana}` -muotoon aiemman `?q=` -parametrin sijasta. Tämä korjaa virheen, jossa haku ohjautui virhesivulle *"Hakusana puuttuu"*.
   - **Hintaopas.fi**: Korjattu hakuparametri muotoon `/search?query={hakusana}` vanhentuneen `search?search=` -polun sijasta, jolloin haku ei enää päädy *"Virhe 404: Tämä sivu ei ole enää käytössä"* -ilmoitukseen.
