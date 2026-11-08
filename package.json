@@ -1,6 +1,6 @@
 {
   "name": "hintatutka",
-  "version": "9.8.7",
+  "version": "9.8.8",
   "description": "Zero-CLS Finnish & EU retail price intelligence overlay across 81 stores + Amazon.de landed cost, Tori/Vinted/Huuto flip arbitrage & club deal audit.",
   "type": "module",
   "scripts": {

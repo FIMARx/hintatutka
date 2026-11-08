@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HintaTutka
 // @namespace    https://github.com/FIMARx/hintatutka
-// @version      9.8.7
+// @version      9.8.8
 // @description  Suomen älykkäin hintatutka (v9.8.6): Reaaliaikainen PC-komponenttihaku, välitön DIY-optimointi, parannettu mobiili- & historiagrid & 81 kauppaa
 // @author       FIMARx
 // @icon         https://raw.githubusercontent.com/FIMARx/hintatutka/main/extension-mv3/icons/icon128.png
@@ -150,7 +150,7 @@
     // =========================================================================
     // CONFIGURATION & THRESHOLDS
     // =========================================================================
-    const SCRIPT_VERSION = '9.8.7';
+    const SCRIPT_VERSION = '9.8.8';
     const BRAND_LOGO_SVG_MINI = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 58 58" width="15" height="15" style="flex-shrink:0;display:block;"><defs><linearGradient id="htMiniBg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#065f46"/><stop offset="100%" stop-color="#0f172a"/></linearGradient><linearGradient id="htMiniBolt" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#a7f3d0"/><stop offset="100%" stop-color="#10b981"/></linearGradient></defs><rect x="1.5" y="1.5" width="55" height="55" rx="14.5" fill="url(#htMiniBg)" stroke="#10b981" stroke-opacity="0.78" stroke-width="2.4"/><circle cx="29" cy="29" r="19.5" fill="none" stroke="#34d399" stroke-opacity="0.36" stroke-width="1.8" stroke-dasharray="4 3"/><path d="M32.5 11L18.5 31H29.5L25.5 47L40.5 26.5H29.5L32.5 11Z" fill="url(#htMiniBolt)"/></svg>`;
     const IS_MV3_EXTENSION = Boolean(
         globalThis.__HT_MV3_EXTENSION__ ||
@@ -2260,6 +2260,9 @@
             .replace(/,\s*(?:ATX-emolevy|mATX-emolevy|Mini-ITX-emolevy|emolevy|musta|valkoinen|WOF|bulk|box)\b/gi, '')
             .replace(/\b(?:4\.7\s*GHz|8-Core|16-Core|24-Core|1\.\d+V)\b/gi, '')
             .replace(/\b(?:AM5|LGA\d{3,4})\b/gi, '')
+            .replace(/\s*-?\s*piirisarjaan\s+(?:pohjautuva|perustuva)\b/gi, '')
+            .replace(/\s*-?\s*piirisarja\b/gi, '')
+            .replace(/\s*-?\s*(?:AIO-)?(?:neste|vesi|ilma)?jäähdyt(?:ys|in)(?:ratkaisu)?\b/gi, '')
             .replace(/\s+/g, ' ')
             .trim();
 
@@ -2268,8 +2271,30 @@
             if (cpuMatch) return cpuMatch[0].trim();
         }
         if (roleKey === 'mobo') {
-            const moboMatch = s.match(/([A-Z0-9\s-]+\b(?:B850|X870E?|B650|Z890|Z790|B760)[A-Z0-9\s-]*)/i);
-            if (moboMatch) return moboMatch[1].replace(/,\s*.*$/, '').trim();
+            const mClean = s
+                .replace(/,\s*(?=AMD|Intel|[A-Z0-9])/i, ' ')
+                .replace(/\s*-?\s*emolevy\b/gi, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+            const brandMatch = mClean.match(/\b(ASUS|MSI|Gigabyte|ASRock|NZXT)\b/i);
+            const chipsetMatch = mClean.match(/\b(?:AMD\s+|Intel\s+)?(X870E?|B850|B650E?|A620|X670E?|Z890|Z790|B760|H610|B550|A520)\b/i);
+            const fullModelMatch = mClean.match(/([A-Z0-9\s-]+\b(?:X870E?|B850|B650E?|A620|X670E?|Z890|Z790|B760|H610|B550)[A-Z0-9\s-]*)/i);
+
+            // If it's a specific named board model (e.g. ASUS TUF GAMING B650-PLUS WIFI)
+            if (fullModelMatch && fullModelMatch[1].trim().length > 18) {
+                return fullModelMatch[1].replace(/,\s*.*$/, '').trim();
+            }
+            // If it's a generic chipset spec (e.g. ASUS, AMD B650 or GIGABYTE, AMD X870)
+            if (brandMatch && chipsetMatch) {
+                const hasAmd = /\bAMD\b/i.test(mClean);
+                const hasIntel = /\bIntel\b/i.test(mClean);
+                const vendor = hasAmd ? 'AMD ' : (hasIntel ? 'Intel ' : '');
+                return `${brandMatch[0]} ${vendor}${chipsetMatch[1]}`.replace(/\s+/g, ' ').trim();
+            }
+            if (fullModelMatch) {
+                return fullModelMatch[1].replace(/,\s*.*$/, '').trim();
+            }
+            return mClean;
         }
         if (roleKey === 'ram') {
             const capMatch = raw.match(/(\d+\s*(?:GB|Gt)|\d+\s*x\s*\d+\s*(?:GB|Gt))/i);
@@ -2312,11 +2337,21 @@
             }
         }
         if (roleKey === 'cooler') {
-            const brandMatch = raw.match(/\b(Noctua|Corsair|NZXT|Arctic|DeepCool|be\s*quiet!?|Thermalright|Lian\s*Li|ASUS)\b/i);
-            const modelMatch = raw.match(/\b([A-Z0-9]{2,}-[A-Z0-9-]{2,})\b/i);
+            const brandMatch = raw.match(/\b(Phanteks|Noctua|Corsair|NZXT|Arctic|DeepCool|be\s*quiet!?|Thermalright|Lian\s*Li|ASUS|MSI|EKWB|Cooler\s*Master|Fractal\s*Design|Endorfy|Valkyrie|Montech|Jonsbo|ID-Cooling|SilverStone)\b/i);
+            const modelCodeMatch = raw.match(/\b([0-9]{2,3}[A-Z0-9-]{2,}|[A-Z0-9]{2,}-[A-Z0-9-]{2,})\b/i);
             const aioMatch = raw.match(/(\d{3})\s*mm\b/i);
-            if (brandMatch && modelMatch) {
-                return `${brandMatch[0]} ${modelMatch[1]}`.trim();
+
+            let cClean = raw
+                .replace(/,\s*\d{3}\s*mm.*$/i, '')
+                .replace(/\s*-?\s*(?:AIO-)?(?:neste|vesi|ilma)?jäähdyt(?:ys|in)(?:ratkaisu)?\b.*$/i, '')
+                .replace(/,\s*(?:musta|valkoinen|black|white)\b.*$/i, '')
+                .trim();
+
+            if (cClean && cClean.length >= 6) {
+                return cClean;
+            }
+            if (brandMatch && modelCodeMatch) {
+                return `${brandMatch[0]} ${modelCodeMatch[1]}`.trim();
             } else if (brandMatch && aioMatch) {
                 return `${brandMatch[0]} ${aioMatch[1]}mm AIO`.trim();
             }
@@ -2649,7 +2684,7 @@
 
             // Task 2: Search Hinta.fi for market lowest price across all Finnish stores
             if (!comp.marketLowest) {
-                const hintaCacheKey = `hinta_comp_v987_${comp.cleanQuery || comp.name}`;
+                const hintaCacheKey = `hinta_comp_v988_${comp.cleanQuery || comp.name}`;
                 let hintaData = getCached(hintaCacheKey);
                 if (!hintaData || !hintaData.lowestPrice || Number(hintaData.lowestPrice) <= 0) {
                     hintaData = null;
@@ -2709,6 +2744,29 @@
                         const m = comp.name.replace(/[®™]/g, '').match(/(?:AMD\s+Ryzen\s+[3579]\s+[0-9A-Z]+|Intel\s+Core\s+(?:Ultra\s+)?[i0-9A-Z-]+)/i);
                         if (m && !queriesToTry.includes(m[0].trim())) {
                             queriesToTry.push(m[0].trim());
+                        }
+                    }
+                    if (comp.roleKey === 'mobo') {
+                        const brand = comp.name.match(/\b(ASUS|MSI|Gigabyte|ASRock|NZXT)\b/i);
+                        const chipset = comp.name.match(/\b(X870E?|B850|B650E?|A620|X670E?|Z890|Z790|B760|H610|B550|A520)\b/i);
+                        if (brand && chipset) {
+                            const qBrandAmdChipset = `${brand[0]} AMD ${chipset[0]}`;
+                            if (!queriesToTry.includes(qBrandAmdChipset)) queriesToTry.push(qBrandAmdChipset);
+                            const qBrandChipset = `${brand[0]} ${chipset[0]}`;
+                            if (!queriesToTry.includes(qBrandChipset)) queriesToTry.push(qBrandChipset);
+                        }
+                    }
+                    if (comp.roleKey === 'cooler') {
+                        const brand = comp.name.match(/\b(Phanteks|Noctua|Corsair|NZXT|Arctic|DeepCool|be\s*quiet!?|Thermalright|Lian\s*Li|ASUS|MSI|EKWB|Cooler\s*Master|Fractal\s*Design|Endorfy|Valkyrie|Montech|Jonsbo)\b/i);
+                        const modelCode = comp.name.match(/\b([0-9]{2,3}[A-Z0-9-]{2,}|[A-Z0-9]{2,}-[A-Z0-9-]{2,})\b/i);
+                        const aio = comp.name.match(/(\d{3})\s*mm\b/i);
+                        if (brand && modelCode) {
+                            const qBrandCode = `${brand[0]} ${modelCode[1]}`;
+                            if (!queriesToTry.includes(qBrandCode)) queriesToTry.push(qBrandCode);
+                        }
+                        if (brand && aio) {
+                            const qBrandAio = `${brand[0]} ${aio[1]}mm`;
+                            if (!queriesToTry.includes(qBrandAio)) queriesToTry.push(qBrandAio);
                         }
                     }
                     const fallbackQ = extractConciseModelQuery(comp.name);

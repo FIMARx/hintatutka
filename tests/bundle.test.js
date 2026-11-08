@@ -588,3 +588,101 @@ test('bundle: cleanComponentQuery and classifyComponentRole handle Finnish units
     const rPsu = HT.classifyComponentRole('750 W', 'Virtalähde (watt)');
     assert.strictEqual(rPsu.roleKey, 'psu');
 });
+
+test('bundle: cleanComponentQuery cleans motherboard chipset fluff (-piirisarjaan pohjautuva)', () => {
+    const { exports: HT } = loadHintaTutka();
+
+    // ASUS AMD B650
+    const qAsusB650 = HT.cleanComponentQuery('ASUS, AMD B650 -piirisarjaan pohjautuva', 'mobo');
+    assert.strictEqual(qAsusB650, 'ASUS AMD B650');
+
+    // GIGABYTE AMD X870
+    const qGbX870 = HT.cleanComponentQuery('GIGABYTE, AMD X870 -piirisarjaan pohjautuva', 'mobo');
+    assert.strictEqual(qGbX870, 'GIGABYTE AMD X870');
+
+    // MSI Intel B760
+    const qMsiB760 = HT.cleanComponentQuery('MSI, Intel B760 -piirisarjaan pohjautuva', 'mobo');
+    assert.strictEqual(qMsiB760, 'MSI Intel B760');
+
+    // Full model preservation
+    const qFull = HT.cleanComponentQuery('ASUS TUF GAMING X870E-PLUS WIFI7', 'mobo');
+    assert.strictEqual(qFull, 'ASUS TUF GAMING X870E-PLUS WIFI7');
+});
+
+test('bundle: cleanComponentQuery cleans cooler model and strips Finnish AIO suffixes', () => {
+    const { exports: HT } = loadHintaTutka();
+
+    // Phanteks Glacier One
+    const qPhanteks = HT.cleanComponentQuery('Phanteks Glacier One 360S25-SE, 360 mm AIO-nestejäähdytys', 'cooler');
+    assert.strictEqual(qPhanteks, 'Phanteks Glacier One 360S25-SE');
+
+    // Thermalright Peerless Assassin
+    const qThermalright = HT.cleanComponentQuery('Thermalright Peerless Assassin 120 SE', 'cooler');
+    assert.strictEqual(qThermalright, 'Thermalright Peerless Assassin 120 SE');
+
+    // Noctua AIO
+    const qNoctua = HT.cleanComponentQuery('Noctua NL-LC1-42, 420 mm AIO-nestejäähdytys', 'cooler');
+    assert.strictEqual(qNoctua, 'Noctua NL-LC1-42');
+
+    // DeepCool
+    const qDeepCool = HT.cleanComponentQuery('DeepCool LS720 SE -nestejäähdytys', 'cooler');
+    assert.strictEqual(qDeepCool, 'DeepCool LS720 SE');
+});
+
+test('bundle: Nexus 5070 and Voidwalker 5070 Ti prebuilts extract all components cleanly', () => {
+    const { exports: HT } = loadHintaTutka();
+
+    const mockNexusHtml = `
+        <h1>Jimm's GtG Nexus 5070, pelitietokone</h1>
+        <div class="product-description">
+            <p>
+                Prosessori: AMD Ryzen 5 9600X, 3,9 / 5,4 GHz<br>
+                Emolevy: ASUS, AMD B650 -piirisarjaan pohjautuva<br>
+                Näytönohjain: ASUS NVIDIA GeForce RTX 5070, 12 GB GDDR7<br>
+                Keskusmuisti: 32 GB (2 x 16 GB) DDR5 4800 MHz<br>
+                Massamuisti: 1 TB M.2 PCIe 4.0 NVMe SSD<br>
+                Prosessorijäähdytys: Thermalright Peerless Assassin 120 SE<br>
+                Kotelo: APNX C1-R, musta<br>
+                Virtalähde: 750 W 80+ Gold, PCIe 5.0 Ready<br>
+                Käyttöjärjestelmä: Windows 11 Home
+            </p>
+        </div>
+    `;
+
+    const nexusInfo = { name: "Jimm's GtG Nexus 5070, pelitietokone", currentPrice: 2299.00 };
+    const nexusData = HT.detectAndExtractBundleData(nexusInfo, null, 2299.00, mockNexusHtml);
+
+    assert.ok(nexusData, 'Nexus 5070 PC build must be detected');
+    assert.strictEqual(nexusData.components.length, 9);
+
+    const mobo = nexusData.components.find(c => c.roleKey === 'mobo');
+    assert.strictEqual(mobo.cleanQuery, 'ASUS AMD B650');
+
+    const cooler = nexusData.components.find(c => c.roleKey === 'cooler');
+    assert.strictEqual(cooler.cleanQuery, 'Thermalright Peerless Assassin 120 SE');
+
+    const mockVoidwalkerHtml = `
+        <h1>Jimm's GtG Voidwalker 5070 Ti, pelitietokone</h1>
+        <div class="product-description">
+            <p>
+                Prosessori: AMD Ryzen 7 9800X3D<br>
+                Emolevy: GIGABYTE, AMD X870 -piirisarjaan pohjautuva<br>
+                Näytönohjain: GIGABYTE NVIDIA GeForce RTX 5070 Ti<br>
+                Prosessorijäähdytys: Phanteks Glacier One 360S25-SE, 360 mm AIO-nestejäähdytys<br>
+                Massamuisti: 2 TB M.2 PCIe 4.0 NVMe SSD
+            </p>
+        </div>
+    `;
+
+    const voidInfo = { name: "Jimm's GtG Voidwalker 5070 Ti, pelitietokone", currentPrice: 3199.00 };
+    const voidData = HT.detectAndExtractBundleData(voidInfo, null, 3199.00, mockVoidwalkerHtml);
+
+    assert.ok(voidData, 'Voidwalker PC build must be detected');
+    assert.strictEqual(voidData.components.length, 5);
+
+    const voidMobo = voidData.components.find(c => c.roleKey === 'mobo');
+    assert.strictEqual(voidMobo.cleanQuery, 'GIGABYTE AMD X870');
+
+    const voidCooler = voidData.components.find(c => c.roleKey === 'cooler');
+    assert.strictEqual(voidCooler.cleanQuery, 'Phanteks Glacier One 360S25-SE');
+});
