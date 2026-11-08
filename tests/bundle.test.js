@@ -145,6 +145,79 @@ test('bundle: evaluatePriceVerdict calculates bundle savings vs standalone parts
     assert.ok(verdict.theme.label.includes('TUOTEPAKETIN SÄÄSTÖ'), `Label must state savings, got ${verdict.theme.label}`);
 });
 
+test('bundle: evaluatePriceVerdict prefers market DIY total over single store price when DIY is cheaper', () => {
+    const { exports: HT } = loadHintaTutka();
+
+    const productInfo = {
+        name: 'Asus TUF GAMING B850-PLUS WIFI + 9800X3D + 32GB DDR5 6000MHz -tuotepaketti',
+        currentPrice: 1139.00,
+        bundleData: {
+            isBundle: true,
+            isPcBuild: false,
+            officialStandaloneTotal: 1188.80,
+            marketDiyTotal: 1116.80, // Gigantti (148.90) + Multitronic (438.90) + Jimm's (529.00)
+            components: [
+                { roleKey: 'mobo', name: 'Asus TUF GAMING B850-PLUS WIFI', marketLowest: 148.90, cheapestStore: 'Gigantti', storePrice: 179.90 },
+                { roleKey: 'cpu', name: 'AMD Ryzen 7 9800X3D', marketLowest: 438.90, cheapestStore: 'Multitronic', storePrice: 479.90 },
+                { roleKey: 'ram', name: 'Patriot 32GB DDR5', marketLowest: 529.00, cheapestStore: "Jimm's", storePrice: 529.00 }
+            ]
+        }
+    };
+
+    const verdict = HT.evaluatePriceVerdict(1139.00, null, 'fi', false, productInfo);
+    assert.strictEqual(verdict.isBundleVerdict, true);
+    assert.strictEqual(verdict.isMarketDiy, true);
+    assert.ok(verdict.diffEur > 20.0, `Expected DIY to be cheaper by ~22.20 €, got diffEur ${verdict.diffEur}`);
+    assert.ok(verdict.theme.label.includes('ERIKSEEN HALVEMPI KILPAILIJOILTA'), `Verdict must state competitors cheaper: ${verdict.theme.label}`);
+});
+
+test('bundle: buildBundleBreakdownHtml renders 3-way financial comparison and competitor store tags', () => {
+    const { exports: HT } = loadHintaTutka();
+
+    const bundleData = {
+        isBundle: true,
+        isPcBuild: false,
+        officialStandaloneTotal: 1188.80,
+        marketDiyTotal: 1116.80,
+        components: [
+            {
+                roleIcon: '🔲',
+                roleLabel: 'Emolevy',
+                name: 'Asus TUF GAMING B850-PLUS WIFI',
+                cleanQuery: 'Asus TUF GAMING B850-PLUS WIFI',
+                marketLowest: 148.90,
+                cheapestStore: 'Gigantti',
+                storePrice: 179.90,
+                hintaUrl: 'https://hinta.fi/5077013/asus-tuf-gaming-b850-plus-wifi',
+                url: 'https://www.jimms.fi/fi/Product/Show/208583'
+            },
+            {
+                roleIcon: '⚡',
+                roleLabel: 'Prosessori',
+                name: 'AMD Ryzen 7 9800X3D',
+                cleanQuery: 'AMD Ryzen 7 9800X3D',
+                marketLowest: 438.90,
+                cheapestStore: 'Multitronic',
+                storePrice: 479.90,
+                hintaUrl: 'https://hinta.fi/5047701/amd-ryzen-7-9800x3d',
+                url: 'https://www.jimms.fi/fi/Product/Show/207359'
+            }
+        ]
+    };
+
+    const productInfo = {
+        name: 'Asus TUF GAMING B850-PLUS WIFI + 9800X3D -tuotepaketti',
+        currentPrice: 1139.00
+    };
+
+    const html = HT.buildBundleBreakdownHtml(bundleData, productInfo, {}, 'fi');
+    assert.ok(html.includes('Halvin DIY (Hinta.fi)'), 'Must include Market DIY header');
+    assert.ok(html.includes('Gigantti'), 'Must include cheapest competitor store Gigantti');
+    assert.ok(html.includes('Multitronic'), 'Must include cheapest competitor store Multitronic');
+    assert.ok(html.includes('148,90'), 'Must include Gigantti price');
+    assert.ok(html.includes('438,90'), 'Must include Multitronic price');
+});
+
 test('bundle: spec compatibility hard conflict prevents false single-motherboard match on multi-part bundle', () => {
     const { exports: HT } = loadHintaTutka();
 

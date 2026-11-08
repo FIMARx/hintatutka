@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         HintaTutka
 // @namespace    https://github.com/FIMARx/hintatutka
-// @version      9.8
-// @description  Suomen älykkäin hintatutka (v9.8): Älykäs PC-kokoonpanojen & tuotepakettien erittely (DIY vs Valmiskone), EU/Saksa ALV-vertailu, Flip-arbitraasi (Tori/Vinted/Huuto) & 81 kauppaa
+// @version      9.8.1
+// @description  Suomen älykkäin hintatutka (v9.8.1): Älykäs PC-kokoonpanojen & tuotepakettien erittely (DIY vs Valmiskone), EU/Saksa ALV-vertailu, Flip-arbitraasi (Tori/Vinted/Huuto) & 81 kauppaa
 // @author       FIMARx
 // @icon         https://raw.githubusercontent.com/FIMARx/hintatutka/main/extension-mv3/icons/icon128.png
 // @homepageURL  https://github.com/FIMARx/hintatutka
@@ -150,7 +150,7 @@
     // =========================================================================
     // CONFIGURATION & THRESHOLDS
     // =========================================================================
-    const SCRIPT_VERSION = '9.8';
+    const SCRIPT_VERSION = '9.8.1';
     const BRAND_LOGO_SVG_MINI = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 58 58" width="15" height="15" style="flex-shrink:0;display:block;"><defs><linearGradient id="htMiniBg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#065f46"/><stop offset="100%" stop-color="#0f172a"/></linearGradient><linearGradient id="htMiniBolt" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#a7f3d0"/><stop offset="100%" stop-color="#10b981"/></linearGradient></defs><rect x="1.5" y="1.5" width="55" height="55" rx="14.5" fill="url(#htMiniBg)" stroke="#10b981" stroke-opacity="0.78" stroke-width="2.4"/><circle cx="29" cy="29" r="19.5" fill="none" stroke="#34d399" stroke-opacity="0.36" stroke-width="1.8" stroke-dasharray="4 3"/><path d="M32.5 11L18.5 31H29.5L25.5 47L40.5 26.5H29.5L32.5 11Z" fill="url(#htMiniBolt)"/></svg>`;
     const IS_MV3_EXTENSION = Boolean(
         globalThis.__HT_MV3_EXTENSION__ ||
@@ -2258,8 +2258,10 @@
             const capMatch = s.match(/(\d+\s*GB|\d+\s*x\s*\d+\s*GB)/i);
             const ddrMatch = s.match(/DDR[45]\s*\d{4}MHz/i);
             const brandMatch = s.match(/^(?:Patriot|Kingston|Corsair|G\.Skill|Crucial|TeamGroup)/i);
+            const seriesMatch = s.match(/\b(Viper\s*Venom|Fury\s*Beast|Vengeance|Trident\s*Z\d?|Ripjaws|T-Force|Dominator)\b/i);
+            const clMatch = s.match(/\bCL\d{2}\b/i);
             if (capMatch && ddrMatch) {
-                return `${brandMatch ? brandMatch[0] + ' ' : ''}${capMatch[1]} ${ddrMatch[0]}`.trim();
+                return `${brandMatch ? brandMatch[0] + ' ' : ''}${seriesMatch ? seriesMatch[0] + ' ' : ''}${capMatch[1]} ${ddrMatch[0]}${clMatch ? ' ' + clMatch[0] : ''}`.trim();
             }
         }
         if (roleKey === 'gpu') {
@@ -2312,6 +2314,8 @@
 
                             const href = linkEl ? linkEl.getAttribute('href') : null;
                             const fullUrl = href ? (href.startsWith('http') ? href : `${location.origin}${href}`) : null;
+                            const pCodeMatch = href ? href.match(/\/Product\/Show\/\d+\/([^/]+)/i) : null;
+                            const partNumber = pCodeMatch ? pCodeMatch[1].trim() : null;
                             const role = classifyComponentRole(rawName, '');
                             const cleanQuery = cleanComponentQuery(rawName, role.roleKey);
 
@@ -2319,9 +2323,13 @@
                                 ...role,
                                 name: rawName,
                                 cleanQuery,
+                                partNumber,
                                 url: fullUrl,
                                 price: null,
-                                priceLabel: null
+                                storePrice: null,
+                                marketLowest: null,
+                                cheapestStore: null,
+                                hintaUrl: null
                             });
                         });
                         break;
@@ -2344,6 +2352,8 @@
 
                     const href = aMatch ? aMatch[1] : null;
                     const fullUrl = href ? (href.startsWith('http') ? href : (typeof location !== 'undefined' ? `${location.origin}${href}` : `https://www.jimms.fi${href}`)) : null;
+                    const pCodeMatch = href ? href.match(/\/Product\/Show\/\d+\/([^/]+)/i) : null;
+                    const partNumber = pCodeMatch ? pCodeMatch[1].trim() : null;
                     const role = classifyComponentRole(rawName, '');
                     const cleanQuery = cleanComponentQuery(rawName, role.roleKey);
 
@@ -2351,9 +2361,13 @@
                         ...role,
                         name: rawName,
                         cleanQuery,
+                        partNumber,
                         url: fullUrl,
                         price: null,
-                        priceLabel: null
+                        storePrice: null,
+                        marketLowest: null,
+                        cheapestStore: null,
+                        hintaUrl: null
                     });
                 });
             }
@@ -2428,38 +2442,144 @@
     async function enrichBundleComponentPrices(bundleData) {
         if (!bundleData || !Array.isArray(bundleData.components)) return bundleData;
         let anyFetched = false;
+
         await Promise.all(bundleData.components.map(async (comp) => {
-            if (!comp.url || comp.price) return;
-            const cacheKey = `comp_price_${comp.url}`;
-            const cached = getCached(cacheKey);
-            if (cached && typeof cached === 'number') {
-                comp.price = cached;
-                comp.source = "Jimm's";
-                return;
+            // Task 1: Fetch store price from current retailer component page if url exists
+            if (comp.url && !comp.storePrice) {
+                const storeCacheKey = `comp_store_${comp.url}`;
+                let storePrice = getCached(storeCacheKey);
+                if (!storePrice) {
+                    try {
+                        const { text: html } = await gmFetch(comp.url, 'text/html,application/xhtml+xml', 4000);
+                        const pMatch = html.match(/property="product:price:amount"\s+content="([0-9.]+)"/i) ||
+                                       html.match(/itemprop="price"\s+content="([0-9.]+)"/i) ||
+                                       html.match(/class="[^"]*price__amount[^"]*">\s*([0-9\s,.]+)/i);
+                        if (pMatch) {
+                            const parsed = parsePriceNumber(pMatch[1]);
+                            if (parsed && parsed > 0) {
+                                storePrice = parsed;
+                                setCached(storeCacheKey, parsed);
+                            }
+                        }
+                    } catch (_) {}
+                }
+                if (storePrice) {
+                    comp.storePrice = storePrice;
+                    comp.price = storePrice;
+                    anyFetched = true;
+                }
             }
-            try {
-                const { text: html } = await gmFetch(comp.url, 'text/html,application/xhtml+xml', 4000);
-                const pMatch = html.match(/property="product:price:amount"\s+content="([0-9.]+)"/i) ||
-                               html.match(/itemprop="price"\s+content="([0-9.]+)"/i) ||
-                               html.match(/class="[^"]*price__amount[^"]*">\s*([0-9\s,.]+)/i);
-                if (pMatch) {
-                    const parsed = parsePriceNumber(pMatch[1]);
-                    if (parsed && parsed > 0) {
-                        comp.price = parsed;
-                        comp.source = "Jimm's";
-                        setCached(cacheKey, parsed);
-                        anyFetched = true;
+
+            // Task 2: Search Hinta.fi for market lowest price across all Finnish stores
+            if (!comp.marketLowest) {
+                const hintaCacheKey = `hinta_comp_${comp.cleanQuery || comp.name}`;
+                let hintaData = getCached(hintaCacheKey);
+                if (!hintaData) {
+                    const queriesToTry = [];
+                    if (comp.cleanQuery) queriesToTry.push(comp.cleanQuery);
+                    if (comp.partNumber && comp.partNumber.length > 5 && !queriesToTry.includes(comp.partNumber)) {
+                        queriesToTry.push(comp.partNumber);
+                    }
+                    const fallbackQ = extractConciseModelQuery(comp.name);
+                    if (fallbackQ && !queriesToTry.includes(fallbackQ)) queriesToTry.push(fallbackQ);
+
+                    for (const q of queriesToTry) {
+                        try {
+                            const searchUrl = `https://hinta.fi/haku?q=${encodeURIComponent(q)}`;
+                            const { text: html, finalUrl } = await gmFetch(searchUrl, 'text/html,application/xhtml+xml', 5000);
+                            if (html) {
+                                const isDirect = html.includes('id="hv-oft"') || html.includes('class="hv-prh"');
+                                if (isDirect) {
+                                    const parser = new DOMParser();
+                                    const doc = parser.parseFromString(html, 'text/html');
+                                    const prod = parseHintaProductDoc(doc, finalUrl);
+                                    if (prod && prod.lowestPrice) {
+                                        hintaData = {
+                                            lowestPrice: prod.lowestPrice,
+                                            lowestDelivered: prod.lowestDelivered || prod.lowestPrice,
+                                            url: finalUrl,
+                                            cheapestStore: prod.offers?.[0]?.store || null,
+                                            storeCount: prod.offers?.length || 1
+                                        };
+                                        break;
+                                    }
+                                } else {
+                                    const parser = new DOMParser();
+                                    const doc = parser.parseFromString(html, 'text/html');
+                                    const rows = doc.querySelectorAll('table.hv-prt tbody tr.hv-prt-tr');
+                                    let bestCand = null;
+                                    let bestScore = -999;
+
+                                    rows.forEach((row) => {
+                                        const rawPrice = row.getAttribute('data-price') || '';
+                                        const rawTotal = row.getAttribute('data-price-total') || '';
+                                        const p = parsePriceNumber(rawPrice);
+                                        const linkEl = row.querySelector('a.hv-prt_product-a');
+                                        const nameEl = row.querySelector('.hv--name');
+                                        const candName = nameEl ? nameEl.textContent.trim() : '';
+                                        const href = linkEl ? linkEl.getAttribute('href') : '';
+
+                                        if (p && candName && href) {
+                                            const candUrl = href.startsWith('http') ? href : `https://hinta.fi${href}`;
+                                            const score = scoreSearchCandidate({ name: candName, price: p }, comp.name, null);
+                                            const compat = evaluateSpecCompatibility(comp.name, candName);
+                                            if (!compat.hasHardConflict && score > bestScore) {
+                                                bestScore = score;
+                                                bestCand = {
+                                                    lowestPrice: p,
+                                                    lowestDelivered: parsePriceNumber(rawTotal) || p,
+                                                    url: candUrl,
+                                                    name: candName
+                                                };
+                                            }
+                                        }
+                                    });
+
+                                    if (bestCand && bestScore > 10) {
+                                        try {
+                                            const { text: prodHtml } = await gmFetch(bestCand.url, 'text/html,application/xhtml+xml', 3500);
+                                            const prodDoc = parser.parseFromString(prodHtml, 'text/html');
+                                            const prod = parseHintaProductDoc(prodDoc, bestCand.url);
+                                            bestCand.cheapestStore = prod.offers?.[0]?.store || null;
+                                            bestCand.storeCount = prod.offers?.length || 1;
+                                            if (prod.lowestPrice) bestCand.lowestPrice = prod.lowestPrice;
+                                        } catch (_) {}
+                                        hintaData = bestCand;
+                                        break;
+                                    }
+                                }
+                            }
+                        } catch (_) {}
+                    }
+                    if (hintaData) {
+                        setCached(hintaCacheKey, hintaData);
                     }
                 }
-            } catch (_) {}
+                if (hintaData) {
+                    comp.marketLowest = hintaData.lowestPrice;
+                    comp.marketLowestDelivered = hintaData.lowestDelivered || hintaData.lowestPrice;
+                    comp.hintaUrl = hintaData.url;
+                    comp.cheapestStore = hintaData.cheapestStore || null;
+                    comp.storeCount = hintaData.storeCount || null;
+                    anyFetched = true;
+                }
+            }
         }));
 
-        if (anyFetched || !bundleData.computedStandaloneTotal) {
-            const sum = bundleData.components.reduce((acc, c) => acc + (c.price || 0), 0);
-            if (sum > 0) {
-                bundleData.computedStandaloneTotal = Number(sum.toFixed(2));
+        // Compute Market DIY Total (cheapest stores across Finland) and Store Separate Total
+        const marketSum = bundleData.components.reduce((acc, c) => acc + (c.marketLowest || c.storePrice || c.price || 0), 0);
+        if (marketSum > 0) {
+            bundleData.marketDiyTotal = Number(marketSum.toFixed(2));
+        }
+
+        const storeSum = bundleData.components.reduce((acc, c) => acc + (c.storePrice || c.price || 0), 0);
+        if (storeSum > 0) {
+            bundleData.storeSeparateTotal = Number(storeSum.toFixed(2));
+            if (!bundleData.officialStandaloneTotal) {
+                bundleData.computedStandaloneTotal = bundleData.storeSeparateTotal;
             }
         }
+
         return bundleData;
     }
 
@@ -2468,33 +2588,61 @@
             return `<div class="ufhpc-empty">${lang === 'en' ? 'No component specs found' : 'Ei komponentteja löydetty'}</div>`;
         }
 
-        const standalone = bundleData.officialStandaloneTotal || bundleData.computedStandaloneTotal;
         const bundlePrice = productInfo.currentPrice;
-        let summaryHtml = '';
-        if (standalone && bundlePrice) {
-            const diff = bundlePrice - standalone;
-            const isSave = diff < -1;
-            const isPricier = diff > 1;
-            const absDiff = Math.abs(diff);
-            const diffPct = ((absDiff / standalone) * 100).toFixed(1);
-            const badgeClass = isSave ? 'is-save' : (isPricier ? 'is-pricier' : '');
-            const badgeText = isSave
-                ? (lang === 'en' ? `🔥 SAVE -${formatEur(absDiff, 0)} (-${diffPct}%)` : `🔥 SÄÄSTÄ -${formatEur(absDiff, 0)} (-${diffPct}%)`)
-                : (isPricier
-                    ? (lang === 'en' ? `⚠️ +${formatEur(absDiff, 0)} (+${diffPct}%)` : `⚠️ KALLIIMPI +${formatEur(absDiff, 0)} (+${diffPct}%)`)
-                    : (lang === 'en' ? '⚖️ SAME PRICE' : '⚖️ SAMA HINTA'));
+        const marketDiy = bundleData.marketDiyTotal;
+        const storeSeparate = bundleData.officialStandaloneTotal || bundleData.storeSeparateTotal || bundleData.computedStandaloneTotal;
+        const storeName = detectCurrentStore().name || (lang === 'en' ? 'This store' : 'Tämä kauppa');
 
-            const desc = isSave
-                ? (lang === 'en'
-                    ? `Bundle is ${formatEur(absDiff)} cheaper than buying components separately.`
-                    : `Tuotepaketti on ${formatEur(absDiff)} edullisempi kuin osien ostaminen erikseen.`)
-                : (isPricier
-                    ? (lang === 'en'
-                        ? `Buying components separately saves ${formatEur(absDiff)}!`
-                        : `Ostamalla osat erikseen säästät ${formatEur(absDiff)}!`)
-                    : (lang === 'en'
-                        ? 'Bundle price equals the sum of separate components.'
-                        : 'Paketin hinta vastaa osien yhteenlaskettua hintaa.'));
+        let summaryHtml = '';
+        if (bundlePrice && (marketDiy || storeSeparate)) {
+            const diyDiff = marketDiy ? bundlePrice - marketDiy : null;
+            const storeDiff = storeSeparate ? bundlePrice - storeSeparate : null;
+
+            const isDiyCheaper = diyDiff !== null && diyDiff > 1.5;
+            const isBundleCheaperThanDiy = diyDiff !== null && diyDiff < -1.5;
+            const isBundleCheaperThanStore = storeDiff !== null && storeDiff < -1.5;
+
+            let badgeClass = 'is-save';
+            let badgeText = '';
+            let verdictHeadline = '';
+            let verdictExplanation = '';
+
+            if (isDiyCheaper) {
+                badgeClass = 'is-pricier';
+                badgeText = lang === 'en'
+                    ? `⚠️ DIY CHEAPER (+${formatEur(diyDiff, 0)})`
+                    : `⚠️ ERIKSEEN HALVEMPI (+${formatEur(diyDiff, 0)})`;
+                verdictHeadline = lang === 'en' ? 'Competitor parts save money!' : 'Osat halvempia eri kaupoista!';
+                verdictExplanation = lang === 'en'
+                    ? `Buying components individually from cheapest Finnish stores (${formatEur(marketDiy)}) saves ${formatEur(diyDiff)} compared to this package (${formatEur(bundlePrice)}).`
+                    : `Ostamalla osat erikseen markkinoiden halvimmista kaupoista (${formatEur(marketDiy)}) säästät ${formatEur(diyDiff)} verrattuna tähän pakettiin (${formatEur(bundlePrice)}).`;
+            } else if (isBundleCheaperThanDiy) {
+                badgeClass = 'is-save';
+                const s = Math.abs(diyDiff);
+                const pct = ((s / marketDiy) * 100).toFixed(1);
+                badgeText = lang === 'en'
+                    ? `🔥 TRUE MARKET SAVINGS (-${formatEur(s, 0)} / -${pct}%)`
+                    : `🔥 MARKKINASÄÄSTÖ (-${formatEur(s, 0)} / -${pct}%)`;
+                verdictHeadline = lang === 'en' ? 'Cheaper than cheapest DIY!' : 'Halvempi kuin halvin DIY!';
+                verdictExplanation = lang === 'en'
+                    ? `This bundle (${formatEur(bundlePrice)}) is ${formatEur(s)} cheaper than buying parts from the lowest-priced Finnish stores combined (${formatEur(marketDiy)}).`
+                    : `Tämä tuotepaketti (${formatEur(bundlePrice)}) on ${formatEur(s)} halvempi kuin osien ostaminen Suomen halvimmista kaupoista (${formatEur(marketDiy)}).`;
+            } else if (isBundleCheaperThanStore) {
+                badgeClass = 'is-save';
+                const s = Math.abs(storeDiff);
+                const pct = ((s / storeSeparate) * 100).toFixed(1);
+                badgeText = lang === 'en'
+                    ? `🔥 BUNDLE SAVINGS (-${formatEur(s, 0)} / -${pct}%)`
+                    : `🔥 TUOTEPAKETIN SÄÄSTÖ (-${formatEur(s, 0)} / -${pct}%)`;
+                verdictHeadline = lang === 'en' ? 'Package deal savings' : 'Pakettialennus';
+                verdictExplanation = lang === 'en'
+                    ? `Bundle is ${formatEur(s)} cheaper than this store's separate parts total (${formatEur(storeSeparate)}).`
+                    : `Tuotepaketti on ${formatEur(s)} edullisempi kuin tämän kaupan osat erikseen (${formatEur(storeSeparate)}).`;
+            } else {
+                badgeText = lang === 'en' ? '⚖️ SIMILAR PRICE' : '⚖️ HINNAT LÄHES SAMAT';
+                verdictHeadline = lang === 'en' ? 'Similar cost' : 'Sama hintataso';
+                verdictExplanation = lang === 'en' ? 'Bundle price matches buying individual parts.' : 'Paketin hinta vastaa erillisosien yhteenlaskettua hintaa.';
+            }
 
             summaryHtml = `
                 <div class="ufhpc-bundle-summary">
@@ -2503,30 +2651,67 @@
                         <span class="ufhpc-bundle-savings-badge ${badgeClass}">${badgeText}</span>
                     </div>
                     <div class="ufhpc-bundle-summary-math">
-                        <strong>${lang === 'en' ? 'Package' : 'Paketti'}:</strong> ${formatEur(bundlePrice)} • 
-                        <strong>${lang === 'en' ? 'Separate' : 'Erikseen'}:</strong> ${formatEur(standalone)}
-                        <br>${escapeHtml(desc)}
+                        <div class="ufhpc-bundle-grid">
+                            <div class="ufhpc-bgrid-item">
+                                <span class="ufhpc-bgrid-lbl">${lang === 'en' ? 'Package here' : 'Paketti täällä'}</span>
+                                <strong class="ufhpc-bgrid-val is-pkg">${formatEur(bundlePrice)}</strong>
+                            </div>
+                            ${marketDiy ? `
+                                <div class="ufhpc-bgrid-item">
+                                    <span class="ufhpc-bgrid-lbl">${lang === 'en' ? 'Market DIY (Hinta.fi)' : 'Halvin DIY (Hinta.fi)'}</span>
+                                    <strong class="ufhpc-bgrid-val ${isDiyCheaper ? 'is-diy-better' : ''}">${formatEur(marketDiy)}</strong>
+                                </div>
+                            ` : ''}
+                            ${storeSeparate ? `
+                                <div class="ufhpc-bgrid-item">
+                                    <span class="ufhpc-bgrid-lbl">${lang === 'en' ? 'Store parts sum' : 'Tämä kauppa erikseen'}</span>
+                                    <strong class="ufhpc-bgrid-val is-store">${formatEur(storeSeparate)}</strong>
+                                </div>
+                            ` : ''}
+                        </div>
+                        <div class="ufhpc-bundle-verdict-note">
+                            <strong>${escapeHtml(verdictHeadline)}:</strong> ${escapeHtml(verdictExplanation)}
+                        </div>
                     </div>
                 </div>
             `;
         }
 
         const rowsHtml = bundleData.components.map((comp) => {
-            const hintaSearchUrl = `https://hinta.fi/haku?q=${encodeURIComponent(comp.cleanQuery || comp.name)}`;
-            const storeSearchUrl = `https://www.jimms.fi/fi/Product/Search?q=${encodeURIComponent(comp.cleanQuery || comp.name)}`;
-            const priceStr = comp.price ? formatEur(comp.price) : '';
+            const hintaSearchUrl = comp.hintaUrl || `https://hinta.fi/haku?q=${encodeURIComponent(comp.cleanQuery || comp.name)}`;
+            const storeSearchUrl = comp.url || `https://www.jimms.fi/fi/Product/Search?q=${encodeURIComponent(comp.cleanQuery || comp.name)}`;
+
+            const marketPriceStr = comp.marketLowest ? formatEur(comp.marketLowest) : null;
+            const storePriceStr = comp.storePrice ? formatEur(comp.storePrice) : (comp.price ? formatEur(comp.price) : null);
 
             return `
                 <div class="ufhpc-component-card">
                     <div class="ufhpc-component-top">
                         <span class="ufhpc-component-role">${comp.roleIcon} ${escapeHtml(comp.roleLabel)}</span>
-                        ${priceStr ? `<span class="ufhpc-component-price">${priceStr}</span>` : ''}
+                        <div class="ufhpc-component-price-stack">
+                            ${marketPriceStr ? `
+                                <span class="ufhpc-comp-market-price" title="${escapeHtml(comp.cheapestStore ? `Markkinoiden halvin: ${comp.cheapestStore}` : 'Halvin hinta Hinta.fi')}">
+                                    ${marketPriceStr}
+                                    ${comp.cheapestStore ? `<small class="ufhpc-comp-store">(${escapeHtml(comp.cheapestStore)})</small>` : ''}
+                                </span>
+                            ` : ''}
+                            ${storePriceStr && storePriceStr !== marketPriceStr ? `
+                                <span class="ufhpc-comp-store-sub" title="${escapeHtml(storeName)} erillishinta">
+                                    <small>${escapeHtml(storeName)}:</small> ${storePriceStr}
+                                </span>
+                            ` : ''}
+                        </div>
                     </div>
                     <div class="ufhpc-component-name">${escapeHtml(comp.name)}</div>
                     <div class="ufhpc-component-links">
-                        ${comp.url ? `<a class="ufhpc-comp-link-btn" href="${escapeHtml(comp.url)}" target="_blank" rel="noopener noreferrer">Tuotesivu ↗</a>` : ''}
-                        <a class="ufhpc-comp-link-btn is-hinta" href="${escapeHtml(hintaSearchUrl)}" target="_blank" rel="noopener noreferrer">Hinta.fi ↗</a>
-                        <a class="ufhpc-comp-link-btn" href="${escapeHtml(storeSearchUrl)}" target="_blank" rel="noopener noreferrer">Haku ↗</a>
+                        <a class="ufhpc-comp-link-btn is-hinta" href="${escapeHtml(hintaSearchUrl)}" target="_blank" rel="noopener noreferrer">
+                            Hinta.fi ${comp.marketLowest ? `(${formatEur(comp.marketLowest, 0)})` : ''} ↗
+                        </a>
+                        ${comp.url ? `
+                            <a class="ufhpc-comp-link-btn" href="${escapeHtml(comp.url)}" target="_blank" rel="noopener noreferrer">
+                                ${escapeHtml(storeName)} ${comp.storePrice ? `(${formatEur(comp.storePrice, 0)})` : ''} ↗
+                            </a>
+                        ` : ''}
                     </div>
                 </div>
             `;
@@ -2535,8 +2720,8 @@
         const tipHtml = `
             <div class="ufhpc-bonus-box" style="margin-top:4px;">
                 <span>💡 <strong>${lang === 'en' ? 'DIY Builder Tip:' : 'Kasausvinkki:'}</strong> ${lang === 'en'
-                    ? 'Click "Hinta.fi" on any component to check today\'s lowest price across competing stores.'
-                    : 'Klikkaa "Hinta.fi" minkä tahansa osan kohdalta nähdäksesi päivän halvimman markkinahinnan.'}</span>
+                    ? 'Click "Hinta.fi" on any component to inspect all competing stores and shipping fees.'
+                    : 'Klikkaa "Hinta.fi" minkä tahansa osan kohdalta nähdäksesi kaikki kilpailevat kaupat ja toimituskulut.'}</span>
             </div>
         `;
 
@@ -6192,10 +6377,14 @@
         // Check if item is a Component Bundle or Prebuilt PC
         if (productInfo?.bundleData) {
             const bData = productInfo.bundleData;
-            const standalone = bData.officialStandaloneTotal || bData.computedStandaloneTotal;
-            if (standalone && currentPrice) {
-                const diffEur = currentPrice - standalone;
-                const diffPct = (diffEur / standalone) * 100;
+            const diyTotal = bData.marketDiyTotal;
+            const storeStandalone = bData.officialStandaloneTotal || bData.computedStandaloneTotal || bData.storeSeparateTotal;
+            const refTotal = diyTotal || storeStandalone;
+            const isMarketDiy = Boolean(diyTotal);
+
+            if (refTotal && currentPrice) {
+                const diffEur = currentPrice - refTotal;
+                const diffPct = (diffEur / refTotal) * 100;
                 if (diffEur <= -2.0) {
                     const saveEur = Math.abs(diffEur);
                     return {
@@ -6205,14 +6394,19 @@
                             label: lang === 'en'
                                 ? `BUNDLE SAVINGS (-${formatEur(saveEur, 0)} / ${diffPct.toFixed(1)}%)`
                                 : `TUOTEPAKETIN SÄÄSTÖ (-${formatEur(saveEur, 0)} / ${diffPct.toFixed(1)}%)`,
-                            sublabel: lang === 'en'
-                                ? `Cheaper than buying parts separately (Separate total: ${formatEur(standalone)})`
-                                : `Edullisempi kuin osat erikseen (Osat erikseen: ${formatEur(standalone)})`
+                            sublabel: isMarketDiy
+                                ? (lang === 'en'
+                                    ? `Cheaper than buying cheapest parts across stores (${formatEur(refTotal)})`
+                                    : `Edullisempi kuin osat markkinoiden halvimmista kaupoista (${formatEur(refTotal)})`)
+                                : (lang === 'en'
+                                    ? `Cheaper than buying parts separately (${formatEur(refTotal)})`
+                                    : `Edullisempi kuin osat erikseen tässä kaupassa (${formatEur(refTotal)})`)
                         },
                         diffEur,
                         diffPct,
                         isBundleVerdict: true,
-                        standaloneTotal: standalone
+                        standaloneTotal: refTotal,
+                        isMarketDiy
                     };
                 } else if (diffEur >= 2.0) {
                     return {
@@ -6220,16 +6414,21 @@
                             ...themes.red,
                             icon: '⚠️',
                             label: lang === 'en'
-                                ? `PARTS CHEAPER SEPARATELY (+${formatEur(diffEur, 0)} / +${diffPct.toFixed(1)}%)`
-                                : `ERIKSEEN OSTETTUNA HALVEMPI (+${formatEur(diffEur, 0)} / +${diffPct.toFixed(1)}%)`,
-                            sublabel: lang === 'en'
-                                ? `Parts cost less if purchased separately (Separate total: ${formatEur(standalone)})`
-                                : `Osat maksavat vähemmän erikseen ostettuna (Osat erikseen: ${formatEur(standalone)})`
+                                ? (isMarketDiy ? `DIY CHEAPER ACROSS STORES (+${formatEur(diffEur, 0)} / +${diffPct.toFixed(1)}%)` : `PARTS CHEAPER SEPARATELY (+${formatEur(diffEur, 0)} / +${diffPct.toFixed(1)}%)`)
+                                : (isMarketDiy ? `ERIKSEEN HALVEMPI KILPAILIJOILTA (+${formatEur(diffEur, 0)} / +${diffPct.toFixed(1)}%)` : `ERIKSEEN OSTETTUNA HALVEMPI (+${formatEur(diffEur, 0)} / +${diffPct.toFixed(1)}%)`),
+                            sublabel: isMarketDiy
+                                ? (lang === 'en'
+                                    ? `Buying parts from cheapest stores saves ${formatEur(diffEur)} (DIY total: ${formatEur(refTotal)})`
+                                    : `Ostamalla osat eri kaupoista säästät ${formatEur(diffEur)} (Halvin DIY: ${formatEur(refTotal)})`)
+                                : (lang === 'en'
+                                    ? `Parts cost less if purchased separately (${formatEur(refTotal)})`
+                                    : `Osat maksavat vähemmän erikseen ostettuna (${formatEur(refTotal)})`)
                         },
                         diffEur,
                         diffPct,
                         isBundleVerdict: true,
-                        standaloneTotal: standalone
+                        standaloneTotal: refTotal,
+                        isMarketDiy
                     };
                 } else {
                     return {
@@ -6237,14 +6436,15 @@
                             ...themes.yellow,
                             icon: '⚖️',
                             label: lang === 'en' ? 'SAME PRICE AS SEPARATE PARTS' : 'SAMA HINTA KUIN ERIKSEEN',
-                            sublabel: lang === 'en'
-                                ? `Bundle price equals parts purchased separately (${formatEur(standalone)})`
-                                : `Paketin hinta vastaa osien summaa erikseen ostettuna (${formatEur(standalone)})`
+                            sublabel: isMarketDiy
+                                ? (lang === 'en' ? `Matches market DIY parts total (${formatEur(refTotal)})` : `Vastaa osien hintaa erikseen markkinoilta (${formatEur(refTotal)})`)
+                                : (lang === 'en' ? `Bundle price equals parts purchased separately (${formatEur(refTotal)})` : `Paketin hinta vastaa osien summaa erikseen ostettuna (${formatEur(refTotal)})`)
                         },
                         diffEur,
                         diffPct,
                         isBundleVerdict: true,
-                        standaloneTotal: standalone
+                        standaloneTotal: refTotal,
+                        isMarketDiy
                     };
                 }
             } else if (bData.isPcBuild) {
@@ -8773,6 +8973,74 @@
                 color: #94a3b8;
                 line-height: 1.4;
             }
+            .ufhpc-bundle-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+                gap: 5px;
+                margin-top: 4px;
+                margin-bottom: 5px;
+            }
+            .ufhpc-bgrid-item {
+                background: rgba(255, 255, 255, 0.04);
+                border: 1px solid rgba(255, 255, 255, 0.06);
+                border-radius: 8px;
+                padding: 4px 7px;
+                display: flex;
+                flex-direction: column;
+                gap: 1px;
+            }
+            .ufhpc-bgrid-lbl {
+                font-size: 8.5px;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.04em;
+                color: #94a3b8;
+            }
+            .ufhpc-bgrid-val {
+                font-size: 12.5px;
+                font-weight: 800;
+                color: #f8fafc;
+                font-variant-numeric: tabular-nums;
+            }
+            .ufhpc-bgrid-val.is-pkg {
+                color: #38bdf8;
+            }
+            .ufhpc-bgrid-val.is-diy-better {
+                color: #34d399;
+            }
+            .ufhpc-bgrid-val.is-store {
+                color: #cbd5e1;
+            }
+            .ufhpc-bundle-verdict-note {
+                font-size: 10px;
+                color: #cbd5e1;
+                line-height: 1.35;
+                border-top: 1px solid rgba(255, 255, 255, 0.06);
+                padding-top: 4px;
+            }
+            .ufhpc-component-price-stack {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-end;
+                gap: 1px;
+            }
+            .ufhpc-comp-market-price {
+                font-size: 12.5px;
+                font-weight: 800;
+                color: #34d399;
+                font-variant-numeric: tabular-nums;
+            }
+            .ufhpc-comp-store {
+                font-size: 9px;
+                font-weight: 700;
+                color: #38bdf8;
+                margin-left: 3px;
+            }
+            .ufhpc-comp-store-sub {
+                font-size: 9.5px;
+                color: #94a3b8;
+                font-variant-numeric: tabular-nums;
+            }
             .ufhpc-components-list {
                 display: flex;
                 flex-direction: column;
@@ -9721,18 +9989,36 @@
 
             if (productInfo.bundleData) {
                 const bData = productInfo.bundleData;
-                const standalone = bData.officialStandaloneTotal || bData.computedStandaloneTotal;
+                const marketDiy = bData.marketDiyTotal;
+                const storeSeparate = bData.officialStandaloneTotal || bData.computedStandaloneTotal || bData.storeSeparateTotal;
+
                 thisStoreLabel = bData.isPcBuild ? (this.lang === 'en' ? 'THIS PC BUILD' : 'KOKO KONE') : (this.lang === 'en' ? 'THIS BUNDLE' : 'TÄMÄ PAKETTI');
                 thisStoreSub = `${bData.components.length} ${this.lang === 'en' ? 'components' : 'osaa'}`;
-                rightMetricLabel = this.lang === 'en' ? 'PARTS SEPARATELY' : 'OSAT ERIKSEEN';
-                if (standalone) {
-                    rightMetricValue = formatEur(standalone);
+
+                if (marketDiy) {
+                    rightMetricLabel = this.lang === 'en' ? 'CHEAPEST DIY (HINTA.FI)' : 'HALVIN DIY (HINTA.FI)';
+                    rightMetricValue = formatEur(marketDiy);
                     if (productInfo.currentPrice) {
-                        const sDiff = productInfo.currentPrice - standalone;
+                        const diyDiff = productInfo.currentPrice - marketDiy;
+                        if (diyDiff > 1.5) {
+                            rightMetricSub = this.lang === 'en' ? `⚠️ DIY saves ${formatEur(diyDiff, 0)}` : `⚠️ DIY säästää ${formatEur(diyDiff, 0)}`;
+                        } else if (diyDiff < -1.5) {
+                            rightMetricSub = this.lang === 'en' ? `🔥 Bundle saves ${formatEur(Math.abs(diyDiff), 0)}` : `🔥 Paketti säästää ${formatEur(Math.abs(diyDiff), 0)}`;
+                        } else {
+                            rightMetricSub = this.lang === 'en' ? '⚖️ Same price' : '⚖️ Sama hinta';
+                        }
+                    } else {
+                        rightMetricSub = this.lang === 'en' ? 'Sum across stores' : 'Summa eri kaupoista';
+                    }
+                } else if (storeSeparate) {
+                    rightMetricLabel = this.lang === 'en' ? 'PARTS SEPARATELY' : 'OSAT ERIKSEEN';
+                    rightMetricValue = formatEur(storeSeparate);
+                    if (productInfo.currentPrice) {
+                        const sDiff = productInfo.currentPrice - storeSeparate;
                         if (sDiff < -1) {
-                            rightMetricSub = this.lang === 'en' ? `🔥 Save -${formatEur(Math.abs(sDiff), 0)} (-${((Math.abs(sDiff) / standalone) * 100).toFixed(1)}%)` : `🔥 Säästö -${formatEur(Math.abs(sDiff), 0)} (-${((Math.abs(sDiff) / standalone) * 100).toFixed(1)}%)`;
+                            rightMetricSub = this.lang === 'en' ? `🔥 Save -${formatEur(Math.abs(sDiff), 0)} (-${((Math.abs(sDiff) / storeSeparate) * 100).toFixed(1)}%)` : `🔥 Säästö -${formatEur(Math.abs(sDiff), 0)} (-${((Math.abs(sDiff) / storeSeparate) * 100).toFixed(1)}%)`;
                         } else if (sDiff > 1) {
-                            rightMetricSub = this.lang === 'en' ? `⚠️ +${formatEur(sDiff, 0)} (+${((sDiff / standalone) * 100).toFixed(1)}%)` : `⚠️ Kalliimpi +${formatEur(sDiff, 0)} (+${((sDiff / standalone) * 100).toFixed(1)}%)`;
+                            rightMetricSub = this.lang === 'en' ? `⚠️ +${formatEur(sDiff, 0)} (+${((sDiff / storeSeparate) * 100).toFixed(1)}%)` : `⚠️ Kalliimpi +${formatEur(sDiff, 0)} (+${((sDiff / storeSeparate) * 100).toFixed(1)}%)`;
                         } else {
                             rightMetricSub = this.lang === 'en' ? '⚖️ Same price' : '⚖️ Sama hinta';
                         }
@@ -9740,6 +10026,7 @@
                         rightMetricSub = this.lang === 'en' ? 'Standalone total' : 'Osien kokonaishinta';
                     }
                 } else {
+                    rightMetricLabel = this.lang === 'en' ? 'PARTS SEPARATELY' : 'OSAT ERIKSEEN';
                     rightMetricValue = '—';
                     rightMetricSub = this.lang === 'en' ? `${bData.components.length} components` : `${bData.components.length} komponenttia`;
                 }
