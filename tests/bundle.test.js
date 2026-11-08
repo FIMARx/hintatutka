@@ -686,3 +686,62 @@ test('bundle: Nexus 5070 and Voidwalker 5070 Ti prebuilts extract all components
     const voidCooler = voidData.components.find(c => c.roleKey === 'cooler');
     assert.strictEqual(voidCooler.cleanQuery, 'Phanteks Glacier One 360S25-SE');
 });
+
+test('bundle: Jimm\'s GtG PCs with single <p> containing <br> and nav menu items do not squash components or false match \'Osa 6\'', () => {
+    const { exports: HT } = loadHintaTutka();
+
+    const mockHtml = `
+        <header>
+            <nav>
+                <ul>
+                    <li><a href="/fi/Pages/Oppaat/abc-6">Osa 6: Pelitietokone vai perustietokone?</a></li>
+                </ul>
+            </nav>
+        </header>
+        <main>
+            <h1>Jimm's GtG Voidwalker 5070 Ti, pelitietokone</h1>
+            <h2>Pelitietokoneen tekniset tiedot</h2>
+            <p><strong>Prosessori</strong>: AMD Ryzen 7 9850X3D, 4,7 / 5,6 GHz<br><strong>Emolevy</strong>: GIGABYTE, AMD X870 -piirisarjaan pohjautuva<br><strong>N&auml;yt&ouml;nohjain</strong>: PNY NVIDIA GeForce RTX 5070 Ti, 16 GB GDDR7<br><strong>Keskusmuisti</strong>: 32 GB (2 x 16 GB) DDR5 5600 MHz<br><strong>Massamuisti</strong>: 2 TB M.2 PCIe 4.0 NVMe SSD<br><strong>Prosessorij&auml;&auml;hdytys</strong>: Phanteks Glacier One 360S25-SE, 360 mm AIO-nestej&auml;&auml;hdytys<br><strong>Kotelo</strong>: Phanteks EX5 Plus<br><strong>Virtal&auml;hde</strong>: 850 W 80+ Gold, PCIe 5.0 Ready<br><strong>K&auml;ytt&ouml;j&auml;rjestelm&auml;</strong>: Windows 11 Home<br><strong>Muuta</strong>: Wi-Fi &amp; Bluetooth<br><strong>Kokoonpanotakuu</strong>: 3 vuotta<br><strong>Tuotekoodi</strong>: JIMMS-A-N-GTG-OBF-57T3</p>
+        </main>
+    `;
+
+    const mockDoc = {
+        title: "Jimm's GtG Voidwalker 5070 Ti, pelitietokone",
+        body: { innerHTML: mockHtml, textContent: mockHtml.replace(/<[^>]+>/g, ' ') },
+        querySelector: (sel) => {
+            if (sel === 'main' || sel === 'body') return { innerHTML: mockHtml, innerText: mockHtml.replace(/<[^>]+>/g, ' ') };
+            return null;
+        },
+        querySelectorAll: (sel) => {
+            if (sel === 'tr' || sel === 'dt') return [];
+            return [];
+        }
+    };
+
+    const info = { name: "Jimm's GtG Voidwalker 5070 Ti, pelitietokone", currentPrice: 3199.00 };
+    const bundleData = HT.detectAndExtractBundleData(info, mockDoc, 3199.00, mockHtml);
+
+    assert.ok(bundleData, 'PC build must be detected');
+    assert.strictEqual(bundleData.isPcBuild, true);
+    assert.strictEqual(bundleData.components.length, 9, 'Must extract exactly 9 hardware components');
+
+    // Ensure 'Osa 6' did NOT match as OS
+    const os = bundleData.components.find(c => c.roleKey === 'os');
+    assert.ok(os, 'OS component must be present');
+    assert.strictEqual(os.name, 'Windows 11 Home', 'OS must be Windows 11 Home, not guide link');
+
+    // Ensure CPU is NOT squashed with the rest of the components
+    const cpu = bundleData.components.find(c => c.roleKey === 'cpu');
+    assert.strictEqual(cpu.name, 'AMD Ryzen 7 9850X3D, 4,7 / 5,6 GHz');
+    assert.strictEqual(cpu.cleanQuery, 'AMD Ryzen 7 9850X3D');
+
+    // Ensure Mobo is cleaned of chipset fluff
+    const mobo = bundleData.components.find(c => c.roleKey === 'mobo');
+    assert.strictEqual(mobo.name, 'GIGABYTE, AMD X870 -piirisarjaan pohjautuva');
+    assert.strictEqual(mobo.cleanQuery, 'GIGABYTE AMD X870');
+
+    // Ensure Cooler is cleaned of AIO fluff
+    const cooler = bundleData.components.find(c => c.roleKey === 'cooler');
+    assert.strictEqual(cooler.name, 'Phanteks Glacier One 360S25-SE, 360 mm AIO-nestejäähdytys');
+    assert.strictEqual(cooler.cleanQuery, 'Phanteks Glacier One 360S25-SE');
+});

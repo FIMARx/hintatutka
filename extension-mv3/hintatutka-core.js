@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HintaTutka
 // @namespace    https://github.com/FIMARx/hintatutka
-// @version      9.8.8
+// @version      9.8.9
 // @description  Suomen älykkäin hintatutka (v9.8.6): Reaaliaikainen PC-komponenttihaku, välitön DIY-optimointi, parannettu mobiili- & historiagrid & 81 kauppaa
 // @author       FIMARx
 // @icon         https://raw.githubusercontent.com/FIMARx/hintatutka/main/extension-mv3/icons/icon128.png
@@ -150,7 +150,7 @@
     // =========================================================================
     // CONFIGURATION & THRESHOLDS
     // =========================================================================
-    const SCRIPT_VERSION = '9.8.8';
+    const SCRIPT_VERSION = '9.8.9';
     const BRAND_LOGO_SVG_MINI = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 58 58" width="15" height="15" style="flex-shrink:0;display:block;"><defs><linearGradient id="htMiniBg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#065f46"/><stop offset="100%" stop-color="#0f172a"/></linearGradient><linearGradient id="htMiniBolt" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#a7f3d0"/><stop offset="100%" stop-color="#10b981"/></linearGradient></defs><rect x="1.5" y="1.5" width="55" height="55" rx="14.5" fill="url(#htMiniBg)" stroke="#10b981" stroke-opacity="0.78" stroke-width="2.4"/><circle cx="29" cy="29" r="19.5" fill="none" stroke="#34d399" stroke-opacity="0.36" stroke-width="1.8" stroke-dasharray="4 3"/><path d="M32.5 11L18.5 31H29.5L25.5 47L40.5 26.5H29.5L32.5 11Z" fill="url(#htMiniBolt)"/></svg>`;
     const IS_MV3_EXTENSION = Boolean(
         globalThis.__HT_MV3_EXTENSION__ ||
@@ -2218,7 +2218,7 @@
         if (/keskusmuisti|\bmuisti\b|ram|memory/i.test(normKey)) return { roleKey: 'ram', roleLabel: 'Keskusmuisti', roleIcon: '🧠' };
         if (/kotelo|chassis|case/i.test(normKey)) return { roleKey: 'case', roleLabel: 'Kotelo', roleIcon: '📦' };
         if (/virtaläh|virtal&auml;h|psu|power supply/i.test(normKey)) return { roleKey: 'psu', roleLabel: 'Virtalähde', roleIcon: '🔌' };
-        if (/käyttöjärjestelmä|k&auml;ytt&ouml;j&auml;rjestelm&auml;|operating system|os/i.test(normKey)) return { roleKey: 'os', roleLabel: 'Käyttöjärjestelmä', roleIcon: '🪟' };
+        if (/käyttöjärjestelmä|k&auml;ytt&ouml;j&auml;rjestelm&auml;|operating\s+system|\bos\b/i.test(normKey)) return { roleKey: 'os', roleLabel: 'Käyttöjärjestelmä', roleIcon: '🪟' };
 
         const n = (name || '').toLowerCase();
         if (/\b(?:ryzen\s*[3579]|core\s*i[3579]|intel\s*core|ultra\s*[579]|\d{4,5}x3d|\d{4,5}[kxf]|threadripper)\b/i.test(n)) {
@@ -2485,7 +2485,7 @@
 
             const isSpecKey = (k) => {
                 const norm = decodeHtmlEntities(k).toLowerCase().trim();
-                return /^(?:prosessori|suoritin|cpu|processor|emolevy|motherboard|mainboard|piirisarja|chipset|näytönohjai|n&auml;yt&ouml;nohjai|gpu|grafiikka|video card|graphics|keskusmuisti|ram|memory|tallennustila|massamuisti|kiintolevy|kovalevy|ssd|tallennus|storage|jäähdytys|j&auml;&auml;hdytys|prosessorijäähdyt|prosessorin\s+jäähdyt|cooler|aio|kotelo|tietokonekotelo|chassis|case|virtaläh|virtal&auml;h|psu|power supply|käyttöjärjestelmä|k&auml;ytt&ouml;j&auml;rjestelm&auml;|operating system|os)/i.test(norm);
+                return /^(?:prosessori|suoritin|cpu|processor|emolevy|motherboard|mainboard|piirisarja|chipset|näytönohjai|n&auml;yt&ouml;nohjai|gpu|grafiikka|video card|graphics|keskusmuisti|ram|memory|tallennustila|massamuisti|kiintolevy|kovalevy|ssd|tallennus|storage|jäähdytys|j&auml;&auml;hdytys|prosessorijäähdyt|prosessorin\s+jäähdyt|cooler|aio|kotelo|tietokonekotelo|chassis|case|virtaläh|virtal&auml;h|psu|power supply|käyttöjärjestelmä|k&auml;ytt&ouml;j&auml;rjestelm&auml;|operating\s+system|\bos\b)/i.test(norm);
             };
 
             const addCandidate = (rawKey, rawVal) => {
@@ -2537,22 +2537,6 @@
                         }
                     }
                 }
-
-                // Check bullet points and paragraph lines (Verkkokauppa Blackstorm, Jimm's GtG, etc.)
-                if (components.length === 0) {
-                    const listItems = doc.querySelectorAll('li, p');
-                    for (const el of listItems) {
-                        const text = (el.textContent || '').trim();
-                        const colonIdx = text.indexOf(':');
-                        if (colonIdx > 0 && colonIdx < 40) {
-                            const k = text.substring(0, colonIdx).trim();
-                            const v = text.substring(colonIdx + 1).trim();
-                            if (isSpecKey(k)) {
-                                addCandidate(k, v);
-                            }
-                        }
-                    }
-                }
             }
 
             // 2b. Raw HTML regex parsing fallback (headless test harness, SSR, or rawHtml provided)
@@ -2581,8 +2565,8 @@
                     }
                 }
 
-                // Colon list regex
-                const specRegex = /(?:^|\n|<br\s*\/?>|<li[^>]*>)\s*(?:<[^>]+>)*\s*([A-Za-zÄÖÅäöå&;()/\s-]+?)\s*(?:<[^>]+>)*\s*:\s*([^<\n\r]+)/gi;
+                // Colon list regex (Jimm's GtG PCs, Verkkokauppa Blackstorm bullet lists, etc.)
+                const specRegex = /(?:^|\n|<br\s*\/?>|<li[^>]*>|<p[^>]*>)\s*(?:<[^>]+>)*\s*([A-Za-zÄÖÅäöå&;()/\s-]+?)\s*(?:<[^>]+>)*\s*:\s*([^<\n\r]+)/gi;
                 let sm;
                 while ((sm = specRegex.exec(bodyHtml)) !== null) {
                     if (!sm[1] || !sm[2]) continue;
@@ -2684,7 +2668,7 @@
 
             // Task 2: Search Hinta.fi for market lowest price across all Finnish stores
             if (!comp.marketLowest) {
-                const hintaCacheKey = `hinta_comp_v988_${comp.cleanQuery || comp.name}`;
+                const hintaCacheKey = `hinta_comp_v989_${comp.cleanQuery || comp.name}`;
                 let hintaData = getCached(hintaCacheKey);
                 if (!hintaData || !hintaData.lowestPrice || Number(hintaData.lowestPrice) <= 0) {
                     hintaData = null;
