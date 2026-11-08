@@ -306,3 +306,43 @@ test('bundle: RAM component matching scores correct kit over overpriced/mismatch
     assert.ok(score1 > score2, `Correct candidate (score: ${score1}) must outscore inflated candidate (score: ${score2})`);
     assert.ok(score1 > 100, `Score for matching candidate must be high (>100), got ${score1}`);
 });
+
+test('bundle: cleanComponentQuery extracts concise queries for all prebuilt PC components', () => {
+    const { exports: HT } = loadHintaTutka();
+
+    const psu = HT.cleanComponentQuery('1200 W 80+ Gold, PCIe 5.0 Ready', 'psu');
+    assert.strictEqual(psu, '1200W 80+Gold');
+
+    const storage = HT.cleanComponentQuery('4 TB M.2 PCIe 4.0 NVMe SSD', 'storage');
+    assert.strictEqual(storage, '4TB M.2 NVMe SSD');
+
+    const cooler = HT.cleanComponentQuery('Noctua NL-LC1-42, 420 mm AIO-nestejäähdytys', 'cooler');
+    assert.strictEqual(cooler, 'Noctua NL-LC1-42');
+
+    const pcCase = HT.cleanComponentQuery('Antec X Noctua FLUX PRO Noctua Edition', 'case');
+    assert.strictEqual(pcCase, 'Antec FLUX PRO');
+
+    const ram = HT.cleanComponentQuery('64 GB (2 x 32 GB) DDR5 5600 MHz', 'ram');
+    assert.strictEqual(ram, '64GB DDR5 5600 MHz');
+
+    const gpu = HT.cleanComponentQuery('ASUS NVIDIA GeForce RTX 5090 TUF GAMING, 32 GB GDDR7', 'gpu');
+    assert.strictEqual(gpu, 'ASUS NVIDIA GeForce RTX 5090 TUF GAMING');
+});
+
+test('bundle: generic component specs match branded hardware without false hard conflicts', () => {
+    const { exports: HT } = loadHintaTutka();
+
+    const genericStorage = '4 TB M.2 PCIe 4.0 NVMe SSD';
+    const brandedSsd = 'Samsung 990 PRO 4 TB M.2 NVMe SSD';
+    const compatStorage = HT.evaluateSpecCompatibility(genericStorage, brandedSsd);
+    assert.strictEqual(compatStorage.hasHardConflict, false, 'Generic 4TB SSD must match branded Samsung 990 PRO 4TB');
+
+    const genericPsu = '1200 W 80+ Gold, PCIe 5.0 Ready';
+    const brandedPsu = 'ASUS TUF GAMING 1200W Gold';
+    const compatPsu = HT.evaluateSpecCompatibility(genericPsu, brandedPsu);
+    assert.strictEqual(compatPsu.hasHardConflict, false, 'Generic 1200W PSU must match ASUS TUF 1200W Gold');
+
+    // Confirm branded precision guards remain strict
+    const iphoneGuard = HT.evaluateSpecCompatibility('Apple iPhone 18', 'Apple iPhone 18 Pro');
+    assert.strictEqual(iphoneGuard.hasHardConflict, true, 'iPhone 18 vs Pro must remain a hard conflict');
+});

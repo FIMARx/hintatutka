@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         HintaTutka
 // @namespace    https://github.com/FIMARx/hintatutka
-// @version      9.8.3
-// @description  Suomen älykkäin hintatutka (v9.8.3): Parannettu komponenttihaku & SKU-osumat, monikomponenttihistoria, reaaliaikainen DIY-optimointi & 81 kauppaa
+// @version      9.8.4
+// @description  Suomen älykkäin hintatutka (v9.8.4): Reaaliaikainen PC-komponenttihaku, välitön DIY-optimointi, parannettu mobiili- & historiagrid & 81 kauppaa
 // @author       FIMARx
 // @icon         https://raw.githubusercontent.com/FIMARx/hintatutka/main/extension-mv3/icons/icon128.png
 // @homepageURL  https://github.com/FIMARx/hintatutka
@@ -150,7 +150,7 @@
     // =========================================================================
     // CONFIGURATION & THRESHOLDS
     // =========================================================================
-    const SCRIPT_VERSION = '9.8.3';
+    const SCRIPT_VERSION = '9.8.4';
     const BRAND_LOGO_SVG_MINI = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 58 58" width="15" height="15" style="flex-shrink:0;display:block;"><defs><linearGradient id="htMiniBg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#065f46"/><stop offset="100%" stop-color="#0f172a"/></linearGradient><linearGradient id="htMiniBolt" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#a7f3d0"/><stop offset="100%" stop-color="#10b981"/></linearGradient></defs><rect x="1.5" y="1.5" width="55" height="55" rx="14.5" fill="url(#htMiniBg)" stroke="#10b981" stroke-opacity="0.78" stroke-width="2.4"/><circle cx="29" cy="29" r="19.5" fill="none" stroke="#34d399" stroke-opacity="0.36" stroke-width="1.8" stroke-dasharray="4 3"/><path d="M32.5 11L18.5 31H29.5L25.5 47L40.5 26.5H29.5L32.5 11Z" fill="url(#htMiniBolt)"/></svg>`;
     const IS_MV3_EXTENSION = Boolean(
         globalThis.__HT_MV3_EXTENSION__ ||
@@ -1444,7 +1444,10 @@
         }
 
         // 5. Tier modifier parity (Pro vs Pro Max vs Plus vs Ultra vs Air vs Mini vs Base; Ti vs Super)
-        if (!sharesExactMpn) {
+        const isGenericSpec = !tCodes.length &&
+            !/(?:iphone|ipad|galaxy|pixel|geforce|radeon|ryzen|intel|core\s+i[3579]|thinkpad|macbook)\b/i.test(targetStr);
+
+        if (!sharesExactMpn && !isGenericSpec) {
             const tTierOnly = [...t.tierSet].filter(m => !c.tierSet.has(m));
             const cTierOnly = [...c.tierSet].filter(m => !t.tierSet.has(m));
             if (tTierOnly.length > 0 || cTierOnly.length > 0) {
@@ -1469,8 +1472,8 @@
             if (tGenOnly.length > 0 && cGenOnly.length > 0) {
                 delta -= 115;
                 hasHardConflict = true;
-            } else if ((t.genTokens.size > 0 && c.genTokens.size === 0 && !isPureMpnCand) ||
-                       (c.genTokens.size > 0 && t.genTokens.size === 0 && !isPureMpnTarg)) {
+            } else if (!isGenericSpec && (((t.genTokens.size > 0 && c.genTokens.size === 0 && !isPureMpnCand) ||
+                       (c.genTokens.size > 0 && t.genTokens.size === 0 && !isPureMpnTarg)))) {
                 delta -= 105;
                 hasHardConflict = true;
             } else if (sharedGen.length > 0) {
@@ -2257,17 +2260,53 @@
         }
         if (roleKey === 'ram') {
             const capMatch = raw.match(/(\d+\s*GB|\d+\s*x\s*\d+\s*GB)/i);
-            const ddrMatch = raw.match(/DDR[45]\s*\d{4}MHz/i);
-            const brandMatch = raw.match(/^(?:Patriot|Kingston|Corsair|G\.Skill|Crucial|TeamGroup)/i);
+            const ddrMatch = raw.match(/DDR[45]\s*\d{4}\s*MHz/i);
+            const brandMatch = raw.match(/\b(Patriot|Kingston|Corsair|G\.Skill|Crucial|TeamGroup)\b/i);
             const seriesMatch = raw.match(/\b(Viper\s*Venom|Fury\s*Beast|Vengeance|Trident\s*Z\d?|Ripjaws|T-Force|Dominator)\b/i);
             const clMatch = raw.match(/\bCL\d{2}\b/i);
             if (capMatch && ddrMatch) {
-                return `${brandMatch ? brandMatch[0] + ' ' : ''}${seriesMatch ? seriesMatch[0] + ' ' : ''}${capMatch[1]} ${ddrMatch[0]}${clMatch ? ' ' + clMatch[0] : ''}`.trim();
+                const capStr = capMatch[1].replace(/\s+/g, '');
+                const ddrStr = ddrMatch[0].replace(/\s+/g, ' ');
+                return `${brandMatch ? brandMatch[0] + ' ' : ''}${seriesMatch ? seriesMatch[0] + ' ' : ''}${capStr} ${ddrStr}${clMatch ? ' ' + clMatch[0] : ''}`.trim();
             }
         }
         if (roleKey === 'gpu') {
             const gpuMatch = s.match(/(?:ASUS|MSI|Gigabyte|Palit|Zotac|PNY|Sapphire|PowerColor|XFX)?\s*(?:NVIDIA\s+GeForce\s+|GeForce\s+)?(RTX\s*\d{4}(?:\s*Ti|\s*Super)?|RX\s*\d{4}(?:\s*XTX|\s*XT)?)[A-Z0-9\s-]*/i);
             if (gpuMatch) return gpuMatch[0].replace(/,\s*.*$/, '').trim();
+        }
+        if (roleKey === 'storage') {
+            const capMatch = raw.match(/(\d+(?:\.\d+)?)\s*(TB|GB)\b/i);
+            const m2Match = /\bM\.?2\b/i.test(raw);
+            const nvmeMatch = /\bNVMe\b/i.test(raw);
+            const brandMatch = raw.match(/\b(Samsung|Western\s*Digital|WD|Crucial|Kingston|Corsair|Seagate)\b/i);
+            if (capMatch) {
+                return `${brandMatch ? brandMatch[0] + ' ' : ''}${capMatch[1]}${capMatch[2].toUpperCase()} ${m2Match ? 'M.2 ' : ''}${nvmeMatch ? 'NVMe ' : ''}SSD`.trim();
+            }
+        }
+        if (roleKey === 'cooler') {
+            const brandMatch = raw.match(/\b(Noctua|Corsair|NZXT|Arctic|DeepCool|be\s*quiet!?|Thermalright|Lian\s*Li|ASUS)\b/i);
+            const modelMatch = raw.match(/\b([A-Z0-9]{2,}-[A-Z0-9-]{2,})\b/i);
+            const aioMatch = raw.match(/(\d{3})\s*mm\b/i);
+            if (brandMatch && modelMatch) {
+                return `${brandMatch[0]} ${modelMatch[1]}`.trim();
+            } else if (brandMatch && aioMatch) {
+                return `${brandMatch[0]} ${aioMatch[1]}mm AIO`.trim();
+            }
+        }
+        if (roleKey === 'case') {
+            const brandMatch = raw.match(/\b(Antec|Lian\s*Li|Fractal\s*Design|Corsair|NZXT|Phanteks|Montech|Cooler\s*Master|be\s*quiet!?)\b/i);
+            const modelMatch = raw.match(/\b(FLUX\s*PRO|North(?:\s*XL)?|Torrent|O11\s*Dynamic|H[579]\s*Flow|4000D|5000D|Pop\s*Air)\b/i);
+            if (brandMatch && modelMatch) {
+                return `${brandMatch[0]} ${modelMatch[1]}`.trim();
+            }
+        }
+        if (roleKey === 'psu') {
+            const wattMatch = raw.match(/(\d{3,4})\s*W\b/i);
+            const certMatch = raw.match(/\b(80\s*\+\s*(?:Bronze|Silver|Gold|Platinum|Titanium)|Bronze|Silver|Gold|Platinum|Titanium)\b/i);
+            const brandMatch = raw.match(/\b(Corsair|Seasonic|be\s*quiet!?|ASUS|EVGA|MSI|Thermalright|Cooler\s*Master|Kolink|DeepCool)\b/i);
+            if (wattMatch) {
+                return `${brandMatch ? brandMatch[0] + ' ' : ''}${wattMatch[1]}W${certMatch ? ' ' + certMatch[0].replace(/\s+/g, '') : ''}`.trim();
+            }
         }
 
         return extractConciseModelQuery(s) || s;
@@ -2440,11 +2479,26 @@
         };
     }
 
-    async function enrichBundleComponentPrices(bundleData) {
+    async function enrichBundleComponentPrices(bundleData, onProgress = null) {
         if (!bundleData || !Array.isArray(bundleData.components)) return bundleData;
-        let anyFetched = false;
+
+        const recalcTotals = () => {
+            const marketSum = bundleData.components.reduce((acc, c) => acc + (c.marketLowest || c.storePrice || c.price || 0), 0);
+            if (marketSum > 0) {
+                bundleData.marketDiyTotal = Number(marketSum.toFixed(2));
+            }
+            const storeSum = bundleData.components.reduce((acc, c) => acc + (c.storePrice || c.price || 0), 0);
+            if (storeSum > 0) {
+                bundleData.storeSeparateTotal = Number(storeSum.toFixed(2));
+                if (!bundleData.officialStandaloneTotal) {
+                    bundleData.computedStandaloneTotal = bundleData.storeSeparateTotal;
+                }
+            }
+        };
 
         await Promise.all(bundleData.components.map(async (comp) => {
+            let compUpdated = false;
+
             // Task 1: Fetch store price from current retailer component page if url exists
             if (comp.url && !comp.storePrice) {
                 const storeCacheKey = `comp_store_${comp.url}`;
@@ -2467,7 +2521,7 @@
                 if (storePrice) {
                     comp.storePrice = storePrice;
                     comp.price = storePrice;
-                    anyFetched = true;
+                    compUpdated = true;
                 }
             }
 
@@ -2594,33 +2648,17 @@
                     comp.hintaUrl = hintaData.url;
                     comp.cheapestStore = hintaData.cheapestStore || null;
                     comp.storeCount = hintaData.storeCount || null;
-                    anyFetched = true;
+                    compUpdated = true;
                 }
             }
 
-            // Task 3: Fetch component price history from Hinta.fi if url available
-            if (comp.hintaUrl && !comp.history) {
-                try {
-                    comp.history = await fetchProductHistory(comp.hintaUrl);
-                    if (comp.history) anyFetched = true;
-                } catch (_) {}
+            if (compUpdated) {
+                recalcTotals();
+                if (typeof onProgress === 'function') onProgress(comp);
             }
         }));
 
-        // Compute Market DIY Total (cheapest stores across Finland) and Store Separate Total
-        const marketSum = bundleData.components.reduce((acc, c) => acc + (c.marketLowest || c.storePrice || c.price || 0), 0);
-        if (marketSum > 0) {
-            bundleData.marketDiyTotal = Number(marketSum.toFixed(2));
-        }
-
-        const storeSum = bundleData.components.reduce((acc, c) => acc + (c.storePrice || c.price || 0), 0);
-        if (storeSum > 0) {
-            bundleData.storeSeparateTotal = Number(storeSum.toFixed(2));
-            if (!bundleData.officialStandaloneTotal) {
-                bundleData.computedStandaloneTotal = bundleData.storeSeparateTotal;
-            }
-        }
-
+        recalcTotals();
         return bundleData;
     }
 
@@ -5388,9 +5426,13 @@
         let isLearned = Boolean(learnedMatch);
         let marketResult = null;
 
-        // Asynchronously enrich bundle / PC build component prices from subproduct links
+        // Asynchronously enrich bundle / PC build component prices from subproduct links with progressive updates
         if (productInfo?.bundleData && Array.isArray(productInfo.bundleData.components)) {
-            enrichBundleComponentPrices(productInfo.bundleData).then(() => {
+            enrichBundleComponentPrices(productInfo.bundleData, () => {
+                if (typeof onPartialUpdate === 'function') {
+                    onPartialUpdate(marketResult);
+                }
+            }).then(() => {
                 if (typeof onPartialUpdate === 'function') {
                     onPartialUpdate(marketResult);
                 }
@@ -9218,41 +9260,36 @@
             }
             .ufhpc-bch-filter-bar {
                 display: flex;
-                gap: 5px;
-                overflow-x: auto;
-                padding: 4px 1px 8px 1px;
-                margin-bottom: 6px;
-                scrollbar-width: none;
-                align-items: center;
-            }
-            .ufhpc-bch-filter-bar::-webkit-scrollbar {
-                display: none;
+                flex-wrap: wrap;
+                gap: 6px;
+                padding: 6px 2px 8px 2px;
+                margin-bottom: 8px;
             }
             .ufhpc-bch-filter-btn {
-                flex-shrink: 0;
                 display: inline-flex;
                 align-items: center;
-                gap: 4px;
-                background: rgba(255, 255, 255, 0.04);
-                border: 1px solid rgba(255, 255, 255, 0.08);
-                border-radius: 7px;
+                gap: 4.5px;
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.10);
+                border-radius: 999px;
                 color: #94a3b8;
-                font-size: 10.5px;
-                line-height: 1.25;
+                font-size: 11px;
+                line-height: 1.3;
                 font-weight: 600;
-                padding: 5px 9px;
+                padding: 4px 10px;
                 cursor: pointer;
                 transition: all 0.15s ease;
                 user-select: none;
                 box-sizing: border-box;
             }
             .ufhpc-bch-filter-btn:hover {
-                background: rgba(255, 255, 255, 0.08);
+                background: rgba(255, 255, 255, 0.10);
                 color: #f1f5f9;
+                border-color: rgba(255, 255, 255, 0.20);
             }
             .ufhpc-bch-filter-btn.is-active {
-                background: rgba(16, 185, 129, 0.16);
-                border-color: rgba(52, 211, 153, 0.4);
+                background: rgba(16, 185, 129, 0.18);
+                border-color: rgba(52, 211, 153, 0.45);
                 color: #34d399;
                 font-weight: 700;
             }
