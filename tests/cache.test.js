@@ -2,9 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadHintaTutka } from './lib/harness.js';
 
-test('cache: CACHE_PREFIX uses isolated v97 namespace', () => {
+test('cache: CACHE_PREFIX uses isolated v98 namespace', () => {
     const { exports: HT } = loadHintaTutka();
-    assert.strictEqual(HT.CACHE_PREFIX, 'ufhpc_v97_', 'CACHE_PREFIX must be isolated to ufhpc_v97_');
+    assert.strictEqual(HT.CACHE_PREFIX, 'ufhpc_v98_', 'CACHE_PREFIX must be isolated to ufhpc_v98_');
 });
 
 test('cache: purgeLegacyCaches dynamically removes stale versions but keeps current version entries', () => {
@@ -15,7 +15,8 @@ test('cache: purgeLegacyCaches dynamically removes stale versions but keeps curr
         'ufhpc_v94_iphone18': 'stale_v94',
         'ufhpc_v95_iphone18': 'stale_v95',
         'ufhpc_v96_iphone18': 'stale_v96',
-        'ufhpc_v97_iphone18': 'valid_v97',
+        'ufhpc_v97_iphone18': 'stale_v97',
+        'ufhpc_v98_iphone18': 'valid_v98',
         'other_app_key': 'unrelated'
     };
 
@@ -29,7 +30,8 @@ test('cache: purgeLegacyCaches dynamically removes stale versions but keeps curr
     assert.strictEqual(storage.getItem('ufhpc_v94_iphone18'), null, 'v94 cache must be purged');
     assert.strictEqual(storage.getItem('ufhpc_v95_iphone18'), null, 'v95 cache must be purged');
     assert.strictEqual(storage.getItem('ufhpc_v96_iphone18'), null, 'v96 cache must be purged');
-    assert.strictEqual(storage.getItem('ufhpc_v97_iphone18'), 'valid_v97', 'Current v97 cache must be preserved');
+    assert.strictEqual(storage.getItem('ufhpc_v97_iphone18'), null, 'v97 cache must be purged');
+    assert.strictEqual(storage.getItem('ufhpc_v98_iphone18'), 'valid_v98', 'Current v98 cache must be preserved');
     assert.strictEqual(storage.getItem('other_app_key'), 'unrelated', 'Non-HintaTutka keys must not be touched');
 });
 

@@ -44,7 +44,13 @@ globalThis.__HT_TEST_EXPORTS__ = {
     setCached,
     purgeLegacyCaches,
     fetchPrismaDirectOffers,
-    fetchAmazonDeCrossBorder
+    fetchAmazonDeCrossBorder,
+    classifyComponentRole,
+    cleanComponentQuery,
+    detectAndExtractBundleData,
+    enrichBundleComponentPrices,
+    buildBundleBreakdownHtml,
+    evaluatePriceVerdict
 };
 `;
 

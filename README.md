@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/hero-banner.svg" width="100%" alt="HintaTutka v9.7 — Finnish & EU Real-Time Price Intelligence" />
+<img src="assets/hero-banner.svg" width="100%" alt="HintaTutka v9.8 — Finnish & EU Real-Time Price Intelligence" />
 
 <br />
 
@@ -153,6 +153,13 @@ HintaTutka works across all localized store paths (`/fi/`, `/en/`, `/sv/`) and S
 ---
 
 ## 🗺️ Changelog
+
+### 🚀 v9.8
+- **🖥️ PC Build & Hardware Component Bundle Deconstruction Engine**: Intelligent parser that detects, breaks down, and analyzes prebuilt gaming PCs (e.g., Jimm's GtG Owl 5090) and hardware upgrade packages (e.g., TUF B850-PLUS + 9800X3D + 32GB RAM) into their individual components: CPU, Motherboard, GPU, RAM, Storage (SSD), Cooler, Case, Power Supply, and OS.
+- **💰 DIY vs. Prebuilt Math & Standalone Savings Breakdown**: Dynamically compares the package price against the sum of buying parts individually, showing verified savings (`🔥 TUOTEPAKETIN SÄÄSTÖ (-49,80 € / -4.2%)`) or warning when buying parts separately is cheaper (`⚠️ ERIKSEEN OSTETTUNA HALVEMPI`).
+- **🔗 1-Click Component Price Check Hub**: Each deconstructed component card provides 1-click links to its product page, custom Hinta.fi market search, and retailer search for instant price comparison across Finland.
+- **🛡️ Hard-Conflict Anti-False-Match Shield**: Strictly stops multi-part bundles or prebuilt PCs from matching against single standalone motherboard or CPU listings on Hinta.fi (`delta -= 160; hasHardConflict = true; score -= 350;`).
+- **⚡ v98 Isolated Cache Namespace**: Automatic legacy cache eviction and zero-leak storage isolation across all 81 stores.
 
 ### 🚀 v9.7 (Latest)
 - **🎨 Complete Professional GUI/UX Overhaul**: Completely redesigned the sidebar into a sleek, dark glassmorphic terminal inspired by Linear, Apple, and professional financial analytics.

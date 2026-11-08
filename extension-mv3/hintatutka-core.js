@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         HintaTutka
 // @namespace    https://github.com/FIMARx/hintatutka
-// @version      9.7
-// @description  Suomen älykkäin hintatutka (v9.7): Täysi ammattimainen GUI-uudistus, EU/Saksa ALV+toimitus -vertailu, Flip-arbitraasi (Tori/Vinted/Huuto), Klubi-totuusmittari, Holt-Winters -kausiennuste & 81 kauppaa
+// @version      9.8
+// @description  Suomen älykkäin hintatutka (v9.8): Älykäs PC-kokoonpanojen & tuotepakettien erittely (DIY vs Valmiskone), EU/Saksa ALV-vertailu, Flip-arbitraasi (Tori/Vinted/Huuto) & 81 kauppaa
 // @author       FIMARx
 // @icon         https://raw.githubusercontent.com/FIMARx/hintatutka/main/extension-mv3/icons/icon128.png
 // @homepageURL  https://github.com/FIMARx/hintatutka
@@ -150,7 +150,7 @@
     // =========================================================================
     // CONFIGURATION & THRESHOLDS
     // =========================================================================
-    const SCRIPT_VERSION = '9.7';
+    const SCRIPT_VERSION = '9.8';
     const BRAND_LOGO_SVG_MINI = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 58 58" width="15" height="15" style="flex-shrink:0;display:block;"><defs><linearGradient id="htMiniBg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#065f46"/><stop offset="100%" stop-color="#0f172a"/></linearGradient><linearGradient id="htMiniBolt" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#a7f3d0"/><stop offset="100%" stop-color="#10b981"/></linearGradient></defs><rect x="1.5" y="1.5" width="55" height="55" rx="14.5" fill="url(#htMiniBg)" stroke="#10b981" stroke-opacity="0.78" stroke-width="2.4"/><circle cx="29" cy="29" r="19.5" fill="none" stroke="#34d399" stroke-opacity="0.36" stroke-width="1.8" stroke-dasharray="4 3"/><path d="M32.5 11L18.5 31H29.5L25.5 47L40.5 26.5H29.5L32.5 11Z" fill="url(#htMiniBolt)"/></svg>`;
     const IS_MV3_EXTENSION = Boolean(
         globalThis.__HT_MV3_EXTENSION__ ||
@@ -583,7 +583,7 @@
     // =========================================================================
     // IDLE SCHEDULER, REMOTE HOT-PATCH SELECTORS & L1/L2 CROSS-DOMAIN CACHE
     // =========================================================================
-    const CACHE_PREFIX = 'ufhpc_v97_';
+    const CACHE_PREFIX = 'ufhpc_v98_';
     const memoryCache = new Map();
     const pendingSharedCacheWrites = new Map();
     let sharedCacheFlushScheduled = false;
@@ -1327,8 +1327,11 @@
             packCount = 2;
         }
 
-        // Detect multi-device '+' combo bundles (e.g. "Sonicare 9000 + Power Flosser 3000" or "Fly More Combo"), ignoring S24+ / Wi-Fi 6E+
-        const isComboBundle = /\s\+\s+[a-z0-9]{2,}/i.test(coreNorm) || /\b(?:fly\s+more\s+combo|creator\s+combo|bundle\s+pack)\b/i.test(coreNorm);
+        // Detect multi-device '+' combo bundles or PC builds (e.g. "Motherboard + CPU + RAM -tuotepaketti", "Sonicare 9000 + Power Flosser 3000", "Pelitietokone")
+        const isComboBundle = /\s\+\s+[a-z0-9]{2,}/i.test(coreNorm) ||
+            /\b(?:fly\s+more\s+combo|creator\s+combo|bundle\s+pack|-tuotepaketti|\btuotepaketti\b|\bpäivityspaketti\b|\bupgrade\s*kit\b|\bkomponenttipaketti\b)\b/i.test(coreNorm) ||
+            /\b(?:fly\s+more\s+combo|creator\s+combo|bundle\s+pack|-tuotepaketti|\btuotepaketti\b|\bpäivityspaketti\b|\bupgrade\s*kit\b|\bkomponenttipaketti\b)\b/i.test(norm) ||
+            /\b(?:pelitietokone|konepaketti|gaming\s*pc|pelikone)\b/i.test(norm);
 
         // Strip non-SKU display & appliance category phrases before tier & generation extraction (e.g. "air purifier" != "iPhone Air")
         const tierScanStr = coreNorm
@@ -1386,7 +1389,7 @@
             }
         }
 
-        return { storageSet, screenInches, packCount, isComboBundle, tierSet, genTokens };
+        return { storageSet, screenInches, packCount, isComboBundle, isBundle: isComboBundle, tierSet, genTokens };
     }
 
     function isAppleRegionalPartNumber(code) {
@@ -1432,9 +1435,9 @@
             hasHardConflict = true;
         }
 
-        // 4. Multi-device '+' bundle vs standalone device conflict
+        // 4. Multi-device / Hardware Bundle / Prebuilt PC vs standalone device conflict
         if (t.isComboBundle !== c.isComboBundle) {
-            delta -= 70;
+            delta -= 160;
             hasHardConflict = true;
         } else if (t.isComboBundle && c.isComboBundle) {
             delta += 25;
@@ -2161,6 +2164,18 @@
             addQuery('Title', extractCoreProductTitle(info.name));
         }
 
+        const bundleData = detectAndExtractBundleData(info, typeof document !== 'undefined' ? document : null, currentPrice);
+        if (bundleData) {
+            info.isBundle = bundleData.isBundle;
+            info.isPcBuild = bundleData.isPcBuild;
+            info.bundleData = bundleData;
+            if (bundleData.isBundle && bundleData.components.length >= 2) {
+                queries.length = 0;
+                if (info.mpn) queries.push({ type: 'MPN', value: info.mpn });
+                if (info.name) queries.push({ type: 'Bundle', value: extractCoreProductTitle(info.name) });
+            }
+        }
+
         return {
             ...info,
             category,
@@ -2168,8 +2183,370 @@
             currentPrice,
             priceElement: clubOffer?.clubElement || priceDom?.element || null,
             clubOffer,
-            queries
+            queries,
+            isBundle: Boolean(bundleData?.isBundle),
+            isPcBuild: Boolean(bundleData?.isPcBuild),
+            bundleData: bundleData || null
         };
+    }
+
+    // =========================================================================
+    // PC BUILD & HARDWARE COMPONENT BUNDLE DECONSTRUCTION ENGINE
+    // =========================================================================
+    function classifyComponentRole(name, explicitKey = '') {
+        const normKey = (explicitKey || '').toLowerCase();
+        if (/prosessorijäähdytys|prosessorij&auml;&auml;hdytys|jäähdytys|j&auml;&auml;hdytys|cooler|aio|nestejäähdytys/i.test(normKey)) return { roleKey: 'cooler', roleLabel: 'Jäähdytys', roleIcon: '❄️' };
+        if (/prosessori|cpu|suoritin/i.test(normKey)) return { roleKey: 'cpu', roleLabel: 'Prosessori', roleIcon: '⚡' };
+        if (/emolevy|motherboard|mainboard/i.test(normKey)) return { roleKey: 'mobo', roleLabel: 'Emolevy', roleIcon: '🔲' };
+        if (/näytönohjain|n&auml;yt&ouml;nohjain|gpu|grafiikka|video card/i.test(normKey)) return { roleKey: 'gpu', roleLabel: 'Näytönohjain', roleIcon: '🎮' };
+        if (/massamuisti|tallennustila|kovalevy|ssd|kiintolevy|storage/i.test(normKey)) return { roleKey: 'storage', roleLabel: 'Massamuisti', roleIcon: '💾' };
+        if (/keskusmuisti|\bmuisti\b|ram|memory/i.test(normKey)) return { roleKey: 'ram', roleLabel: 'Keskusmuisti', roleIcon: '🧠' };
+        if (/kotelo|chassis|case/i.test(normKey)) return { roleKey: 'case', roleLabel: 'Kotelo', roleIcon: '📦' };
+        if (/virtalähde|virtal&auml;hde|psu|power supply/i.test(normKey)) return { roleKey: 'psu', roleLabel: 'Virtalähde', roleIcon: '🔌' };
+        if (/käyttöjärjestelmä|k&auml;ytt&ouml;j&auml;rjestelm&auml;|os/i.test(normKey)) return { roleKey: 'os', roleLabel: 'Käyttöjärjestelmä', roleIcon: '🪟' };
+
+        const n = (name || '').toLowerCase();
+        if (/\b(?:ryzen\s*[3579]|core\s*i[3579]|intel\s*core|ultra\s*[579]|\d{4,5}x3d|\d{4,5}[kxf]|threadripper)\b/i.test(n)) {
+            return { roleKey: 'cpu', roleLabel: 'Prosessori', roleIcon: '⚡' };
+        }
+        if (/\b(?:emolevy|motherboard|b850|x870|b650|z890|z790|b760|a620|am5|lga\d{3,4}|atx-emolevy)\b/i.test(n)) {
+            return { roleKey: 'mobo', roleLabel: 'Emolevy', roleIcon: '🔲' };
+        }
+        if (/\b(?:rtx\s*\d{4}|geforce|radeon|rx\s*\d{4}|näytönohjain|gddr\d)\b/i.test(n)) {
+            return { roleKey: 'gpu', roleLabel: 'Näytönohjain', roleIcon: '🎮' };
+        }
+        if (/\b(?:ddr[45]|keskusmuisti|viper\s*venom|fury\s*beast|vengeance|cl\d{2}|\d+\s*mhz\b|\(\d+\s*x\s*\d+\s*gb\))/i.test(n)) {
+            return { roleKey: 'ram', roleLabel: 'Keskusmuisti', roleIcon: '🧠' };
+        }
+        if (/\b(?:nvme|m\.2|ssd|pcie\s*[45]\.0|tallennustila|massamuisti|sn850|990\s*pro)\b/i.test(n)) {
+            return { roleKey: 'storage', roleLabel: 'Massamuisti', roleIcon: '💾' };
+        }
+        if (/\b(?:aio|nestejäähdytys|vesijäähdytys|noctua\s*n[hl]|kraken|liquid|jäähdytin)\b/i.test(n)) {
+            return { roleKey: 'cooler', roleLabel: 'Jäähdytys', roleIcon: '❄️' };
+        }
+        if (/\b(?:kotelo|chassis|pure\s*base|north|flux\s*pro|pop\s*air|h[579]\s*flow)\b/i.test(n)) {
+            return { roleKey: 'case', roleLabel: 'Kotelo', roleIcon: '📦' };
+        }
+        if (/\b(?:virtalähde|80\+\s*(?:gold|platinum|bronze|titanium)|\d{3,4}\s*w\b|pcie\s*5\.0\s*ready)\b/i.test(n)) {
+            return { roleKey: 'psu', roleLabel: 'Virtalähde', roleIcon: '🔌' };
+        }
+        if (/\b(?:windows\s*1[01]|käyttöjärjestelmä)\b/i.test(n)) {
+            return { roleKey: 'os', roleLabel: 'Käyttöjärjestelmä', roleIcon: '🪟' };
+        }
+
+        return { roleKey: 'part', roleLabel: 'Komponentti', roleIcon: '🧩' };
+    }
+
+    function cleanComponentQuery(rawName, roleKey = '') {
+        let s = (rawName || '')
+            .replace(/^[0-9.]+\s*-\s*/, '')
+            .replace(/,\s*(?:ATX-emolevy|mATX-emolevy|Mini-ITX-emolevy|emolevy|musta|valkoinen|WOF|bulk|box)\b/gi, '')
+            .replace(/\b(?:4\.7\s*GHz|8-Core|16-Core|24-Core|CL\d{2}|1\.\d+V)\b/gi, '')
+            .replace(/\b(?:AM5|LGA\d{3,4})\b/gi, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        if (roleKey === 'cpu') {
+            const cpuMatch = s.match(/(?:AMD\s+Ryzen\s+[3579]\s+[0-9A-Z]+|Intel\s+Core\s+(?:Ultra\s+)?[i0-9A-Z\s]+)/i);
+            if (cpuMatch) return cpuMatch[0].trim();
+        }
+        if (roleKey === 'mobo') {
+            const moboMatch = s.match(/([A-Z0-9\s-]+\b(?:B850|X870E?|B650|Z890|Z790|B760)[A-Z0-9\s-]*)/i);
+            if (moboMatch) return moboMatch[1].replace(/,\s*.*$/, '').trim();
+        }
+        if (roleKey === 'ram') {
+            const capMatch = s.match(/(\d+\s*GB|\d+\s*x\s*\d+\s*GB)/i);
+            const ddrMatch = s.match(/DDR[45]\s*\d{4}MHz/i);
+            const brandMatch = s.match(/^(?:Patriot|Kingston|Corsair|G\.Skill|Crucial|TeamGroup)/i);
+            if (capMatch && ddrMatch) {
+                return `${brandMatch ? brandMatch[0] + ' ' : ''}${capMatch[1]} ${ddrMatch[0]}`.trim();
+            }
+        }
+        if (roleKey === 'gpu') {
+            const gpuMatch = s.match(/(?:ASUS|MSI|Gigabyte|Palit|Zotac|PNY|Sapphire|PowerColor|XFX)?\s*(?:NVIDIA\s+GeForce\s+|GeForce\s+)?(RTX\s*\d{4}(?:\s*Ti|\s*Super)?|RX\s*\d{4}(?:\s*XTX|\s*XT)?)[A-Z0-9\s-]*/i);
+            if (gpuMatch) return gpuMatch[0].replace(/,\s*.*$/, '').trim();
+        }
+
+        return extractConciseModelQuery(s) || s;
+    }
+
+    function detectAndExtractBundleData(info, doc, currentPrice, rawHtml = '') {
+        const title = (info?.name || (doc && doc.title ? doc.title : '') || '').toLowerCase();
+        const bodyText = doc ? ((doc.querySelector && (doc.querySelector('main') || doc.body)?.innerText) || (doc.body ? doc.body.textContent : (typeof doc === 'string' ? doc : ''))) : (typeof rawHtml === 'string' ? rawHtml : '');
+        const bodyHtml = rawHtml || (doc ? ((doc.querySelector && (doc.querySelector('main') || doc.body)?.innerHTML) || (typeof doc === 'string' ? doc : '')) : '');
+
+        const isBundleTitle = /(?:-tuotepaketti|\btuotepaketti\b|\bbundle\b|\bpäivityspaketti\b|\bupgrade kit\b|\bkomponenttipaketti\b)/i.test(title) ||
+            /\b\+\s*(?:\d{4,5}x3d|\d{4,5}[kxf]|ddr[45]|rtx\s*\d{4})/i.test(title);
+
+        const isPcTitle = /(?:pelitietokone|konepaketti|pöytäkone|gaming pc|pelikone|tietokonekonepaketti)/i.test(title);
+
+        const hasBundleHeading = /tuotepaketti\s+sisältää|paketti\s+sisältää|tuotepaketti\s+sis&auml;lt&auml;&auml;/i.test(bodyHtml);
+        const hasPcSpecHeading = /pelitietokoneen\s+tekniset\s+tiedot|kokoonpanon\s+tiedot/i.test(bodyHtml);
+
+        let officialStandaloneTotal = null;
+        const standaloneMatch = bodyText.match(/(?:normaalihinta\s+erikseen\s+ostettuna|hinta\s+erikseen\s+ostettuna|erikseen\s+ostettuna)\s*[:\s]*([0-9\s]+(?:[.,][0-9]{2})?)\s*€/i) ||
+            bodyHtml.match(/(?:normaalihinta\s+erikseen\s+ostettuna|hinta\s+erikseen\s+ostettuna|erikseen\s+ostettuna)\s*[:\s]*([0-9\s]+(?:[.,][0-9]{2})?)\s*(?:&euro;|€)/i);
+        if (standaloneMatch) {
+            officialStandaloneTotal = parsePriceNumber(standaloneMatch[1]);
+        }
+
+        const components = [];
+        const seenNames = new Set();
+
+        // Strategy 1: Check for explicit bundle product links in live DOM
+        if (doc && typeof doc.querySelectorAll === 'function') {
+            const headings = Array.from(doc.querySelectorAll('p, h2, h3, h4, div, strong'));
+            for (const h of headings) {
+                const txt = (h.textContent || '').trim();
+                if (/^(?:tuotepaketti\s+sisältää|paketti\s+sisältää)/i.test(txt)) {
+                    const parent = h.parentElement;
+                    const nextList = h.nextElementSibling?.tagName === 'UL' ? h.nextElementSibling
+                        : (parent ? parent.querySelector('ul') : null);
+                    if (nextList) {
+                        const links = nextList.querySelectorAll('li a[href], li');
+                        links.forEach(li => {
+                            const linkEl = li.tagName === 'A' ? li : li.querySelector('a[href]');
+                            const rawName = (linkEl ? linkEl.textContent : li.textContent || '').trim();
+                            if (!rawName || rawName.length < 5 || seenNames.has(rawName.toLowerCase())) return;
+                            seenNames.add(rawName.toLowerCase());
+
+                            const href = linkEl ? linkEl.getAttribute('href') : null;
+                            const fullUrl = href ? (href.startsWith('http') ? href : `${location.origin}${href}`) : null;
+                            const role = classifyComponentRole(rawName, '');
+                            const cleanQuery = cleanComponentQuery(rawName, role.roleKey);
+
+                            components.push({
+                                ...role,
+                                name: rawName,
+                                cleanQuery,
+                                url: fullUrl,
+                                price: null,
+                                priceLabel: null
+                            });
+                        });
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Strategy 1b: Raw HTML regex fallback for bundle lists (headless, test & SSR mode)
+        if (components.length === 0 && bodyHtml) {
+            const listMatch = bodyHtml.match(/(?:Tuotepaketti|Paketti)\s+(?:sis&auml;lt&auml;&auml;|sisältää)[\s\S]{0,120}?<ul>([\s\S]*?)<\/ul>/i);
+            if (listMatch) {
+                const ulContent = listMatch[1];
+                const itemMatches = [...ulContent.matchAll(/<li[^>]*>([\s\S]*?)<\/li>/gi)];
+                itemMatches.forEach(m => {
+                    const aMatch = m[1].match(/<a\s+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/i);
+                    const rawName = (aMatch ? aMatch[2] : m[1]).replace(/<[^>]+>/g, '').trim();
+                    if (!rawName || rawName.length < 5 || seenNames.has(rawName.toLowerCase())) return;
+                    seenNames.add(rawName.toLowerCase());
+
+                    const href = aMatch ? aMatch[1] : null;
+                    const fullUrl = href ? (href.startsWith('http') ? href : (typeof location !== 'undefined' ? `${location.origin}${href}` : `https://www.jimms.fi${href}`)) : null;
+                    const role = classifyComponentRole(rawName, '');
+                    const cleanQuery = cleanComponentQuery(rawName, role.roleKey);
+
+                    components.push({
+                        ...role,
+                        name: rawName,
+                        cleanQuery,
+                        url: fullUrl,
+                        price: null,
+                        priceLabel: null
+                    });
+                });
+            }
+        }
+
+        // Strategy 2: Check structured technical specs (e.g. Jimm's / Verkkokauppa Prebuilt PC specs)
+        if (components.length === 0 && bodyHtml) {
+            const specRegex = /(?:^|\n|<br\s*\/?>)\s*(?:<[^>]+>)*\s*(Prosessori|Suoritin|CPU|Emolevy|Motherboard|Näytönohjain|N&auml;yt&ouml;nohjain|GPU|Grafiikka|Keskusmuisti|Muisti|RAM|Massamuisti|Tallennustila|Kovalevy|SSD|Prosessorijäähdytys|Prosessorij&auml;&auml;hdytys|Jäähdytys|J&auml;&auml;hdytys|Kotelo|Virtalähde|Virtal&auml;hde|PSU|Käyttöjärjestelmä|K&auml;ytt&ouml;j&auml;rjestelm&auml;|OS)\s*(?:<[^>]+>)*\s*:\s*([^<\n\r]+)/gi;
+
+            let sm;
+            while ((sm = specRegex.exec(bodyHtml)) !== null) {
+                const rawKey = sm[1].trim();
+                const rawVal = sm[2].replace(/<[^>]+>/g, '').trim();
+                if (!rawVal || rawVal.length < 3 || seenNames.has(rawVal.toLowerCase())) continue;
+                seenNames.add(rawVal.toLowerCase());
+
+                const role = classifyComponentRole(rawVal, rawKey);
+                const cleanQuery = cleanComponentQuery(rawVal, role.roleKey);
+
+                components.push({
+                    ...role,
+                    name: rawVal,
+                    cleanQuery,
+                    url: null,
+                    price: null,
+                    priceLabel: null
+                });
+            }
+        }
+
+        // Strategy 3: Parse title combo '+' items if no DOM list was parsed
+        if (components.length === 0 && isBundleTitle && info?.name && info.name.includes('+')) {
+            const parts = info.name
+                .replace(/\s*-\s*tuotepaketti\b/i, '')
+                .replace(/\b(?:tuotepaketti|bundle|päivityspaketti)\b/i, '')
+                .split(/\s*\+\s*/)
+                .map(p => p.trim())
+                .filter(p => p.length >= 4);
+
+            if (parts.length >= 2) {
+                parts.forEach(p => {
+                    const role = classifyComponentRole(p, '');
+                    const cleanQuery = cleanComponentQuery(p, role.roleKey);
+                    components.push({
+                        ...role,
+                        name: p,
+                        cleanQuery,
+                        url: null,
+                        price: null,
+                        priceLabel: null
+                    });
+                });
+            }
+        }
+
+        const isBundle = isBundleTitle || hasBundleHeading || (components.length >= 2 && Boolean(officialStandaloneTotal));
+        const isPcBuild = isPcTitle || hasPcSpecHeading || components.filter(c => ['cpu', 'mobo', 'gpu', 'ram'].includes(c.roleKey)).length >= 3;
+
+        if (!isBundle && !isPcBuild && components.length < 2) {
+            return null;
+        }
+
+        return {
+            isBundle: Boolean(isBundle),
+            isPcBuild: Boolean(isPcBuild),
+            officialStandaloneTotal,
+            computedStandaloneTotal: null,
+            components
+        };
+    }
+
+    async function enrichBundleComponentPrices(bundleData) {
+        if (!bundleData || !Array.isArray(bundleData.components)) return bundleData;
+        let anyFetched = false;
+        await Promise.all(bundleData.components.map(async (comp) => {
+            if (!comp.url || comp.price) return;
+            const cacheKey = `comp_price_${comp.url}`;
+            const cached = getCached(cacheKey);
+            if (cached && typeof cached === 'number') {
+                comp.price = cached;
+                comp.source = "Jimm's";
+                return;
+            }
+            try {
+                const { text: html } = await gmFetch(comp.url, 'text/html,application/xhtml+xml', 4000);
+                const pMatch = html.match(/property="product:price:amount"\s+content="([0-9.]+)"/i) ||
+                               html.match(/itemprop="price"\s+content="([0-9.]+)"/i) ||
+                               html.match(/class="[^"]*price__amount[^"]*">\s*([0-9\s,.]+)/i);
+                if (pMatch) {
+                    const parsed = parsePriceNumber(pMatch[1]);
+                    if (parsed && parsed > 0) {
+                        comp.price = parsed;
+                        comp.source = "Jimm's";
+                        setCached(cacheKey, parsed);
+                        anyFetched = true;
+                    }
+                }
+            } catch (_) {}
+        }));
+
+        if (anyFetched || !bundleData.computedStandaloneTotal) {
+            const sum = bundleData.components.reduce((acc, c) => acc + (c.price || 0), 0);
+            if (sum > 0) {
+                bundleData.computedStandaloneTotal = Number(sum.toFixed(2));
+            }
+        }
+        return bundleData;
+    }
+
+    function buildBundleBreakdownHtml(bundleData, productInfo, t, lang) {
+        if (!bundleData || !Array.isArray(bundleData.components) || bundleData.components.length === 0) {
+            return `<div class="ufhpc-empty">${lang === 'en' ? 'No component specs found' : 'Ei komponentteja löydetty'}</div>`;
+        }
+
+        const standalone = bundleData.officialStandaloneTotal || bundleData.computedStandaloneTotal;
+        const bundlePrice = productInfo.currentPrice;
+        let summaryHtml = '';
+        if (standalone && bundlePrice) {
+            const diff = bundlePrice - standalone;
+            const isSave = diff < -1;
+            const isPricier = diff > 1;
+            const absDiff = Math.abs(diff);
+            const diffPct = ((absDiff / standalone) * 100).toFixed(1);
+            const badgeClass = isSave ? 'is-save' : (isPricier ? 'is-pricier' : '');
+            const badgeText = isSave
+                ? (lang === 'en' ? `🔥 SAVE -${formatEur(absDiff, 0)} (-${diffPct}%)` : `🔥 SÄÄSTÄ -${formatEur(absDiff, 0)} (-${diffPct}%)`)
+                : (isPricier
+                    ? (lang === 'en' ? `⚠️ +${formatEur(absDiff, 0)} (+${diffPct}%)` : `⚠️ KALLIIMPI +${formatEur(absDiff, 0)} (+${diffPct}%)`)
+                    : (lang === 'en' ? '⚖️ SAME PRICE' : '⚖️ SAMA HINTA'));
+
+            const desc = isSave
+                ? (lang === 'en'
+                    ? `Bundle is ${formatEur(absDiff)} cheaper than buying components separately.`
+                    : `Tuotepaketti on ${formatEur(absDiff)} edullisempi kuin osien ostaminen erikseen.`)
+                : (isPricier
+                    ? (lang === 'en'
+                        ? `Buying components separately saves ${formatEur(absDiff)}!`
+                        : `Ostamalla osat erikseen säästät ${formatEur(absDiff)}!`)
+                    : (lang === 'en'
+                        ? 'Bundle price equals the sum of separate components.'
+                        : 'Paketin hinta vastaa osien yhteenlaskettua hintaa.'));
+
+            summaryHtml = `
+                <div class="ufhpc-bundle-summary">
+                    <div class="ufhpc-bundle-summary-head">
+                        <span>${bundleData.isPcBuild ? (lang === 'en' ? '🖥️ DIY vs. Prebuilt PC' : '🖥️ Kokoaminen vs. Valmiskone') : (lang === 'en' ? '📦 Bundle vs. Separate Parts' : '📦 Tuotepaketti vs. Osat erikseen')}</span>
+                        <span class="ufhpc-bundle-savings-badge ${badgeClass}">${badgeText}</span>
+                    </div>
+                    <div class="ufhpc-bundle-summary-math">
+                        <strong>${lang === 'en' ? 'Package' : 'Paketti'}:</strong> ${formatEur(bundlePrice)} • 
+                        <strong>${lang === 'en' ? 'Separate' : 'Erikseen'}:</strong> ${formatEur(standalone)}
+                        <br>${escapeHtml(desc)}
+                    </div>
+                </div>
+            `;
+        }
+
+        const rowsHtml = bundleData.components.map((comp) => {
+            const hintaSearchUrl = `https://hinta.fi/haku?q=${encodeURIComponent(comp.cleanQuery || comp.name)}`;
+            const storeSearchUrl = `https://www.jimms.fi/fi/Product/Search?q=${encodeURIComponent(comp.cleanQuery || comp.name)}`;
+            const priceStr = comp.price ? formatEur(comp.price) : '';
+
+            return `
+                <div class="ufhpc-component-card">
+                    <div class="ufhpc-component-top">
+                        <span class="ufhpc-component-role">${comp.roleIcon} ${escapeHtml(comp.roleLabel)}</span>
+                        ${priceStr ? `<span class="ufhpc-component-price">${priceStr}</span>` : ''}
+                    </div>
+                    <div class="ufhpc-component-name">${escapeHtml(comp.name)}</div>
+                    <div class="ufhpc-component-links">
+                        ${comp.url ? `<a class="ufhpc-comp-link-btn" href="${escapeHtml(comp.url)}" target="_blank" rel="noopener noreferrer">Tuotesivu ↗</a>` : ''}
+                        <a class="ufhpc-comp-link-btn is-hinta" href="${escapeHtml(hintaSearchUrl)}" target="_blank" rel="noopener noreferrer">Hinta.fi ↗</a>
+                        <a class="ufhpc-comp-link-btn" href="${escapeHtml(storeSearchUrl)}" target="_blank" rel="noopener noreferrer">Haku ↗</a>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        const tipHtml = `
+            <div class="ufhpc-bonus-box" style="margin-top:4px;">
+                <span>💡 <strong>${lang === 'en' ? 'DIY Builder Tip:' : 'Kasausvinkki:'}</strong> ${lang === 'en'
+                    ? 'Click "Hinta.fi" on any component to check today\'s lowest price across competing stores.'
+                    : 'Klikkaa "Hinta.fi" minkä tahansa osan kohdalta nähdäksesi päivän halvimman markkinahinnan.'}</span>
+            </div>
+        `;
+
+        return `
+            ${summaryHtml}
+            <div class="ufhpc-components-list">
+                ${rowsHtml}
+            </div>
+            ${tipHtml}
+        `;
     }
 
     function detectClubOfferOnPage(primaryPriceDom, schemaPrice) {
@@ -3510,8 +3887,8 @@
 
             // Structured spec compatibility (generation, tier Pro/Max/Ultra/Plus, storage GB/TB, screen size, pack count, '+' combo bundle)
             const specCompat = evaluateSpecCompatibility(targetName, candidate.name);
-            if (!hasExactModelMatch && specCompat.hasHardConflict) {
-                score -= 220;
+            if (specCompat.hasHardConflict) {
+                score -= 350;
             } else if (!hasExactModelMatch || specCompat.delta > 0) {
                 score += specCompat.delta;
             }
@@ -3585,11 +3962,13 @@
                 }
             }
 
-            const targetIsPc = /pelikone|tietokone|gaming pc|desktop pc|paketti|bundle/i.test(normTarget);
-            const candIsPc = /pelikone|tietokone|gaming pc|paketti|bundle/i.test(normCand) ||
+            const targetIsPc = /pelikone|tietokone|gaming pc|desktop pc|paketti|bundle|tuotepaketti/i.test(normTarget);
+            const candIsPc = /pelikone|tietokone|gaming pc|paketti|bundle|tuotepaketti/i.test(normCand) ||
                 /tietokoneet/i.test(candidate.category || '');
             if (!targetIsPc && candIsPc) {
                 score -= 80;
+            } else if (targetIsPc && !candIsPc && !hasBaseModelMatch) {
+                score -= 120;
             }
         }
 
@@ -3598,7 +3977,7 @@
             if (ratio >= 0.45 && ratio <= 2.2) {
                 score += 40 - Math.abs(1 - ratio) * 28;
             } else {
-                score -= 90;
+                score -= (ratio < 0.28 || ratio > 3.5) ? 250 : 90;
             }
         }
 
@@ -4774,6 +5153,15 @@
         let isLearned = Boolean(learnedMatch);
         let marketResult = null;
 
+        // Asynchronously enrich bundle / PC build component prices from subproduct links
+        if (productInfo?.bundleData && Array.isArray(productInfo.bundleData.components)) {
+            enrichBundleComponentPrices(productInfo.bundleData).then(() => {
+                if (typeof onPartialUpdate === 'function') {
+                    onPartialUpdate(marketResult);
+                }
+            }).catch(() => {});
+        }
+
         // If an exact Hinta.fi product URL was previously learned for this item, fetch it directly
         if (learnedMatch?.targetUrl) {
             try {
@@ -4847,9 +5235,10 @@
                     }
                 }
 
-                const validCandidates = customQuery
+                const validCandidates = (customQuery
                     ? parsed.candidates.filter(c => c.score > -100)
-                    : parsed.candidates.filter(c => c.score > 15);
+                    : parsed.candidates.filter(c => c.score > 15))
+                    .filter(c => q.type === 'EAN' || customQuery || q.isLearned || !evaluateSpecCompatibility(targetNameForScoring, c.name).hasHardConflict);
 
                 if (validCandidates.length > 0) {
                     const best = validCandidates[0];
@@ -5793,8 +6182,88 @@
     }
 
     function evaluatePriceVerdict(currentPrice, marketLowest, lang = detectLanguage(), isUsedSite = false, clubOffer = null, lowestNonClubPrice = null, lowestNonClubStore = null, productInfo = null, toriStats = null) {
+        if (clubOffer && typeof clubOffer === 'object' && (clubOffer.bundleData || clubOffer.name || clubOffer.category)) {
+            productInfo = clubOffer;
+            clubOffer = productInfo.clubOffer || null;
+        }
         const themes = getStatusThemes(lang, isUsedSite);
         const t = I18N[lang] || I18N.fi;
+
+        // Check if item is a Component Bundle or Prebuilt PC
+        if (productInfo?.bundleData) {
+            const bData = productInfo.bundleData;
+            const standalone = bData.officialStandaloneTotal || bData.computedStandaloneTotal;
+            if (standalone && currentPrice) {
+                const diffEur = currentPrice - standalone;
+                const diffPct = (diffEur / standalone) * 100;
+                if (diffEur <= -2.0) {
+                    const saveEur = Math.abs(diffEur);
+                    return {
+                        theme: {
+                            ...themes.green,
+                            icon: '🔥',
+                            label: lang === 'en'
+                                ? `BUNDLE SAVINGS (-${formatEur(saveEur, 0)} / ${diffPct.toFixed(1)}%)`
+                                : `TUOTEPAKETIN SÄÄSTÖ (-${formatEur(saveEur, 0)} / ${diffPct.toFixed(1)}%)`,
+                            sublabel: lang === 'en'
+                                ? `Cheaper than buying parts separately (Separate total: ${formatEur(standalone)})`
+                                : `Edullisempi kuin osat erikseen (Osat erikseen: ${formatEur(standalone)})`
+                        },
+                        diffEur,
+                        diffPct,
+                        isBundleVerdict: true,
+                        standaloneTotal: standalone
+                    };
+                } else if (diffEur >= 2.0) {
+                    return {
+                        theme: {
+                            ...themes.red,
+                            icon: '⚠️',
+                            label: lang === 'en'
+                                ? `PARTS CHEAPER SEPARATELY (+${formatEur(diffEur, 0)} / +${diffPct.toFixed(1)}%)`
+                                : `ERIKSEEN OSTETTUNA HALVEMPI (+${formatEur(diffEur, 0)} / +${diffPct.toFixed(1)}%)`,
+                            sublabel: lang === 'en'
+                                ? `Parts cost less if purchased separately (Separate total: ${formatEur(standalone)})`
+                                : `Osat maksavat vähemmän erikseen ostettuna (Osat erikseen: ${formatEur(standalone)})`
+                        },
+                        diffEur,
+                        diffPct,
+                        isBundleVerdict: true,
+                        standaloneTotal: standalone
+                    };
+                } else {
+                    return {
+                        theme: {
+                            ...themes.yellow,
+                            icon: '⚖️',
+                            label: lang === 'en' ? 'SAME PRICE AS SEPARATE PARTS' : 'SAMA HINTA KUIN ERIKSEEN',
+                            sublabel: lang === 'en'
+                                ? `Bundle price equals parts purchased separately (${formatEur(standalone)})`
+                                : `Paketin hinta vastaa osien summaa erikseen ostettuna (${formatEur(standalone)})`
+                        },
+                        diffEur,
+                        diffPct,
+                        isBundleVerdict: true,
+                        standaloneTotal: standalone
+                    };
+                }
+            } else if (bData.isPcBuild) {
+                return {
+                    theme: {
+                        ...themes.neutral,
+                        icon: '🖥️',
+                        label: lang === 'en' ? `PC BUILD (${bData.components.length} COMPONENTS)` : `PELITIETOKONE (${bData.components.length} OSAA)`,
+                        sublabel: lang === 'en'
+                            ? 'Explore component specifications and compare DIY standalone pricing below'
+                            : 'Tutki kokoonpanon komponentteja ja vertaa erikseen ostamiseen alta'
+                    },
+                    diffEur: null,
+                    diffPct: null,
+                    isBundleVerdict: true,
+                    isPcBuildVerdict: true
+                };
+            }
+        }
 
         // If brand-new marketLowest is unavailable, check Tori.fi median (for used furniture/items) or Unit Price (€/kg, €/l for groceries)
         if (!currentPrice || !marketLowest) {
@@ -6760,6 +7229,10 @@
             .ufhpc-tab.is-active-history {
                 border-color: rgba(129, 140, 248, 0.3);
                 color: #eef2ff;
+            }
+            .ufhpc-tab.is-active-bundle {
+                border-color: rgba(56, 189, 248, 0.45);
+                color: #e0f2fe;
             }
             .ufhpc-tab-badge {
                 font-size: 9.5px;
@@ -8253,6 +8726,134 @@
                 color: #fde68a;
                 margin-bottom: 2px;
             }
+
+            /* Component Bundle & PC Build Deconstruction Styles */
+            .ufhpc-bundle-summary {
+                background: rgba(0, 0, 0, 0.32);
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                border-radius: 12px;
+                padding: 10px 12px;
+                display: flex;
+                flex-direction: column;
+                gap: 5px;
+                margin-bottom: 2px;
+            }
+            .ufhpc-bundle-summary-head {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+                font-size: 11px;
+                font-weight: 700;
+                color: #e2e8f0;
+            }
+            .ufhpc-bundle-savings-badge {
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                padding: 2px 7.5px;
+                border-radius: 6px;
+                font-size: 10px;
+                font-weight: 800;
+                letter-spacing: 0.02em;
+            }
+            .ufhpc-bundle-savings-badge.is-save {
+                background: rgba(16, 185, 129, 0.2);
+                color: #6ee7b7;
+                border: 1px solid rgba(16, 185, 129, 0.45);
+                box-shadow: 0 0 12px rgba(16, 185, 129, 0.25);
+            }
+            .ufhpc-bundle-savings-badge.is-pricier {
+                background: rgba(239, 68, 68, 0.2);
+                color: #fca5a5;
+                border: 1px solid rgba(239, 68, 68, 0.45);
+            }
+            .ufhpc-bundle-summary-math {
+                font-size: 10.5px;
+                color: #94a3b8;
+                line-height: 1.4;
+            }
+            .ufhpc-components-list {
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+            }
+            .ufhpc-component-card {
+                background: rgba(0, 0, 0, 0.28);
+                border: 1px solid rgba(255, 255, 255, 0.07);
+                border-radius: 10px;
+                padding: 8px 11px;
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+                transition: background 0.12s ease, border-color 0.12s ease;
+            }
+            .ufhpc-component-card:hover {
+                background: rgba(255, 255, 255, 0.05);
+                border-color: rgba(255, 255, 255, 0.14);
+            }
+            .ufhpc-component-top {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+            }
+            .ufhpc-component-role {
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                font-size: 9.5px;
+                font-weight: 800;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                color: #7dd3fc;
+            }
+            .ufhpc-component-price {
+                font-size: 12.5px;
+                font-weight: 800;
+                color: #34d399;
+                font-variant-numeric: tabular-nums;
+            }
+            .ufhpc-component-name {
+                font-size: 11px;
+                color: #e5e7eb;
+                line-height: 1.35;
+                word-break: break-word;
+            }
+            .ufhpc-component-links {
+                display: flex;
+                align-items: center;
+                gap: 5px;
+                margin-top: 3px;
+            }
+            .ufhpc-comp-link-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 3px;
+                padding: 2.5px 7px;
+                border-radius: 5px;
+                font-size: 9.5px;
+                font-weight: 600;
+                text-decoration: none;
+                color: #cbd5e1;
+                background: rgba(255, 255, 255, 0.06);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                transition: all 0.12s ease;
+            }
+            .ufhpc-comp-link-btn:hover {
+                color: #ffffff;
+                background: rgba(255, 255, 255, 0.12);
+                border-color: rgba(255, 255, 255, 0.22);
+            }
+            .ufhpc-comp-link-btn.is-hinta {
+                color: #6ee7b7;
+                background: rgba(16, 185, 129, 0.12);
+                border-color: rgba(16, 185, 129, 0.28);
+            }
+            .ufhpc-comp-link-btn.is-hinta:hover {
+                background: rgba(16, 185, 129, 0.22);
+                color: #a7f3d0;
+            }
         `;
     }
 
@@ -8906,6 +9507,10 @@
             if (verdict.isClubVerdict && verdict.clubOffer) {
                 deltaText = `Norm. ${formatEur(verdict.clubOffer.normalPrice)}`;
                 handleLabel = `👑 ${verdict.clubOffer.clubLabel} • ${formatEur(verdict.clubOffer.clubPrice)}`;
+            } else if (verdict.isBundleVerdict && verdict.diffEur !== null) {
+                const sign = verdict.diffEur > 0 ? '+' : '';
+                deltaText = `${sign}${formatEur(verdict.diffEur)} (${sign}${verdict.diffPct.toFixed(1)}%)`;
+                handleLabel = `${theme.icon} ${verdict.diffEur < 0 ? (this.lang === 'en' ? 'Savings' : 'Säästö') : (this.lang === 'en' ? 'Difference' : 'Erotus')} (${sign}${Math.round(verdict.diffEur)} €)`;
             } else if (verdict.diffEur !== null && lowestPrice) {
                 if (!productInfo.isUsedSite && verdict.diffEur <= 0.05) {
                     deltaText = t.cheapestBadge;
@@ -9087,32 +9692,58 @@
 
             const cheapestToriPrice = filteredTori[0]?.price;
             const unitInfo = productInfo.unitPriceInfo;
-            const thisStoreSub = productInfo.clubOffer?.normalPrice
+            let thisStoreSub = productInfo.clubOffer?.normalPrice
                 ? `Norm. ${formatEur(productInfo.clubOffer.normalPrice)}${cheapestToriPrice ? ` • Tori ${formatEur(cheapestToriPrice, 0)}` : ''}`
                 : (unitInfo
                     ? `⚖️ ${unitInfo.formatted}${unitInfo.quantityStr ? ` (${unitInfo.quantityStr})` : ''}`
                     : (cheapestToriPrice
                         ? `Käytetty alk. ${formatEur(cheapestToriPrice, 0)}`
                         : storeName));
-            const thisStoreLabel = productInfo.clubOffer
+            let thisStoreLabel = productInfo.clubOffer
                 ? `${t.thisStore} (👑 ${productInfo.clubOffer.clubLabel})`
                 : t.thisStore;
 
-            const rightMetricLabel = lowestPrice
+            let rightMetricLabel = lowestPrice
                 ? t.marketLowest
                 : (unitInfo
                     ? (this.lang === 'en' ? 'Unit Price' : 'Yksikköhinta')
                     : (toriData.stats ? (productInfo.isUsedSite ? (this.lang === 'en' ? 'Used Lowest' : 'Käytettynä halvin') : t.compareToriLowest) : t.marketLowest));
-            const rightMetricValue = lowestPrice
+            let rightMetricValue = lowestPrice
                 ? formatEur(lowestPrice)
                 : (unitInfo
                     ? unitInfo.formatted
                     : (toriData.stats ? formatEur(toriData.stats.minPrice, 0) : '—'));
-            const rightMetricSub = lowestPrice
+            let rightMetricSub = lowestPrice
                 ? low30dSub
                 : (unitInfo
                     ? (unitInfo.quantityStr ? `Pakkauskoko: ${unitInfo.quantityStr}` : storeName)
                     : (toriData.stats ? (this.lang === 'en' ? `Used median: ${formatEur(toriData.stats.medianPrice, 0)}` : `Käytettyjen mediaani: ${formatEur(toriData.stats.medianPrice, 0)}`) : low30dSub));
+
+            if (productInfo.bundleData) {
+                const bData = productInfo.bundleData;
+                const standalone = bData.officialStandaloneTotal || bData.computedStandaloneTotal;
+                thisStoreLabel = bData.isPcBuild ? (this.lang === 'en' ? 'THIS PC BUILD' : 'KOKO KONE') : (this.lang === 'en' ? 'THIS BUNDLE' : 'TÄMÄ PAKETTI');
+                thisStoreSub = `${bData.components.length} ${this.lang === 'en' ? 'components' : 'osaa'}`;
+                rightMetricLabel = this.lang === 'en' ? 'PARTS SEPARATELY' : 'OSAT ERIKSEEN';
+                if (standalone) {
+                    rightMetricValue = formatEur(standalone);
+                    if (productInfo.currentPrice) {
+                        const sDiff = productInfo.currentPrice - standalone;
+                        if (sDiff < -1) {
+                            rightMetricSub = this.lang === 'en' ? `🔥 Save -${formatEur(Math.abs(sDiff), 0)} (-${((Math.abs(sDiff) / standalone) * 100).toFixed(1)}%)` : `🔥 Säästö -${formatEur(Math.abs(sDiff), 0)} (-${((Math.abs(sDiff) / standalone) * 100).toFixed(1)}%)`;
+                        } else if (sDiff > 1) {
+                            rightMetricSub = this.lang === 'en' ? `⚠️ +${formatEur(sDiff, 0)} (+${((sDiff / standalone) * 100).toFixed(1)}%)` : `⚠️ Kalliimpi +${formatEur(sDiff, 0)} (+${((sDiff / standalone) * 100).toFixed(1)}%)`;
+                        } else {
+                            rightMetricSub = this.lang === 'en' ? '⚖️ Same price' : '⚖️ Sama hinta';
+                        }
+                    } else {
+                        rightMetricSub = this.lang === 'en' ? 'Standalone total' : 'Osien kokonaishinta';
+                    }
+                } else {
+                    rightMetricValue = '—';
+                    rightMetricSub = this.lang === 'en' ? `${bData.components.length} components` : `${bData.components.length} komponenttia`;
+                }
+            }
 
             const isHintaMatched = Boolean(marketProd && offers.length > 0);
             const hintaStoreCount = offers.length;
@@ -9383,7 +10014,9 @@
             }
 
             let effectiveMainTab = this.mainTab;
-            if (productInfo.isUsedSite && effectiveMainTab !== 'history') {
+            if (productInfo.bundleData && (!effectiveMainTab || (effectiveMainTab === 'stores' && offers.length === 0))) {
+                effectiveMainTab = 'bundle';
+            } else if (productInfo.isUsedSite && effectiveMainTab !== 'history') {
                 effectiveMainTab = 'used';
             } else if (!effectiveMainTab) {
                 if (offers.length > 0) {
@@ -9398,7 +10031,9 @@
             const totalUsedCount = (toriData.items?.length || 0);
 
             let tabPaneContentHtml = '';
-            if (effectiveMainTab === 'stores') {
+            if (effectiveMainTab === 'bundle' && productInfo.bundleData) {
+                tabPaneContentHtml = buildBundleBreakdownHtml(productInfo.bundleData, productInfo, t, this.lang);
+            } else if (effectiveMainTab === 'stores') {
                 tabPaneContentHtml = `
                     ${variantSelectHtml}
                     ${storesHtml}
@@ -9616,6 +10251,12 @@
                             </div>
 
                             <div class="ufhpc-tabs">
+                                ${productInfo.bundleData ? `
+                                    <button type="button" class="ufhpc-tab ${effectiveMainTab === 'bundle' ? 'is-active is-active-bundle' : ''}" data-main-tab="bundle">
+                                        <span>${productInfo.bundleData.isPcBuild ? '🖥️' : '🧩'} ${this.lang === 'en' ? 'Components' : 'Osat'}</span>
+                                        <span class="ufhpc-tab-badge">${productInfo.bundleData.components.length}</span>
+                                    </button>
+                                ` : ''}
                                 <button type="button" class="ufhpc-tab ${effectiveMainTab === 'stores' ? 'is-active is-active-stores' : ''}" data-main-tab="stores">
                                     <span>🏪 ${this.lang === 'en' ? 'Stores' : 'Kaupat'}</span>
                                     <span class="ufhpc-tab-badge">${offers.length}</span>
