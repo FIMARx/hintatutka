@@ -230,3 +230,43 @@ test('bundle: spec compatibility hard conflict prevents false single-motherboard
     const score = HT.scoreSearchCandidate({ name: singleMoboCandidate, price: 148.90 }, bundleTitle, 1139.00);
     assert.ok(score < 0, `Bundle vs single part score must be heavily penalized, got ${score}`);
 });
+
+test('bundle: tab labels are compact to avoid horizontal overflow on 4-tab bundle view', () => {
+    const { exports: HT } = loadHintaTutka();
+
+    assert.strictEqual(HT.I18N.fi.tabHistory, 'Historia', 'Finnish tab label must be compact "Historia"');
+    assert.strictEqual(HT.I18N.en.tabHistory, 'History', 'English tab label must be compact "History"');
+    assert.ok(HT.I18N.fi.tabHistory.length <= 8, 'Tab label length must be <= 8 chars to fit 4-tab grid');
+});
+
+test('bundle: component price history charts render SVG plots, ATL stats and competitor tags', () => {
+    const { exports: HT } = loadHintaTutka();
+
+    const mockMoboHistory = {
+        points: [
+            { dateStr: '01/25', fullTitle: 'Tammikuu 2025', price: 279.90, rawLabel: '2025-01-01' },
+            { dateStr: '11/26', fullTitle: 'Marraskuu 2026', price: 148.90, rawLabel: '2026-11-15' }
+        ],
+        atl: { price: 148.90, bestStore: 'Gigantti', dateStr: '11/2026' },
+        minPrice: 148.90,
+        maxPrice: 279.90
+    };
+
+    const chartHtml = HT.buildDualChartSectionHtml(
+        mockMoboHistory,
+        null,
+        179.90,
+        148.90,
+        { color: '#34d399' },
+        'fi',
+        'new',
+        'comp-0'
+    );
+
+    assert.ok(chartHtml.includes('id="ufhpc-chart-box-comp-0"'), 'Chart box must contain unique component prefix');
+    assert.ok(chartHtml.includes('id="ufhpc-chart-svg-comp-0"'), 'SVG must have unique component prefix');
+    assert.ok(chartHtml.includes('148,90'), 'Chart header must display latest price');
+    assert.ok(chartHtml.includes('Gigantti'), 'ATL label must display cheapest store');
+    assert.ok(chartHtml.includes('<polyline'), 'Must render SVG polyline for price curve');
+    assert.ok(chartHtml.includes('<circle'), 'Must render ATL indicator circle');
+});

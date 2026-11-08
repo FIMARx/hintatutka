@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         HintaTutka
 // @namespace    https://github.com/FIMARx/hintatutka
-// @version      9.8.1
-// @description  Suomen älykkäin hintatutka (v9.8.1): Älykäs PC-kokoonpanojen & tuotepakettien erittely (DIY vs Valmiskone), EU/Saksa ALV-vertailu, Flip-arbitraasi (Tori/Vinted/Huuto) & 81 kauppaa
+// @version      9.8.2
+// @description  Suomen älykkäin hintatutka (v9.8.2): PC-komponenttien & tuotepakettien erillishintahistoriat, reaaliaikainen DIY-optimointi, EU/Saksa ALV-vertailu & 81 kauppaa
 // @author       FIMARx
 // @icon         https://raw.githubusercontent.com/FIMARx/hintatutka/main/extension-mv3/icons/icon128.png
 // @homepageURL  https://github.com/FIMARx/hintatutka
@@ -150,7 +150,7 @@
     // =========================================================================
     // CONFIGURATION & THRESHOLDS
     // =========================================================================
-    const SCRIPT_VERSION = '9.8.1';
+    const SCRIPT_VERSION = '9.8.2';
     const BRAND_LOGO_SVG_MINI = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 58 58" width="15" height="15" style="flex-shrink:0;display:block;"><defs><linearGradient id="htMiniBg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#065f46"/><stop offset="100%" stop-color="#0f172a"/></linearGradient><linearGradient id="htMiniBolt" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#a7f3d0"/><stop offset="100%" stop-color="#10b981"/></linearGradient></defs><rect x="1.5" y="1.5" width="55" height="55" rx="14.5" fill="url(#htMiniBg)" stroke="#10b981" stroke-opacity="0.78" stroke-width="2.4"/><circle cx="29" cy="29" r="19.5" fill="none" stroke="#34d399" stroke-opacity="0.36" stroke-width="1.8" stroke-dasharray="4 3"/><path d="M32.5 11L18.5 31H29.5L25.5 47L40.5 26.5H29.5L32.5 11Z" fill="url(#htMiniBolt)"/></svg>`;
     const IS_MV3_EXTENSION = Boolean(
         globalThis.__HT_MV3_EXTENSION__ ||
@@ -362,7 +362,7 @@
             toriCompany: 'Yritys',
             tabStores: (n) => `Kaupat (${n})`,
             tabUsed: (n) => `Käytetyt (${n})`,
-            tabHistory: 'Hintahistoria',
+            tabHistory: 'Historia',
             compareBtn: '⚔️ Vertaa',
             compareCloseBtn: '⇔ Kapea',
             compareHeader: '⚔️ Vertaa toiseen malliin (esim. edellinen sukupolvi)',
@@ -461,7 +461,7 @@
             toriCompany: 'Refurb/Shop',
             tabStores: (n) => `Stores (${n})`,
             tabUsed: (n) => `Used (${n})`,
-            tabHistory: 'Price History',
+            tabHistory: 'History',
             compareBtn: '⚔️ Compare',
             compareCloseBtn: '⇔ Narrow',
             compareHeader: '⚔️ Compare Side-by-Side (e.g. Previous Gen)',
@@ -2564,6 +2564,14 @@
                     anyFetched = true;
                 }
             }
+
+            // Task 3: Fetch component price history from Hinta.fi if url available
+            if (comp.hintaUrl && !comp.history) {
+                try {
+                    comp.history = await fetchProductHistory(comp.hintaUrl);
+                    if (comp.history) anyFetched = true;
+                } catch (_) {}
+            }
         }));
 
         // Compute Market DIY Total (cheapest stores across Finland) and Store Separate Total
@@ -2711,6 +2719,11 @@
                             <a class="ufhpc-comp-link-btn" href="${escapeHtml(comp.url)}" target="_blank" rel="noopener noreferrer">
                                 ${escapeHtml(storeName)} ${comp.storePrice ? `(${formatEur(comp.storePrice, 0)})` : ''} ↗
                             </a>
+                        ` : ''}
+                        ${comp.history?.points?.length >= 2 ? `
+                            <button type="button" class="ufhpc-comp-link-btn is-hist" data-goto-comp-hist="${escapeHtml(comp.roleKey || '')}" title="${lang === 'en' ? 'View component price history chart' : 'Katso osan hintahistoriakaavio'}">
+                                📈 ${lang === 'en' ? 'History' : 'Historia'} ❯
+                            </button>
                         ` : ''}
                     </div>
                 </div>
@@ -7389,24 +7402,38 @@
                 padding: 3px;
                 gap: 2px;
                 margin-top: 2px;
+                width: 100%;
+                box-sizing: border-box;
             }
             .ufhpc-tab {
-                flex: 1;
+                flex: 1 1 0;
+                min-width: 0;
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
-                gap: 4px;
+                gap: 3.5px;
                 background: transparent;
                 border: 1px solid transparent;
                 color: #94a3b8;
                 font-size: 11px;
                 font-weight: 600;
-                padding: 6.5px 6px;
+                padding: 6.5px 5px;
                 border-radius: 7px;
                 cursor: pointer;
                 transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
                 white-space: nowrap;
                 user-select: none;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .ufhpc-tabs.has-4-tabs .ufhpc-tab {
+                padding: 6px 3px;
+                font-size: 10.5px;
+                gap: 2.5px;
+            }
+            .ufhpc-tabs.has-4-tabs .ufhpc-tab-badge {
+                padding: 1px 4px;
+                font-size: 9px;
             }
             .ufhpc-tab:hover {
                 color: #f1f5f9;
@@ -9122,6 +9149,132 @@
                 background: rgba(16, 185, 129, 0.22);
                 color: #a7f3d0;
             }
+            .ufhpc-comp-link-btn.is-hist {
+                color: #a5b4fc;
+                background: rgba(99, 102, 241, 0.12);
+                border-color: rgba(99, 102, 241, 0.28);
+                cursor: pointer;
+            }
+            .ufhpc-comp-link-btn.is-hist:hover {
+                background: rgba(99, 102, 241, 0.22);
+                color: #c7d2fe;
+            }
+
+            /* Component Price History Cards (v9.8.2) */
+            .ufhpc-bundle-hist-section-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                font-size: 11px;
+                font-weight: 700;
+                color: #94a3b8;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                margin: 6px 0 3px 0;
+                padding: 0 2px;
+            }
+            .ufhpc-bundle-hist-sub {
+                font-size: 9.5px;
+                color: #64748b;
+                font-weight: 600;
+                text-transform: none;
+            }
+            .ufhpc-bch-filter-bar {
+                display: flex;
+                gap: 4px;
+                overflow-x: auto;
+                padding: 2px 1px 4px 1px;
+                margin-bottom: 6px;
+                scrollbar-width: none;
+            }
+            .ufhpc-bch-filter-bar::-webkit-scrollbar {
+                display: none;
+            }
+            .ufhpc-bch-filter-btn {
+                flex-shrink: 0;
+                display: inline-flex;
+                align-items: center;
+                gap: 3.5px;
+                background: rgba(255, 255, 255, 0.04);
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                border-radius: 6px;
+                color: #94a3b8;
+                font-size: 10px;
+                font-weight: 600;
+                padding: 3.5px 8px;
+                cursor: pointer;
+                transition: all 0.15s ease;
+                user-select: none;
+            }
+            .ufhpc-bch-filter-btn:hover {
+                background: rgba(255, 255, 255, 0.08);
+                color: #f1f5f9;
+            }
+            .ufhpc-bch-filter-btn.is-active {
+                background: rgba(16, 185, 129, 0.16);
+                border-color: rgba(52, 211, 153, 0.4);
+                color: #34d399;
+                font-weight: 700;
+            }
+            .ufhpc-bundle-comp-history-card {
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+                background: rgba(0, 0, 0, 0.22);
+                border: 1px solid rgba(255, 255, 255, 0.07);
+                border-radius: 12px;
+                padding: 9px 10px 8px 10px;
+                margin-bottom: 8px;
+            }
+            .ufhpc-bch-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+            }
+            .ufhpc-bch-title-wrap {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                min-width: 0;
+                flex: 1;
+            }
+            .ufhpc-bch-name {
+                font-size: 11px;
+                font-weight: 700;
+                color: #f1f5f9;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .ufhpc-bch-price-wrap {
+                display: flex;
+                align-items: center;
+                gap: 5px;
+                flex-shrink: 0;
+            }
+            .ufhpc-bch-price {
+                font-size: 12px;
+                font-weight: 800;
+                color: #34d399;
+                font-variant-numeric: tabular-nums;
+            }
+            .ufhpc-bch-store {
+                font-size: 9.5px;
+                color: #94a3b8;
+            }
+            .ufhpc-bch-link {
+                font-size: 9.5px;
+                color: #60a5fa;
+                text-decoration: none;
+                padding: 1px 4px;
+                border-radius: 4px;
+                background: rgba(96, 165, 250, 0.08);
+                transition: background 0.15s ease;
+            }
+            .ufhpc-bch-link:hover {
+                background: rgba(96, 165, 250, 0.18);
+            }
         `;
     }
 
@@ -9202,6 +9355,8 @@
             this.compareLoading = false;
             this._panelNeedsHydration = false;
             this._stage2Running = false;
+            this.bundleHistoryFilter = 'all';
+            this._fetchingCompHistories = false;
 
             // Live Update & Reload Confirmation Tracking
             this.updateInstalling = false;
@@ -10339,6 +10494,7 @@
                     </div>
                 `;
             } else if (effectiveMainTab === 'history') {
+                const hasMainHistory = Boolean(marketProd?.history && Array.isArray(marketProd.history.points) && marketProd.history.points.length >= 2);
                 const chartHtml = buildDualChartSectionHtml(
                     marketProd?.history,
                     toriData,
@@ -10349,12 +10505,127 @@
                     this.chartTab,
                     'main'
                 );
-                tabPaneContentHtml = chartHtml ? `${forecastCardHtml}${chartHtml}` : `
-                    ${forecastCardHtml}
-                    <div class="ufhpc-empty">
-                        📈 ${this.lang === 'en' ? 'No price history points recorded for this item yet.' : 'Tuotteelle ei ole vielä kertynyt hintahistoriapisteitä.'}
-                    </div>
-                `;
+
+                if (productInfo.bundleData && Array.isArray(productInfo.bundleData.components)) {
+                    const allComps = productInfo.bundleData.components;
+                    const compsWithHistory = allComps.filter(c => c.history && Array.isArray(c.history.points) && c.history.points.length >= 2);
+
+                    // Trigger lazy load if components have hintaUrl but missing history
+                    const pendingComps = allComps.filter(c => c.hintaUrl && !c.history);
+                    if (pendingComps.length > 0 && !this._fetchingCompHistories) {
+                        this._fetchingCompHistories = true;
+                        Promise.all(pendingComps.map(async c => {
+                            try {
+                                c.history = await fetchProductHistory(c.hintaUrl);
+                            } catch (_) {}
+                        })).then(() => {
+                            this._fetchingCompHistories = false;
+                            this.refreshView();
+                        }).catch(() => { this._fetchingCompHistories = false; });
+                    }
+
+                    if (compsWithHistory.length > 0) {
+                        const activeFilter = this.bundleHistoryFilter || 'all';
+                        const visibleComps = activeFilter === 'all'
+                            ? compsWithHistory
+                            : compsWithHistory.filter((c, idx) => String(idx) === activeFilter || c.roleKey === activeFilter);
+
+                        const filterBarHtml = compsWithHistory.length > 1 ? `
+                            <div class="ufhpc-bch-filter-bar">
+                                <button type="button" class="ufhpc-bch-filter-btn ${activeFilter === 'all' ? 'is-active' : ''}" data-bundle-hist-filter="all">
+                                    ${this.lang === 'en' ? 'All' : 'Kaikki'} (${compsWithHistory.length})
+                                </button>
+                                ${compsWithHistory.map((comp, idx) => `
+                                    <button type="button" class="ufhpc-bch-filter-btn ${activeFilter === String(idx) || activeFilter === comp.roleKey ? 'is-active' : ''}" data-bundle-hist-filter="${idx}">
+                                        ${comp.roleIcon || '🧩'} ${escapeHtml(comp.roleLabel || comp.roleKey || 'Osa')}
+                                    </button>
+                                `).join('')}
+                            </div>
+                        ` : '';
+
+                        const compChartsHtml = visibleComps.map((comp) => {
+                            const originalIdx = allComps.indexOf(comp);
+                            const compPrefix = `comp-${originalIdx >= 0 ? originalIdx : 0}`;
+                            const singleChart = buildDualChartSectionHtml(
+                                comp.history,
+                                null,
+                                comp.storePrice || comp.price,
+                                comp.marketLowest || comp.price,
+                                theme,
+                                this.lang,
+                                'new',
+                                compPrefix
+                            );
+
+                            return `
+                                <div class="ufhpc-bundle-comp-history-card">
+                                    <div class="ufhpc-bch-header">
+                                        <div class="ufhpc-bch-title-wrap">
+                                            <span class="ufhpc-component-role">${comp.roleIcon || '🧩'} ${escapeHtml(comp.roleLabel || comp.roleKey || 'Osa')}</span>
+                                            <span class="ufhpc-bch-name" title="${escapeHtml(comp.name)}">${escapeHtml(comp.name)}</span>
+                                        </div>
+                                        <div class="ufhpc-bch-price-wrap">
+                                            <span class="ufhpc-bch-price">${formatEur(comp.marketLowest || comp.storePrice || comp.price)}</span>
+                                            ${comp.cheapestStore ? `<span class="ufhpc-bch-store">(${escapeHtml(comp.cheapestStore)})</span>` : ''}
+                                            ${comp.hintaUrl ? `<a href="${escapeHtml(comp.hintaUrl)}" target="_blank" rel="noopener noreferrer" class="ufhpc-bch-link" title="Avaa Hinta.fi">Hinta.fi ↗</a>` : ''}
+                                        </div>
+                                    </div>
+                                    ${singleChart}
+                                </div>
+                            `;
+                        }).join('');
+
+                        let bundleHistHeader = '';
+                        if (hasMainHistory) {
+                            bundleHistHeader = `
+                                <div class="ufhpc-bundle-hist-section-header">
+                                    <span>📦 ${this.lang === 'en' ? 'Package Price Trend' : 'Koko paketin hintakehitys'}</span>
+                                </div>
+                                ${chartHtml}
+                                <div class="ufhpc-bundle-hist-section-header" style="margin-top: 10px;">
+                                    <span>🖥️ ${this.lang === 'en' ? 'Component Price Histories' : 'Komponenttien hintahistoriat'}</span>
+                                    <span class="ufhpc-bundle-hist-sub">${compsWithHistory.length} ${this.lang === 'en' ? 'tracked parts' : 'seurattua osaa'}</span>
+                                </div>
+                            `;
+                        } else {
+                            bundleHistHeader = `
+                                <div class="ufhpc-bundle-hist-section-header">
+                                    <span>🖥️ ${this.lang === 'en' ? 'Component Price Histories' : 'Komponenttien hintahistoriat'}</span>
+                                    <span class="ufhpc-bundle-hist-sub">${compsWithHistory.length} ${this.lang === 'en' ? 'tracked parts' : 'seurattua osaa'}</span>
+                                </div>
+                            `;
+                        }
+
+                        tabPaneContentHtml = `
+                            ${forecastCardHtml}
+                            ${bundleHistHeader}
+                            ${filterBarHtml}
+                            ${compChartsHtml}
+                        `;
+                    } else if (pendingComps.length > 0 || this._fetchingCompHistories) {
+                        tabPaneContentHtml = `
+                            ${forecastCardHtml}
+                            ${hasMainHistory ? chartHtml : ''}
+                            <div class="ufhpc-empty">
+                                ⏳ ${this.lang === 'en' ? 'Fetching component price histories from Hinta.fi...' : 'Haetaan komponenttien hintahistoriaa Hinta.fi:stä...'}
+                            </div>
+                        `;
+                    } else {
+                        tabPaneContentHtml = chartHtml ? `${forecastCardHtml}${chartHtml}` : `
+                            ${forecastCardHtml}
+                            <div class="ufhpc-empty">
+                                📈 ${this.lang === 'en' ? 'No price history points recorded for components yet.' : 'Komponenteille ei ole vielä kertynyt hintahistoriapisteitä.'}
+                            </div>
+                        `;
+                    }
+                } else {
+                    tabPaneContentHtml = chartHtml ? `${forecastCardHtml}${chartHtml}` : `
+                        ${forecastCardHtml}
+                        <div class="ufhpc-empty">
+                            📈 ${this.lang === 'en' ? 'No price history points recorded for this item yet.' : 'Tuotteelle ei ole vielä kertynyt hintahistoriapisteitä.'}
+                        </div>
+                    `;
+                }
             }
 
             const watchlist = this.getWatchlist();
@@ -10537,10 +10808,10 @@
                                 </div>
                             </div>
 
-                            <div class="ufhpc-tabs">
+                            <div class="ufhpc-tabs ${productInfo.bundleData ? 'has-4-tabs' : ''}">
                                 ${productInfo.bundleData ? `
                                     <button type="button" class="ufhpc-tab ${effectiveMainTab === 'bundle' ? 'is-active is-active-bundle' : ''}" data-main-tab="bundle">
-                                        <span>${productInfo.bundleData.isPcBuild ? '🖥️' : '🧩'} ${this.lang === 'en' ? 'Components' : 'Osat'}</span>
+                                        <span>${productInfo.bundleData.isPcBuild ? '🖥️' : '🧩'} ${this.lang === 'en' ? 'Parts' : 'Osat'}</span>
                                         <span class="ufhpc-tab-badge">${productInfo.bundleData.components.length}</span>
                                     </button>
                                 ` : ''}
@@ -10608,7 +10879,32 @@
                 }
             }
             if (effectiveMainTab === 'history') {
-                this.bindDualChartEvents(marketProd?.history, toriData, productInfo.currentPrice, lowestPrice, 'main');
+                if (marketProd?.history?.points?.length >= 2) {
+                    this.bindDualChartEvents(marketProd.history, toriData, productInfo.currentPrice, lowestPrice, 'main');
+                }
+                if (productInfo.bundleData && Array.isArray(productInfo.bundleData.components)) {
+                    productInfo.bundleData.components.forEach((comp, idx) => {
+                        if (comp.history && Array.isArray(comp.history.points) && comp.history.points.length >= 2) {
+                            this.bindDualChartEvents(
+                                comp.history,
+                                null,
+                                comp.storePrice || comp.price,
+                                comp.marketLowest || comp.price,
+                                `comp-${idx}`
+                            );
+                        }
+                    });
+
+                    const filterBtns = this.shadow.querySelectorAll('[data-bundle-hist-filter]');
+                    filterBtns.forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            const filterVal = btn.getAttribute('data-bundle-hist-filter');
+                            this.bundleHistoryFilter = filterVal;
+                            this.refreshView();
+                        });
+                    });
+                }
             }
             if (this.isExpanded && this.compareComparison) {
                 const compProd = this.compareComparison.product;
@@ -10992,6 +11288,18 @@
                         localStorage.setItem(CONFIG.storageKeyMainTab, targetTab);
                         this.refreshView();
                     }
+                });
+            });
+
+            const compHistBtns = this.shadow.querySelectorAll('[data-goto-comp-hist]');
+            compHistBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const role = btn.getAttribute('data-goto-comp-hist');
+                    this.bundleHistoryFilter = role || 'all';
+                    this.mainTab = 'history';
+                    localStorage.setItem(CONFIG.storageKeyMainTab, 'history');
+                    this.refreshView();
                 });
             });
 

@@ -50,7 +50,10 @@ globalThis.__HT_TEST_EXPORTS__ = {
     detectAndExtractBundleData,
     enrichBundleComponentPrices,
     buildBundleBreakdownHtml,
-    evaluatePriceVerdict
+    evaluatePriceVerdict,
+    fetchProductHistory,
+    buildDualChartSectionHtml,
+    I18N
 };
 `;
 
