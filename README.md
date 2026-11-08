@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/hero-banner.svg" width="100%" alt="HintaTutka v9.4 — Finnish & EU Real-Time Price Intelligence" />
+<img src="assets/hero-banner.svg" width="100%" alt="HintaTutka v9.6 — Finnish & EU Real-Time Price Intelligence" />
 
 <br />
 
@@ -154,7 +154,15 @@ HintaTutka works across all localized store paths (`/fi/`, `/en/`, `/sv/`) and S
 
 ## 🗺️ Changelog
 
-### 🚀 v9.5 (Latest)
+### 🚀 v9.6 (Latest)
+- **🔥 Automated Resale Arbitrage Bot (`scripts/arbitrage-bot.mjs`)**: Headless scraper using Tukey IQR outlier filtering and flip ROI margin math (`🔥 FLIP +XX €`), running locally or on GitHub Actions (`.github/workflows/arbitrage-bot.yml`) with instant rich Discord webhook push notifications.
+- **🇪🇺 True EU Cross-Border Sourcing & "Suomi-lisä" Index (`scripts/suomi-lisa-tracker.mjs`)**: Automated cross-border tracker comparing domestic Finnish prices vs. Amazon.de landed cost (with 25.5% Finnish VAT adjustment) across product categories, generating [`data/suomi-lisa-index.json`](data/suomi-lisa-index.json) and [`data/SUOMI-LISA-INDEX.md`](data/SUOMI-LISA-INDEX.md) to pinpoint domestic price traps.
+- **☁️ True Micro-Caching (SWR) in Cloudflare Worker (`cloudflare-worker/worker.js`)**: Structured Stale-While-Revalidate caching layer (`max-age=600, stale-while-revalidate=3600`) returning instantaneous 0ms cached responses while silently revalidating prices in the background via `ctx.waitUntil`.
+- **📈 Holt-Winters Seasonal Exponential Smoothing**: Triple exponential smoothing engine capturing smoothed baseline level, trend momentum, and cyclic retail dips (Hullut Päivät, Black Week) directly in the client script and edge proxy (`/forecast`).
+- **🇩🇪 GS1 EAN Structural Matching & German Hardware Synonyms**: Bypasses string word filters on verified GS1 EAN Amazon.de searches when no spec conflict exists, plus German hardware vocabulary (`tastatur`, `grafikkarte`, `hauptplatine`, `prozessor`, `netzteil`, `gehäuse`, `maus`).
+- **🩹 Self-Healing DOM Selectors Engine (`scripts/heal-selectors.mjs`)**: Daily automated GitHub Action (`.github/workflows/self-heal-selectors.yml`) testing selectors across stores, synthesizing fallback selectors using relative currency heuristics, and auto-patching [`selectors.json`](selectors.json).
+
+### 🚀 v9.5
 - **🧪 DigiKaveri-Grade Testing Suite & Real-Time Store Canaries**: Built on native `node:test` (22 unit, precision, parser, algorithm & cache tests + live network canaries) with automated CI on push, PR, and daily schedule (`cron: '0 6 * * *'`).
 - **🛡️ Motherboard Form-Factor Token Shield (`B850M` vs `B850`)**: Upgraded generation token regex to capture 3-digit chipsets (`B850M`, `B850`, `B650M`, `X870E`, `Z890`) and flag hard spec conflicts between micro-ATX and standard ATX boards.
 - **💶 Finnish Unicode Word Boundary Fix (`erissä 29,90 €`)**: Replaced ASCII `\b` with unicode-safe boundary `(?![a-zA-Z0-9äöåÄÖÅ])` across `invalidPriceTextRx` and `exVatOrInstallmentRx` to reject installment text.

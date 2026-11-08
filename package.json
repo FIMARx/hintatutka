@@ -1,6 +1,6 @@
 {
   "name": "hintatutka",
-  "version": "9.5.0",
+  "version": "9.6.0",
   "description": "Zero-CLS Finnish & EU retail price intelligence overlay across 81 stores + Amazon.de landed cost, Tori/Vinted/Huuto flip arbitrage & club deal audit.",
   "type": "module",
   "scripts": {
@@ -14,7 +14,11 @@
     "test:realtime:live": "node tests/realtime.mjs --live",
     "verify": "node scripts/verify.mjs",
     "verify:quick": "node scripts/verify.mjs --quick",
-    "build:zip": "node scripts/build-zip.mjs"
+    "build:zip": "node scripts/build-zip.mjs",
+    "arbitrage": "node scripts/arbitrage-bot.mjs",
+    "arbitrage:once": "node scripts/arbitrage-bot.mjs --once --mock",
+    "suomi-lisa": "node scripts/suomi-lisa-tracker.mjs",
+    "heal:selectors": "node scripts/heal-selectors.mjs --fix"
   },
   "repository": {
     "type": "git",

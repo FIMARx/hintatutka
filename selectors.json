@@ -1,23 +1,42 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-07",
+  "updatedAt": "2026-11-08",
   "description": "Remote hot-patch selector & scraper registry for HintaTutka (synced automatically every 12h without reinstalling the script).",
   "storeOverrides": {
     "verkkokauppa.com": {
       "prependSelectors": [],
-      "anchorSelectors": ["[class*=\"ProductPrice\"]", "[class*=\"Price-sc\"]"]
+      "anchorSelectors": [
+        "[class*=\"ProductPrice\"]",
+        "[class*=\"Price-sc\"]"
+      ]
     },
     "gigantti.fi": {
       "prependSelectors": [],
-      "anchorSelectors": ["[data-testid=\"price-container\"]", ".product-price-container"]
+      "anchorSelectors": [
+        "[data-testid=\"price-container\"]",
+        ".product-price-container"
+      ]
     },
     "power.fi": {
       "prependSelectors": [],
-      "anchorSelectors": ["pwr-price", ".product-price"]
+      "anchorSelectors": [
+        "pwr-price",
+        ".product-price"
+      ]
     },
     "ikea.com": {
       "prependSelectors": [],
-      "anchorSelectors": ["[data-testid=\"pip-price\"]", ".pip-temp-price", ".pip-price"]
+      "anchorSelectors": [
+        "[data-testid=\"pip-price\"]",
+        ".pip-temp-price",
+        ".pip-price"
+      ]
+    },
+    "prisma.fi": {
+      "prependSelectors": [],
+      "anchorSelectors": [
+        "[data-test-id=\"product-price-final\"]"
+      ]
     }
   },
   "globalAnchorSelectors": [],

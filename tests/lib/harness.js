@@ -38,6 +38,8 @@ globalThis.__HT_TEST_EXPORTS__ = {
     evaluateClubBenchmark,
     FINNISH_SEASONAL_SALE_EVENTS,
     getUpcomingFinnishSaleEvent,
+    calculateHoltWintersForecast,
+    computePredictivePriceAnalytics,
     getCached,
     setCached,
     purgeLegacyCaches,

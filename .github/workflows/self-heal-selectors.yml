@@ -1,0 +1,45 @@
+name: Self-Healing DOM Selectors Registry
+
+on:
+  schedule:
+    # Daily run at 03:00 UTC to discover layout shifts across all 81 stores
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  heal-selectors:
+    name: Test, Heal & Hot-Patch selectors.json
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Run Self-Healing Selector Engine
+        run: node scripts/heal-selectors.mjs --fix
+
+      - name: Verify All Safety Nets & Guards
+        run: npm run verify:quick
+
+      - name: Commit & Push Patched selectors.json
+        run: |
+          git config user.name "FIMARx"
+          git config user.email "FIMARx@users.noreply.github.com"
+          if ! git diff --quiet selectors.json; then
+            echo "Layout shift healed! Committing updated selectors.json..."
+            git add selectors.json
+            git commit -m "fix(selectors): automated daily self-healing DOM patch [skip ci]"
+            git push origin main
+          else
+            echo "All selectors healthy. No patch needed."
+          fi

@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         HintaTutka
 // @namespace    https://github.com/FIMARx/hintatutka
-// @version      9.5
-// @description  Suomen älykkäin hintatutka (v9.5): EU/Saksa ALV+toimitus -vertailu, Flip-arbitraasi (Tori/Vinted/Huuto), Klubi-totuusmittari, kausiennuste & 81 kauppaa
+// @version      9.6
+// @description  Suomen älykkäin hintatutka (v9.6): EU/Saksa ALV+toimitus -vertailu, Flip-arbitraasi (Tori/Vinted/Huuto), Klubi-totuusmittari, Holt-Winters -kausiennuste & 81 kauppaa
 // @author       FIMARx
 // @icon         https://raw.githubusercontent.com/FIMARx/hintatutka/main/extension-mv3/icons/icon128.png
 // @homepageURL  https://github.com/FIMARx/hintatutka
@@ -150,7 +150,7 @@
     // =========================================================================
     // CONFIGURATION & THRESHOLDS
     // =========================================================================
-    const SCRIPT_VERSION = '9.5';
+    const SCRIPT_VERSION = '9.6';
     const BRAND_LOGO_SVG_MINI = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 58 58" width="15" height="15" style="flex-shrink:0;display:block;"><defs><linearGradient id="htMiniBg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#065f46"/><stop offset="100%" stop-color="#0f172a"/></linearGradient><linearGradient id="htMiniBolt" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#a7f3d0"/><stop offset="100%" stop-color="#10b981"/></linearGradient></defs><rect x="1.5" y="1.5" width="55" height="55" rx="14.5" fill="url(#htMiniBg)" stroke="#10b981" stroke-opacity="0.78" stroke-width="2.4"/><circle cx="29" cy="29" r="19.5" fill="none" stroke="#34d399" stroke-opacity="0.36" stroke-width="1.8" stroke-dasharray="4 3"/><path d="M32.5 11L18.5 31H29.5L25.5 47L40.5 26.5H29.5L32.5 11Z" fill="url(#htMiniBolt)"/></svg>`;
     const IS_MV3_EXTENSION = Boolean(
         globalThis.__HT_MV3_EXTENSION__ ||
@@ -583,7 +583,7 @@
     // =========================================================================
     // IDLE SCHEDULER, REMOTE HOT-PATCH SELECTORS & L1/L2 CROSS-DOMAIN CACHE
     // =========================================================================
-    const CACHE_PREFIX = 'ufhpc_v95_';
+    const CACHE_PREFIX = 'ufhpc_v96_';
     const memoryCache = new Map();
     const pendingSharedCacheWrites = new Map();
     let sharedCacheFlushScheduled = false;
@@ -1211,7 +1211,14 @@
         ['takki', 'kuoritakki', 'untuvatakki', 'toppatakki', 'jacket', 'jacka'],
         ['kengät', 'vaelluskengät', 'juoksukengät', 'shoes', 'boots', 'skor'],
         ['reppu', 'rinkka', 'backpack', 'ryggsäck'],
-        ['työvalaisin', 'valaisin', 'worklight', 'light', 'lamp', 'arbetslampa']
+        ['työvalaisin', 'valaisin', 'worklight', 'light', 'lamp', 'arbetslampa'],
+        ['näppäimistö', 'keyboard', 'tastatur', 'tangentbord'],
+        ['näytönohjain', 'gpu', 'graphics card', 'videocard', 'grafikkarte', 'grafikkort'],
+        ['emolevy', 'motherboard', 'mainboard', 'hauptplatine', 'moderkort'],
+        ['prosessori', 'processor', 'cpu', 'prozessor'],
+        ['virtalähde', 'power supply', 'psu', 'netzteil', 'nätaggregat'],
+        ['kotelo', 'case', 'chassis', 'gehäuse', 'datorchassi'],
+        ['hiiri', 'pelihiiri', 'mouse', 'maus', 'gamingmus']
     ];
 
     const BILINGUAL_SYNONYM_LOOKUP = (() => {
@@ -5229,8 +5236,9 @@
                 if (compat.hasHardConflict) continue;
                 matchScore += (compat.bonusScore || 0);
 
-                // Always verify product model/generation words EVEN on EAN searches (prevents Amazon silent organic fallbacks!)
-                if (!doesItemMatchQueryWords(title, targetNameForScoring)) {
+                // For GS1 EAN searches: if there is no hard spec conflict, structural barcode match is 100% verified across languages!
+                // For non-EAN string searches: verify product model/generation words
+                if (!isEanSearch && !doesItemMatchQueryWords(title, targetNameForScoring)) {
                     continue;
                 }
                 matchScore += 35;
@@ -5488,6 +5496,48 @@
         return bestUpcoming;
     }
 
+    // Holt-Winters Triple Exponential Smoothing Model for seasonal retail price forecasting
+    // Captures underlying smoothed baseline level (L), trend momentum (b), and cyclic seasonal drop factors (s)
+    function calculateHoltWintersForecast(prices, seasonalPeriod = 4, alpha = 0.25, beta = 0.15, gamma = 0.35, forecastHorizon = 1) {
+        if (!Array.isArray(prices) || prices.length < 3) return null;
+        const cleanPrices = prices.filter(p => Number.isFinite(p) && p > 0);
+        const n = cleanPrices.length;
+        if (n < 3) return null;
+        const m = Math.min(seasonalPeriod, Math.max(2, Math.floor(n / 2)));
+        let L = cleanPrices[0];
+        let b = (cleanPrices[Math.min(m, n - 1)] - cleanPrices[0]) / Math.max(1, m);
+        const s = new Array(m).fill(1.0);
+        if (n >= m * 2) {
+            for (let i = 0; i < m; i++) {
+                const avg = (cleanPrices[i] + cleanPrices[i + m]) / 2;
+                s[i] = (L > 0) ? (avg / L) : 1.0;
+            }
+        }
+        for (let t = 0; t < n; t++) {
+            const y = cleanPrices[t];
+            const sIdx = t % m;
+            const prevL = L;
+            const prevB = b;
+            const sFactor = Math.max(0.5, Math.min(1.5, s[sIdx]));
+            L = alpha * (y / sFactor) + (1 - alpha) * (prevL + prevB);
+            b = beta * (L - prevL) + (1 - beta) * prevB;
+            s[sIdx] = gamma * (y / Math.max(1, L)) + (1 - gamma) * sFactor;
+        }
+        const h = Math.max(1, forecastHorizon);
+        const sFutureIdx = (n - 1 + h) % m;
+        const futureSeasonal = Math.max(0.65, Math.min(1.35, s[sFutureIdx]));
+        const forecastedPrice = Math.max(1, (L + h * b) * futureSeasonal);
+        const trendPct = (L > 0) ? ((b * h) / L) * 100 : 0;
+        return {
+            baselineLevel: Math.round(L * 100) / 100,
+            trendPerInterval: Math.round(b * 100) / 100,
+            trendPct: Math.round(trendPct * 10) / 10,
+            seasonalIndices: s.map(x => Math.round(x * 100) / 100),
+            forecastedPrice: Math.round(forecastedPrice * 100) / 100,
+            trendDir: trendPct <= -2.0 ? 'falling' : (trendPct >= 2.0 ? 'rising' : 'stable')
+        };
+    }
+
     function computePredictivePriceAnalytics(history, currentBestPrice, lang = 'fi', nowDate = new Date()) {
         const pts = history?.points;
         if (!Array.isArray(pts) || pts.length < 3) return null;
@@ -5505,7 +5555,9 @@
         const rangePositionPct = Math.round(((effectiveCurrent - atlPrice) / span) * 100);
         const pctAboveAtl = ((effectiveCurrent - atlPrice) / atlPrice) * 100;
 
-        // Weighted linear regression over the 6 most recent history intervals to detect price momentum
+        // Run Holt-Winters triple exponential smoothing with fallback to linear regression
+        const hw = calculateHoltWintersForecast(prices);
+
         const recent = prices.slice(-6);
         const n = recent.length;
         let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
@@ -5518,8 +5570,9 @@
         const denom = (n * sumXX - sumX * sumX) || 1;
         const slopePerStep = (n * sumXY - sumX * sumY) / denom;
         const recentMean = sumY / n;
-        const trendPct = recentMean > 0 ? ((slopePerStep * (n - 1)) / recentMean) * 100 : 0;
-        const trendDir = trendPct <= -2.2 ? 'falling' : (trendPct >= 2.2 ? 'rising' : 'stable');
+        const linTrendPct = recentMean > 0 ? ((slopePerStep * (n - 1)) / recentMean) * 100 : 0;
+        const trendPct = hw ? hw.trendPct : linTrendPct;
+        const trendDir = hw ? hw.trendDir : (trendPct <= -2.2 ? 'falling' : (trendPct >= 2.2 ? 'rising' : 'stable'));
         const trendLabel = lang === 'en'
             ? (trendDir === 'falling' ? '📉 Falling trend' : (trendDir === 'rising' ? '📈 Rising trend' : '➡️ Stable trend'))
             : (trendDir === 'falling' ? '📉 Laskeva trendi' : (trendDir === 'rising' ? '📈 Nouseva trendi' : '➡️ Vakaa trendi'));
