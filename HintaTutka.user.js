@@ -6453,6 +6453,13 @@
             .ufhpc-wrapper.is-collapsed {
                 transform: translate(calc(100% - 44px), -50%);
             }
+            /* Hide edge handle when sidebar panel is open to prevent awkward tab sticking out */
+            .ufhpc-wrapper:not(.is-collapsed) .ufhpc-handle {
+                display: none !important;
+            }
+            .ufhpc-wrapper.is-collapsed .ufhpc-handle {
+                display: flex !important;
+            }
             .ufhpc-wrapper.is-dock-left {
                 right: auto;
                 left: 0;
@@ -6472,10 +6479,10 @@
                 right: 0;
             }
             .ufhpc-wrapper.is-dock-left .ufhpc-panel {
-                border-radius: 0 18px 18px 0;
+                border-radius: 0 20px 20px 0;
                 border-left: none;
-                border-right: 1px solid rgba(255, 255, 255, 0.1);
-                box-shadow: 20px 0 50px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+                border-right: 1px solid rgba(255, 255, 255, 0.09);
+                box-shadow: 20px 0 60px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.12);
             }
 
             /* Side Handle / Draggable Edge Tab */
@@ -6549,28 +6556,28 @@
                 transform: rotate(180deg);
             }
 
-            /* Main Sidebar Panel (396px standard, 760px when expanded for side-by-side comparison) */
+            /* Main Sidebar Panel (400px standard, 780px when expanded for side-by-side comparison) */
             .ufhpc-panel {
-                width: 396px;
-                max-width: calc(100vw - 48px);
+                width: 400px;
+                max-width: calc(100vw - 32px);
                 max-height: 94vh;
                 overflow-y: auto;
-                background: rgba(13, 16, 25, 0.92);
-                backdrop-filter: blur(28px) saturate(190%);
-                -webkit-backdrop-filter: blur(28px) saturate(190%);
-                border: 1px solid rgba(255, 255, 255, 0.1);
+                background: rgba(12, 15, 24, 0.94);
+                backdrop-filter: blur(32px) saturate(190%);
+                -webkit-backdrop-filter: blur(32px) saturate(190%);
+                border: 1px solid rgba(255, 255, 255, 0.09);
                 border-right: none;
-                border-radius: 18px 0 0 18px;
-                box-shadow: -20px 0 50px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.12);
-                padding: 14px 15px;
+                border-radius: 20px 0 0 20px;
+                box-shadow: -20px 0 60px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+                padding: 15px 16px;
                 display: flex;
                 flex-direction: column;
-                gap: 10px;
+                gap: 11px;
                 color: #f3f4f6;
                 transition: width 0.28s cubic-bezier(0.16, 1, 0.3, 1);
             }
             .ufhpc-panel.is-expanded {
-                width: 760px;
+                width: 780px;
             }
             .ufhpc-panel.is-lazy-shell {
                 backdrop-filter: none !important;
@@ -6583,14 +6590,14 @@
                 padding: 0 !important;
             }
             .ufhpc-panel::-webkit-scrollbar {
-                width: 5px;
+                width: 4px;
             }
             .ufhpc-panel::-webkit-scrollbar-thumb {
-                background: rgba(255, 255, 255, 0.16);
+                background: rgba(255, 255, 255, 0.14);
                 border-radius: 4px;
             }
             .ufhpc-panel::-webkit-scrollbar-thumb:hover {
-                background: rgba(255, 255, 255, 0.28);
+                background: rgba(255, 255, 255, 0.25);
             }
 
             /* 2-Column Grid for Expanded Compare View */
@@ -6605,11 +6612,11 @@
             .ufhpc-col {
                 display: flex;
                 flex-direction: column;
-                gap: 10px;
+                gap: 11px;
                 min-width: 0;
             }
             .ufhpc-col-compare {
-                border-left: 1px solid rgba(255, 255, 255, 0.1);
+                border-left: 1px solid rgba(255, 255, 255, 0.08);
                 padding-left: 14px;
             }
 
@@ -6619,6 +6626,11 @@
                 align-items: center;
                 justify-content: space-between;
                 gap: 8px;
+                cursor: grab;
+                user-select: none;
+            }
+            .ufhpc-header-bar:active {
+                cursor: grabbing;
             }
             .ufhpc-brand-top {
                 display: flex;
@@ -6628,12 +6640,12 @@
                 font-size: 10.5px;
                 font-weight: 700;
                 text-transform: uppercase;
-                letter-spacing: 0.08em;
+                letter-spacing: 0.07em;
                 color: #94a3b8;
                 min-width: 0;
             }
             .ufhpc-product-title {
-                font-size: 14px;
+                font-size: 14.5px;
                 font-weight: 700;
                 color: #ffffff;
                 line-height: 1.35;
@@ -6643,59 +6655,70 @@
                 overflow: hidden;
                 user-select: text;
                 word-break: break-word;
-                letter-spacing: -0.01em;
+                letter-spacing: -0.015em;
             }
             .ufhpc-header-btns {
                 display: flex;
                 align-items: center;
-                gap: 5px;
+                gap: 4px;
                 flex-shrink: 0;
             }
             .ufhpc-icon-btn {
-                background: rgba(255, 255, 255, 0.06);
-                border: 1px solid rgba(255, 255, 255, 0.09);
+                background: rgba(255, 255, 255, 0.04);
+                border: 1px solid rgba(255, 255, 255, 0.08);
                 color: #94a3b8;
-                height: 27px;
-                min-width: 27px;
-                padding: 0 7px;
-                border-radius: 8px;
+                height: 26px;
+                min-width: 26px;
+                padding: 0 6px;
+                border-radius: 7px;
                 cursor: pointer;
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
-                font-size: 11.5px;
+                font-size: 11px;
                 font-weight: 700;
-                transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+                transition: all 0.14s ease;
                 white-space: nowrap;
-                box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+                box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
             }
             .ufhpc-icon-btn:hover {
-                background: rgba(255, 255, 255, 0.14);
+                background: rgba(255, 255, 255, 0.12);
                 color: #ffffff;
-                border-color: rgba(255, 255, 255, 0.18);
+                border-color: rgba(255, 255, 255, 0.16);
                 transform: translateY(-1px);
             }
             .ufhpc-icon-btn.is-active {
-                background: rgba(245, 158, 11, 0.22);
+                background: rgba(245, 158, 11, 0.2);
                 color: #fbbf24;
-                border-color: rgba(245, 158, 11, 0.5);
+                border-color: rgba(245, 158, 11, 0.45);
                 box-shadow: 0 0 10px rgba(245, 158, 11, 0.25);
             }
             .ufhpc-icon-btn.is-active-compare {
-                background: rgba(99, 102, 241, 0.24);
+                background: rgba(99, 102, 241, 0.22);
                 color: #c7d2fe;
-                border-color: rgba(99, 102, 241, 0.55);
+                border-color: rgba(99, 102, 241, 0.5);
                 box-shadow: 0 0 10px rgba(99, 102, 241, 0.25);
             }
+            .ufhpc-icon-btn.ufhpc-btn-close:hover {
+                background: rgba(239, 68, 68, 0.2);
+                border-color: rgba(239, 68, 68, 0.4);
+                color: #fca5a5;
+            }
+            .ufhpc-icon-count {
+                font-size: 9.5px;
+                font-weight: 800;
+                color: #fbbf24;
+                margin-left: 2px;
+            }
 
-            /* Modern Segmented Navigation Tabs */
+            /* Apple/Linear Segmented Pill Tabs */
             .ufhpc-tabs {
                 display: flex;
-                background: rgba(0, 0, 0, 0.42);
+                background: rgba(0, 0, 0, 0.38);
                 border: 1px solid rgba(255, 255, 255, 0.08);
-                border-radius: 11px;
+                border-radius: 10px;
                 padding: 3px;
-                gap: 3px;
+                gap: 2px;
                 margin-top: 2px;
             }
             .ufhpc-tab {
@@ -6703,48 +6726,61 @@
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
-                gap: 5px;
+                gap: 4px;
                 background: transparent;
                 border: 1px solid transparent;
                 color: #94a3b8;
                 font-size: 11px;
-                font-weight: 700;
-                padding: 7px 5px;
-                border-radius: 8px;
+                font-weight: 600;
+                padding: 6.5px 6px;
+                border-radius: 7px;
                 cursor: pointer;
-                transition: all 0.15s ease;
+                transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
                 white-space: nowrap;
                 user-select: none;
             }
             .ufhpc-tab:hover {
                 color: #f1f5f9;
-                background: rgba(255, 255, 255, 0.06);
+                background: rgba(255, 255, 255, 0.05);
+            }
+            .ufhpc-tab.is-active {
+                background: rgba(255, 255, 255, 0.12);
+                color: #ffffff;
+                border-color: rgba(255, 255, 255, 0.15);
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
             }
             .ufhpc-tab.is-active-stores {
-                background: rgba(16, 185, 129, 0.2);
-                color: #34d399;
-                border-color: rgba(16, 185, 129, 0.42);
-                box-shadow: 0 2px 10px rgba(16, 185, 129, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+                border-color: rgba(52, 211, 153, 0.3);
+                color: #ecfdf5;
             }
             .ufhpc-tab.is-active-used {
-                background: rgba(244, 63, 94, 0.2);
-                color: #fda4af;
-                border-color: rgba(244, 63, 94, 0.42);
-                box-shadow: 0 2px 10px rgba(244, 63, 94, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+                border-color: rgba(251, 113, 133, 0.3);
+                color: #fff1f2;
             }
             .ufhpc-tab.is-active-history {
-                background: rgba(99, 102, 241, 0.2);
-                color: #a5b4fc;
-                border-color: rgba(99, 102, 241, 0.42);
-                box-shadow: 0 2px 10px rgba(99, 102, 241, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+                border-color: rgba(129, 140, 248, 0.3);
+                color: #eef2ff;
+            }
+            .ufhpc-tab-badge {
+                font-size: 9.5px;
+                font-weight: 700;
+                padding: 1px 5.5px;
+                border-radius: 999px;
+                background: rgba(255, 255, 255, 0.08);
+                color: #cbd5e1;
+                margin-left: 2px;
+            }
+            .ufhpc-tab.is-active .ufhpc-tab-badge {
+                background: rgba(255, 255, 255, 0.18);
+                color: #ffffff;
             }
             .ufhpc-tab-pane {
                 display: flex;
                 flex-direction: column;
-                gap: 9px;
-                max-height: 350px;
+                gap: 8px;
+                max-height: 380px;
                 overflow-y: auto;
-                padding-right: 3px;
+                padding-right: 2px;
             }
             .ufhpc-tab-pane::-webkit-scrollbar {
                 width: 4px;
@@ -7013,17 +7049,16 @@
                 transform: translateY(-1px);
             }
 
-            /* Verdict Banner */
+            /* Verdict Card - Clean Status Banner */
             .ufhpc-verdict-card {
-                padding: 11px 14px;
-                border-radius: 13px;
-                background: linear-gradient(135deg, var(--status-bg, rgba(99, 102, 241, 0.15)) 0%, rgba(18, 21, 33, 0.7) 100%);
-                border: 1px solid var(--status-border, rgba(99, 102, 241, 0.45));
-                box-shadow: var(--status-glow, none), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+                padding: 11px 13px;
+                border-radius: 12px;
+                background: linear-gradient(135deg, var(--status-bg, rgba(99, 102, 241, 0.14)) 0%, rgba(15, 19, 32, 0.8) 100%);
+                border: 1px solid var(--status-border, rgba(99, 102, 241, 0.4));
+                box-shadow: var(--status-glow, none), inset 0 1px 0 rgba(255, 255, 255, 0.08);
                 display: flex;
                 flex-direction: column;
-                gap: 4px;
-                transition: border-color 0.2s ease, box-shadow 0.2s ease;
+                gap: 5px;
             }
             .ufhpc-verdict-top {
                 display: flex;
@@ -7035,37 +7070,37 @@
                 display: inline-flex;
                 align-items: center;
                 gap: 6px;
-                font-size: 12.5px;
+                font-size: 12px;
                 font-weight: 800;
-                letter-spacing: 0.04em;
+                letter-spacing: 0.03em;
                 color: var(--status-bright, #818cf8);
             }
             .ufhpc-verdict-delta {
                 font-size: 11.5px;
                 font-weight: 800;
-                color: #f9fafb;
+                color: #ffffff;
                 background: rgba(0, 0, 0, 0.45);
                 border: 1px solid rgba(255, 255, 255, 0.12);
-                padding: 3px 8px;
-                border-radius: 7px;
+                padding: 2.5px 7.5px;
+                border-radius: 6px;
                 white-space: nowrap;
-                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+                font-variant-numeric: tabular-nums;
             }
             .ufhpc-verdict-sub {
                 font-size: 11px;
                 color: #cbd5e1;
-                line-height: 1.35;
+                line-height: 1.4;
             }
 
             /* Price Metrics Grid */
             .ufhpc-metrics {
                 display: grid;
                 grid-template-columns: 1fr 1fr;
-                gap: 9px;
+                gap: 8px;
             }
             .ufhpc-metric-box {
-                background: rgba(255, 255, 255, 0.035);
-                border: 1px solid rgba(255, 255, 255, 0.08);
+                background: rgba(255, 255, 255, 0.03);
+                border: 1px solid rgba(255, 255, 255, 0.07);
                 border-radius: 12px;
                 padding: 10px 12px;
                 display: flex;
@@ -7075,42 +7110,63 @@
                 transition: background 0.15s ease, border-color 0.15s ease;
             }
             .ufhpc-metric-box:hover {
-                background: rgba(255, 255, 255, 0.055);
-                border-color: rgba(255, 255, 255, 0.14);
+                background: rgba(255, 255, 255, 0.05);
+                border-color: rgba(255, 255, 255, 0.12);
             }
             .ufhpc-metric-label {
-                font-size: 10px;
+                font-size: 9.5px;
                 font-weight: 700;
                 color: #94a3b8;
                 text-transform: uppercase;
                 letter-spacing: 0.05em;
             }
             .ufhpc-metric-value {
-                font-size: 16.5px;
+                font-size: 17px;
                 font-weight: 800;
                 color: #f9fafb;
                 letter-spacing: -0.02em;
+                font-variant-numeric: tabular-nums;
             }
             .ufhpc-metric-value.is-colored {
                 color: var(--status-bright, #f9fafb);
             }
             .ufhpc-metric-sub {
-                font-size: 10.5px;
+                font-size: 10px;
                 color: #94a3b8;
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
             }
+            .ufhpc-metric-timing {
+                font-size: 9.5px;
+                font-weight: 700;
+                color: #34d399;
+                margin-top: 3px;
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                cursor: pointer;
+                padding: 2px 6px;
+                border-radius: 5px;
+                background: rgba(16, 185, 129, 0.12);
+                border: 1px solid rgba(16, 185, 129, 0.25);
+                align-self: flex-start;
+                transition: all 0.12s ease;
+            }
+            .ufhpc-metric-timing:hover {
+                background: rgba(16, 185, 129, 0.22);
+                color: #a7f3d0;
+            }
 
             /* Interactive Dual SVG Chart Card */
             .ufhpc-chart-box {
-                background: rgba(255, 255, 255, 0.025);
-                border: 1px solid rgba(255, 255, 255, 0.08);
+                background: rgba(0, 0, 0, 0.28);
+                border: 1px solid rgba(255, 255, 255, 0.07);
                 border-radius: 12px;
-                padding: 10px 11px 7px 11px;
+                padding: 11px 12px 8px 12px;
                 display: flex;
                 flex-direction: column;
-                gap: 4px;
+                gap: 5px;
             }
             .ufhpc-chart-header {
                 display: flex;
@@ -7133,12 +7189,13 @@
                 font-weight: 800;
                 color: #34d399;
                 flex-shrink: 0;
+                font-variant-numeric: tabular-nums;
             }
             .ufhpc-chart-price.is-tori {
                 color: #fda4af;
             }
             .ufhpc-chart-sub {
-                font-size: 10.5px;
+                font-size: 10px;
                 color: #94a3b8;
                 white-space: nowrap;
                 overflow: hidden;
@@ -7147,7 +7204,7 @@
             }
             .ufhpc-chart-tabs {
                 display: flex;
-                gap: 5px;
+                gap: 4px;
                 margin-top: 2px;
             }
             .ufhpc-chart-tab {
@@ -7158,7 +7215,7 @@
                 font-size: 10px;
                 font-weight: 700;
                 padding: 4px 6px;
-                border-radius: 7px;
+                border-radius: 6px;
                 cursor: pointer;
                 transition: all 0.15s ease;
             }
@@ -7196,13 +7253,14 @@
                 align-items: center;
                 justify-content: space-between;
                 gap: 6px;
-                margin-top: 2px;
+                margin-top: 1px;
+                padding: 0 1px;
             }
             .ufhpc-section-title {
-                font-size: 10.5px;
+                font-size: 10px;
                 font-weight: 700;
                 text-transform: uppercase;
-                letter-spacing: 0.06em;
+                letter-spacing: 0.05em;
                 color: #94a3b8;
                 display: flex;
                 align-items: center;
@@ -7211,77 +7269,107 @@
             .ufhpc-filters {
                 display: flex;
                 align-items: center;
-                gap: 5px;
+                gap: 4px;
             }
             .ufhpc-pill-btn {
-                background: rgba(255, 255, 255, 0.04);
-                border: 1px solid rgba(255, 255, 255, 0.09);
+                background: rgba(255, 255, 255, 0.035);
+                border: 1px solid rgba(255, 255, 255, 0.08);
                 color: #94a3b8;
-                font-size: 10px;
+                font-size: 9.5px;
                 font-weight: 600;
-                padding: 3px 8px;
+                padding: 2.5px 7.5px;
                 border-radius: 999px;
                 cursor: pointer;
-                transition: all 0.15s ease;
+                transition: all 0.12s ease;
             }
             .ufhpc-pill-btn:hover {
-                color: #f3f4f6;
-                border-color: rgba(255, 255, 255, 0.22);
+                color: #f1f5f9;
+                border-color: rgba(255, 255, 255, 0.18);
             }
             .ufhpc-pill-btn.is-active {
-                background: rgba(16, 185, 129, 0.18);
-                color: #34d399;
-                border-color: rgba(16, 185, 129, 0.45);
+                background: rgba(16, 185, 129, 0.16);
+                color: #6ee7b7;
+                border-color: rgba(16, 185, 129, 0.4);
             }
             .ufhpc-pill-btn.is-active-tori {
-                background: rgba(244, 63, 94, 0.18);
+                background: rgba(244, 63, 94, 0.16);
                 color: #fb7185;
-                border-color: rgba(244, 63, 94, 0.45);
+                border-color: rgba(244, 63, 94, 0.4);
             }
             .ufhpc-pill-btn.is-active-vinted {
-                background: rgba(9, 177, 186, 0.2);
+                background: rgba(9, 177, 186, 0.18);
                 color: #2dd4bf;
-                border-color: rgba(9, 177, 186, 0.45);
+                border-color: rgba(9, 177, 186, 0.4);
             }
             .ufhpc-pill-btn.is-active-huuto {
-                background: rgba(245, 158, 11, 0.25);
+                background: rgba(245, 158, 11, 0.2);
                 color: #fbbf24;
-                border-color: rgba(245, 158, 11, 0.55);
+                border-color: rgba(245, 158, 11, 0.48);
             }
 
-            /* Store Comparison Rows */
+            /* Modern Store List - Single Sleek Table Container */
             .ufhpc-stores-list {
                 display: flex;
                 flex-direction: column;
-                gap: 4px;
+                background: rgba(0, 0, 0, 0.28);
+                border: 1px solid rgba(255, 255, 255, 0.07);
+                border-radius: 12px;
+                overflow: hidden;
             }
             .ufhpc-store-row {
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
-                gap: 9px;
-                padding: 7px 11px;
-                border-radius: 9px;
-                background: rgba(255, 255, 255, 0.032);
-                border: 1px solid rgba(255, 255, 255, 0.06);
+                gap: 10px;
+                padding: 7.5px 11px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.04);
                 text-decoration: none;
                 color: #e5e7eb;
-                transition: all 0.15s ease;
-                box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+                transition: background 0.12s ease;
+            }
+            .ufhpc-store-row:last-child {
+                border-bottom: none;
             }
             .ufhpc-store-row:hover {
-                background: rgba(255, 255, 255, 0.08);
-                border-color: rgba(255, 255, 255, 0.16);
-                transform: translateX(-2px);
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+                background: rgba(255, 255, 255, 0.05);
             }
             .ufhpc-store-row.is-current-store {
-                border-color: var(--status-border, rgba(99, 102, 241, 0.5));
-                background: var(--status-bg, rgba(99, 102, 241, 0.12));
+                background: rgba(99, 102, 241, 0.09);
+                border-left: 3px solid var(--status-bright, #818cf8);
+                padding-left: 9px;
             }
             .ufhpc-store-row.is-club-offer {
-                border-color: rgba(192, 132, 252, 0.45);
-                background: linear-gradient(90deg, rgba(168, 85, 247, 0.15), rgba(245, 158, 11, 0.07));
+                background: linear-gradient(90deg, rgba(168, 85, 247, 0.12), rgba(245, 158, 11, 0.05));
+                border-left: 3px solid #c084fc;
+                padding-left: 9px;
+            }
+            .ufhpc-here-tag {
+                display: inline-flex;
+                align-items: center;
+                flex-shrink: 0;
+                white-space: nowrap;
+                padding: 1.5px 5.5px;
+                border-radius: 5px;
+                font-size: 8.5px;
+                font-weight: 700;
+                letter-spacing: 0.03em;
+                background: rgba(255, 255, 255, 0.1);
+                color: #e2e8f0;
+                border: 1px solid rgba(255, 255, 255, 0.15);
+            }
+            .ufhpc-lowest-tag {
+                display: inline-flex;
+                align-items: center;
+                flex-shrink: 0;
+                white-space: nowrap;
+                padding: 1.5px 5.5px;
+                border-radius: 5px;
+                font-size: 8.5px;
+                font-weight: 800;
+                letter-spacing: 0.02em;
+                background: rgba(16, 185, 129, 0.16);
+                color: #6ee7b7;
+                border: 1px solid rgba(16, 185, 129, 0.35);
             }
             .ufhpc-club-tag {
                 display: inline-flex;
@@ -7296,7 +7384,6 @@
                 background: linear-gradient(135deg, rgba(168, 85, 247, 0.32), rgba(245, 158, 11, 0.28));
                 color: #f3e8ff;
                 border: 1px solid rgba(192, 132, 252, 0.55);
-                box-shadow: 0 0 10px rgba(168, 85, 247, 0.25);
             }
             .ufhpc-nonclub-tag {
                 display: inline-flex;
@@ -7318,8 +7405,8 @@
                 min-width: 0;
             }
             .ufhpc-stock-dot {
-                width: 7px;
-                height: 7px;
+                width: 6.5px;
+                height: 6.5px;
                 border-radius: 50%;
                 flex-shrink: 0;
                 background: #64748b;
@@ -7349,51 +7436,43 @@
             .ufhpc-store-price {
                 font-size: 13px;
                 font-weight: 700;
-                color: #ffffff;
+                font-variant-numeric: tabular-nums;
+                color: #f9fafb;
             }
+            .ufhpc-store-price.is-lowest-price,
             .ufhpc-store-row:first-child .ufhpc-store-price {
                 color: #34d399;
+                font-weight: 800;
             }
             .ufhpc-store-ship {
                 font-size: 9.5px;
                 color: #94a3b8;
+                margin-top: 1px;
             }
 
-            /* Used on Tori.fi & Vinted & Huuto Section */
+            /* Second-Hand Tori/Vinted/Huuto Rows inside .ufhpc-stores-list */
             .ufhpc-tori-row {
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
                 gap: 9px;
                 padding: 7px 10px;
-                border-radius: 9px;
-                background: rgba(244, 63, 94, 0.05);
-                border: 1px solid rgba(244, 63, 94, 0.15);
+                border-bottom: 1px solid rgba(255, 255, 255, 0.04);
                 text-decoration: none;
                 color: #e5e7eb;
-                transition: all 0.15s ease;
+                transition: background 0.12s ease;
+            }
+            .ufhpc-tori-row:last-child {
+                border-bottom: none;
             }
             .ufhpc-tori-row:hover {
-                background: rgba(244, 63, 94, 0.12);
-                border-color: rgba(244, 63, 94, 0.35);
-                transform: translateX(-2px);
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-            }
-            .ufhpc-tori-row.is-vinted-row {
-                background: rgba(9, 177, 186, 0.05);
-                border-color: rgba(9, 177, 186, 0.18);
+                background: rgba(255, 255, 255, 0.05);
             }
             .ufhpc-tori-row.is-vinted-row:hover {
-                background: rgba(9, 177, 186, 0.13);
-                border-color: rgba(9, 177, 186, 0.38);
-            }
-            .ufhpc-tori-row.is-huuto-row {
-                background: rgba(245, 158, 11, 0.05);
-                border-color: rgba(245, 158, 11, 0.18);
+                background: rgba(9, 177, 186, 0.08);
             }
             .ufhpc-tori-row.is-huuto-row:hover {
-                background: rgba(245, 158, 11, 0.13);
-                border-color: rgba(245, 158, 11, 0.38);
+                background: rgba(245, 158, 11, 0.08);
             }
             .ufhpc-tori-thumb {
                 width: 32px;
@@ -7473,14 +7552,15 @@
                 font-size: 13px;
                 font-weight: 800;
                 color: #fda4af;
+                font-variant-numeric: tabular-nums;
             }
 
-            /* Variant Switcher & Search Box */
+            /* Variant Switcher & Spotlight Search Box */
             .ufhpc-variant-select {
                 width: 100%;
                 color-scheme: dark;
                 background-color: #141724;
-                border: 1px solid rgba(255, 255, 255, 0.14);
+                border: 1px solid rgba(255, 255, 255, 0.12);
                 border-radius: 8px;
                 padding: 7px 9px;
                 color: #f3f4f6;
@@ -7501,39 +7581,58 @@
             .ufhpc-search-wrap {
                 position: relative;
                 width: 100%;
+                margin-top: 2px;
             }
             .ufhpc-search-box {
                 display: flex;
-                gap: 6px;
-            }
-            .ufhpc-search-input {
-                flex: 1;
-                background: rgba(0, 0, 0, 0.42);
-                border: 1px solid rgba(255, 255, 255, 0.12);
-                border-radius: 8px;
-                padding: 7px 10px;
-                color: #f3f4f6;
-                font-size: 11.5px;
-                outline: none;
+                align-items: center;
+                background: rgba(0, 0, 0, 0.38);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 9px;
+                padding: 3px 4px 3px 9px;
+                gap: 7px;
                 transition: border-color 0.15s ease, box-shadow 0.15s ease;
             }
-            .ufhpc-search-input:focus {
+            .ufhpc-search-box:focus-within {
                 border-color: #6366f1;
                 box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
             }
-            .ufhpc-search-btn {
-                background: rgba(255, 255, 255, 0.08);
-                border: 1px solid rgba(255, 255, 255, 0.14);
-                color: #e5e7eb;
-                border-radius: 8px;
-                padding: 0 12px;
+            .ufhpc-search-icon {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: #64748b;
+                flex-shrink: 0;
+            }
+            .ufhpc-search-box:focus-within .ufhpc-search-icon {
+                color: #818cf8;
+            }
+            .ufhpc-search-input {
+                flex: 1;
+                background: transparent;
+                border: none;
+                padding: 5px 0;
+                color: #f3f4f6;
                 font-size: 11.5px;
+                outline: none;
+                font-family: inherit;
+                min-width: 0;
+            }
+            .ufhpc-search-btn {
+                background: rgba(255, 255, 255, 0.07);
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                color: #e5e7eb;
+                border-radius: 7px;
+                padding: 4.5px 11px;
+                font-size: 11px;
                 font-weight: 700;
                 cursor: pointer;
                 transition: all 0.15s ease;
+                white-space: nowrap;
+                flex-shrink: 0;
             }
             .ufhpc-search-btn:hover {
-                background: rgba(255, 255, 255, 0.16);
+                background: rgba(255, 255, 255, 0.15);
                 color: #ffffff;
             }
 
@@ -8680,16 +8779,18 @@
                         <span class="ufhpc-section-title">${escapeHtml(t.cheapestStores(compOffers.length))}</span>
                     </div>
                     <div class="ufhpc-stores-list">
-                        ${compOffers.slice(0, 4).map(offer => {
+                        ${compOffers.slice(0, 4).map((offer, compIdx) => {
+                            const isCompCheapest = compIdx === 0;
                             const displayedPrice = this.includeShipping ? (offer.totalPrice || offer.price) : offer.price;
                             return `
-                                <a class="ufhpc-store-row" href="${escapeHtml(offer.url)}" target="_blank" rel="noopener noreferrer">
+                                <a class="ufhpc-store-row ${isCompCheapest ? 'is-cheapest' : ''}" href="${escapeHtml(offer.url)}" target="_blank" rel="noopener noreferrer">
                                     <div class="ufhpc-store-left">
                                         <span class="ufhpc-stock-dot ${offer.stockStatus}"></span>
                                         <span class="ufhpc-store-name">${escapeHtml(offer.store)}</span>
+                                        ${isCompCheapest ? `<span class="ufhpc-lowest-tag">🏆 ${this.lang === 'en' ? 'Lowest' : 'Halvin'}</span>` : ''}
                                     </div>
                                     <div class="ufhpc-store-right">
-                                        <span class="ufhpc-store-price">${formatEur(displayedPrice)}</span>
+                                        <span class="ufhpc-store-price ${isCompCheapest ? 'is-lowest-price' : ''}">${formatEur(displayedPrice)}</span>
                                     </div>
                                 </a>
                             `;
@@ -8753,6 +8854,12 @@
                     ${chipsHtml}
                     <div class="ufhpc-search-wrap">
                         <form class="ufhpc-search-box" id="ufhpc-compare-search-form">
+                            <div class="ufhpc-search-icon">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="11" cy="11" r="8"></circle>
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                </svg>
+                            </div>
                             <input type="text" class="ufhpc-search-input" id="ufhpc-compare-search-input"
                                    autocomplete="off"
                                    placeholder="${escapeHtml(t.compareInputPlaceholder)}"
@@ -8873,13 +8980,14 @@
                         </div>
                     </div>
                     <div class="ufhpc-stores-list">
-                        ${topOffers.map((offer) => {
+                        ${topOffers.map((offer, offerIdx) => {
                             const currentIdentity = normalizeStoreIdentity(storeName);
                             const offerIdentity = normalizeStoreIdentity(offer.store);
                             const isCurrent = !productInfo.isUsedSite && Boolean(
                                 currentIdentity && offerIdentity &&
                                 (offerIdentity === currentIdentity || offerIdentity.includes(currentIdentity) || currentIdentity.includes(offerIdentity))
                             );
+                            const isCheapestOffer = offerIdx === 0 && !offer.isClubOffer;
                             const isBestNonClub = firstOfferIsClub && lowestNonClubOffer && offer.store === lowestNonClubOffer.store && offer.price === lowestNonClubOffer.price;
                             const displayedPrice = this.includeShipping ? (offer.totalPrice || offer.price) : offer.price;
                             let shipText = offer.deliveryFee === 0
@@ -8891,15 +8999,17 @@
                                 shipText = `Norm. ${formatEur(offer.normalPrice)}${offer.deliveryFee > 0 ? ` (+${formatEur(offer.deliveryFee)})` : ''}`;
                             }
                             return `
-                                <a class="ufhpc-store-row ${isCurrent ? 'is-current-store' : ''} ${offer.isClubOffer ? 'is-club-offer' : ''}" href="${escapeHtml(offer.url)}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(offer.stockLabel)}">
+                                <a class="ufhpc-store-row ${isCurrent ? 'is-current-store' : ''} ${isCheapestOffer ? 'is-cheapest' : ''} ${offer.isClubOffer ? 'is-club-offer' : ''}" href="${escapeHtml(offer.url)}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(offer.stockLabel)}">
                                     <div class="ufhpc-store-left">
                                         <span class="ufhpc-stock-dot ${offer.stockStatus}"></span>
-                                        <span class="ufhpc-store-name">${escapeHtml(offer.store)}${(isCurrent && !offer.isClubOffer) ? escapeHtml(t.nowTag) : ''}</span>
+                                        <span class="ufhpc-store-name">${escapeHtml(offer.store)}</span>
+                                        ${isCurrent ? `<span class="ufhpc-here-tag">${this.lang === 'en' ? 'Here' : 'Täällä'}</span>` : ''}
+                                        ${isCheapestOffer ? `<span class="ufhpc-lowest-tag">🏆 ${this.lang === 'en' ? 'Lowest' : 'Halvin'}</span>` : ''}
                                         ${offer.isClubOffer ? `<span class="ufhpc-club-tag">👑 ${escapeHtml(offer.clubLabel || 'KLUBI')}</span>` : ''}
                                         ${isBestNonClub ? `<span class="ufhpc-nonclub-tag">${escapeHtml(t.nonClubCheapestTag)}</span>` : ''}
                                     </div>
                                     <div class="ufhpc-store-right">
-                                        <span class="ufhpc-store-price" ${offer.isClubOffer ? 'style="color:#e9d5ff;"' : ''}>${formatEur(displayedPrice)}</span>
+                                        <span class="ufhpc-store-price ${isCheapestOffer ? 'is-lowest-price' : ''}" ${offer.isClubOffer ? 'style="color:#e9d5ff;"' : ''}>${formatEur(displayedPrice)}</span>
                                         ${shipText ? `<span class="ufhpc-store-ship">${escapeHtml(shipText)}</span>` : ''}
                                     </div>
                                 </a>
@@ -9151,7 +9261,9 @@
             const forecast = !productInfo.isUsedSite
                 ? computePredictivePriceAnalytics(marketProd?.history, lowestPrice || productInfo.currentPrice, this.lang)
                 : null;
-            const forecastChipHtml = (forecast && (forecast.action === 'buy_now' || forecast.action === 'wait_sale')) ? `
+            const isCurrentExpensive = verdict.diffEur !== null && verdict.diffEur > 1.0;
+            // Suppress standalone chip when current store is expensive so we don't display a green BUY NOW directly under a red TOO EXPENSIVE card
+            const forecastChipHtml = (forecast && !isCurrentExpensive && (forecast.action === 'buy_now' || forecast.action === 'wait_sale')) ? `
                 <div class="ufhpc-forecast-chip is-${escapeHtml(forecast.action)}" data-main-tab="history" title="${escapeHtml(forecast.headline)}">
                     <span>${forecast.icon} ${escapeHtml(forecast.badge)}</span>
                     <span style="opacity:0.85;">${escapeHtml(forecast.trendLabel)} ❯</span>
@@ -9453,7 +9565,7 @@
                                 ${isSaved ? '⭐' : '☆'}
                             </button>
                             <button class="ufhpc-icon-btn" id="ufhpc-watchlist-open-btn" title="${escapeHtml(t.watchlistTitle)}">
-                                🔔${watchlist.length > 0 ? ` ${watchlist.length}` : ''}
+                                🔔${watchlist.length > 0 ? `<span class="ufhpc-icon-count">${watchlist.length}</span>` : ''}
                             </button>
                             <button class="ufhpc-icon-btn ${this.isExpanded ? 'is-active-compare' : ''}" id="ufhpc-expand-btn" title="${escapeHtml(this.isExpanded ? t.compareCloseBtn : t.compareBtn)}">
                                 ${this.isExpanded ? '⇔' : '⚔️'}
@@ -9465,7 +9577,7 @@
                                 ↔
                             </button>
                             <button class="ufhpc-icon-btn" id="ufhpc-lang-btn" title="Switch Language (FI / EN)">${this.lang.toUpperCase()}</button>
-                            <button class="ufhpc-icon-btn" id="ufhpc-collapse-btn" title="Collapse to side">✕</button>
+                            <button class="ufhpc-icon-btn ufhpc-btn-close" id="ufhpc-collapse-btn" title="Collapse to side">✕</button>
                         </div>
                     </div>
                     <div class="ufhpc-product-title" title="${escapeHtml(marketProd?.title || productInfo.name)}">
@@ -9495,18 +9607,25 @@
                                     <span class="ufhpc-metric-label">${escapeHtml(rightMetricLabel)}</span>
                                     <span class="ufhpc-metric-value">${escapeHtml(rightMetricValue)}</span>
                                     <span class="ufhpc-metric-sub" title="${escapeHtml(rightMetricSub)}">${escapeHtml(rightMetricSub)}</span>
+                                    ${(isCurrentExpensive && forecast && forecast.action === 'buy_now') ? `
+                                        <div class="ufhpc-metric-timing" data-main-tab="history" title="${escapeHtml(forecast.headline)}">
+                                            ${forecast.icon} ${this.lang === 'en' ? 'Market ATL' : 'Markkinapohja'} • ${escapeHtml(forecast.trendLabel)} ❯
+                                        </div>
+                                    ` : ''}
                                 </div>
                             </div>
 
                             <div class="ufhpc-tabs">
                                 <button type="button" class="ufhpc-tab ${effectiveMainTab === 'stores' ? 'is-active is-active-stores' : ''}" data-main-tab="stores">
-                                    🏪 ${escapeHtml(t.tabStores(offers.length))}
+                                    <span>🏪 ${this.lang === 'en' ? 'Stores' : 'Kaupat'}</span>
+                                    <span class="ufhpc-tab-badge">${offers.length}</span>
                                 </button>
                                 <button type="button" class="ufhpc-tab ${effectiveMainTab === 'used' ? 'is-active is-active-used' : ''}" data-main-tab="used">
-                                    ${comparison?.isPartialStage ? '⏳' : '♻️'} ${escapeHtml(t.tabUsed(totalUsedCount))}
+                                    <span>${comparison?.isPartialStage ? '⏳' : '♻️'} ${this.lang === 'en' ? 'Used' : 'Käytetyt'}</span>
+                                    <span class="ufhpc-tab-badge">${totalUsedCount}</span>
                                 </button>
                                 <button type="button" class="ufhpc-tab ${effectiveMainTab === 'history' ? 'is-active is-active-history' : ''}" data-main-tab="history">
-                                    📈 ${escapeHtml(t.tabHistory)}
+                                    <span>📈 ${escapeHtml(t.tabHistory)}</span>
                                 </button>
                             </div>
 
@@ -9517,6 +9636,12 @@
                             <div class="ufhpc-search-wrap">
                                 <div class="ufhpc-ac-menu is-upward" id="ufhpc-custom-ac-menu"></div>
                                 <form class="ufhpc-search-box" id="ufhpc-custom-search-form">
+                                    <div class="ufhpc-search-icon">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                            <circle cx="11" cy="11" r="8"></circle>
+                                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                        </svg>
+                                    </div>
                                     <input type="text" class="ufhpc-search-input" id="ufhpc-custom-search-input"
                                            autocomplete="off"
                                            placeholder="${escapeHtml(t.searchPlaceholder)}"
@@ -9758,6 +9883,40 @@
 
                 handle.addEventListener('mousedown', (e) => {
                     if (e.button !== 0) return;
+                    startY = e.clientY;
+                    startTopPct = this.topPct;
+                    dragged = false;
+                    window.addEventListener('mousemove', onMouseMove);
+                    window.addEventListener('mouseup', onMouseUp);
+                });
+            }
+
+            const headerBar = this.shadow.querySelector('.ufhpc-header-bar');
+            if (headerBar) {
+                let startY = 0;
+                let startTopPct = this.topPct;
+                let dragged = false;
+
+                const onMouseMove = (e) => {
+                    const dy = e.clientY - startY;
+                    if (Math.abs(dy) > 5) dragged = true;
+                    if (dragged) {
+                        const newPct = Math.max(12, Math.min(88, startTopPct + (dy / window.innerHeight) * 100));
+                        this.topPct = newPct;
+                        this.wrapperEl.style.setProperty('--sidebar-top', `${newPct.toFixed(1)}%`);
+                    }
+                };
+
+                const onMouseUp = () => {
+                    window.removeEventListener('mousemove', onMouseMove);
+                    window.removeEventListener('mouseup', onMouseUp);
+                    if (dragged) {
+                        localStorage.setItem(CONFIG.storageKeyTopPct, this.topPct.toFixed(1));
+                    }
+                };
+
+                headerBar.addEventListener('mousedown', (e) => {
+                    if (e.button !== 0 || e.target.closest('button, a, input, select')) return;
                     startY = e.clientY;
                     startTopPct = this.topPct;
                     dragged = false;
