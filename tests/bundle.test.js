@@ -346,3 +346,55 @@ test('bundle: generic component specs match branded hardware without false hard 
     const iphoneGuard = HT.evaluateSpecCompatibility('Apple iPhone 18', 'Apple iPhone 18 Pro');
     assert.strictEqual(iphoneGuard.hasHardConflict, true, 'iPhone 18 vs Pro must remain a hard conflict');
 });
+
+test('bundle: PSU wattage and 80+ efficiency ratings score high for prebuilt PC PSU component', () => {
+    const { exports: HT } = loadHintaTutka();
+
+    const targetPsu = '1200 W 80+ Gold, PCIe 5.0 Ready';
+    const candPsu = {
+        name: 'ASUS TUF GAMING 1200W Gold',
+        lowestPrice: 172.67,
+        price: 172.67
+    };
+
+    const cleanQ = HT.cleanComponentQuery(targetPsu, 'psu');
+    assert.strictEqual(cleanQ, '1200W 80+Gold');
+
+    const score1 = HT.scoreSearchCandidate(candPsu, targetPsu, null);
+    const score2 = HT.scoreSearchCandidate(candPsu, cleanQ, null);
+    const maxScore = Math.max(score1, score2);
+
+    assert.ok(maxScore >= 25, `PSU candidate score must be >= 25, got maxScore: ${maxScore} (score1: ${score1}, score2: ${score2})`);
+
+    const compat = HT.evaluateSpecCompatibility(targetPsu, candPsu.name);
+    assert.strictEqual(compat.hasHardConflict, false, 'PSU must not trigger hard conflict');
+});
+
+test('bundle: HTML entities are decoded in Strategy 2 specs', () => {
+    const { exports: HT } = loadHintaTutka();
+
+    const mockHtml = `
+        <h1>Jimm's GtG Owl 5090, pelitietokone</h1>
+        <div class="product-description">
+            <p>
+                J&auml;&auml;hdytys: Noctua NL-LC1-42, 420 mm AIO-nestej&auml;&auml;hdytys<br>
+                Virtal&auml;hde: 1200 W 80+ Gold, PCIe 5.0 Ready<br>
+                K&auml;ytt&ouml;j&auml;rjestelm&auml;: Windows 11 Home
+            </p>
+        </div>
+    `;
+
+    const info = { name: "Jimm's GtG Owl 5090, pelitietokone", currentPrice: 10499 };
+    const bundleData = HT.detectAndExtractBundleData(info, null, 10499, mockHtml);
+
+    assert.ok(bundleData, 'Bundle data must be parsed');
+    const cooler = bundleData.components.find(c => c.roleKey === 'cooler');
+    assert.ok(cooler, 'Cooler component must be present');
+    assert.strictEqual(cooler.name, 'Noctua NL-LC1-42, 420 mm AIO-nestejäähdytys');
+    assert.strictEqual(cooler.cleanQuery, 'Noctua NL-LC1-42');
+
+    const psu = bundleData.components.find(c => c.roleKey === 'psu');
+    assert.ok(psu, 'PSU component must be present');
+    assert.strictEqual(psu.name, '1200 W 80+ Gold, PCIe 5.0 Ready');
+    assert.strictEqual(psu.cleanQuery, '1200W 80+Gold');
+});

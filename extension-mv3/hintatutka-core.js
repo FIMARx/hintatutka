@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         HintaTutka
 // @namespace    https://github.com/FIMARx/hintatutka
-// @version      9.8.4
-// @description  Suomen älykkäin hintatutka (v9.8.4): Reaaliaikainen PC-komponenttihaku, välitön DIY-optimointi, parannettu mobiili- & historiagrid & 81 kauppaa
+// @version      9.8.5
+// @description  Suomen älykkäin hintatutka (v9.8.5): Reaaliaikainen PC-komponenttihaku, välitön DIY-optimointi, parannettu mobiili- & historiagrid & 81 kauppaa
 // @author       FIMARx
 // @icon         https://raw.githubusercontent.com/FIMARx/hintatutka/main/extension-mv3/icons/icon128.png
 // @homepageURL  https://github.com/FIMARx/hintatutka
@@ -150,7 +150,7 @@
     // =========================================================================
     // CONFIGURATION & THRESHOLDS
     // =========================================================================
-    const SCRIPT_VERSION = '9.8.4';
+    const SCRIPT_VERSION = '9.8.5';
     const BRAND_LOGO_SVG_MINI = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 58 58" width="15" height="15" style="flex-shrink:0;display:block;"><defs><linearGradient id="htMiniBg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#065f46"/><stop offset="100%" stop-color="#0f172a"/></linearGradient><linearGradient id="htMiniBolt" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#a7f3d0"/><stop offset="100%" stop-color="#10b981"/></linearGradient></defs><rect x="1.5" y="1.5" width="55" height="55" rx="14.5" fill="url(#htMiniBg)" stroke="#10b981" stroke-opacity="0.78" stroke-width="2.4"/><circle cx="29" cy="29" r="19.5" fill="none" stroke="#34d399" stroke-opacity="0.36" stroke-width="1.8" stroke-dasharray="4 3"/><path d="M32.5 11L18.5 31H29.5L25.5 47L40.5 26.5H29.5L32.5 11Z" fill="url(#htMiniBolt)"/></svg>`;
     const IS_MV3_EXTENSION = Boolean(
         globalThis.__HT_MV3_EXTENSION__ ||
@@ -2415,12 +2415,17 @@
 
         // Strategy 2: Check structured technical specs (e.g. Jimm's / Verkkokauppa Prebuilt PC specs)
         if (components.length === 0 && bodyHtml) {
+            const decodeHtmlEntities = (str) => String(str || '')
+                .replace(/&auml;/gi, 'ä').replace(/&ouml;/gi, 'ö').replace(/&aring;/gi, 'å')
+                .replace(/&euro;/gi, '€').replace(/&amp;/gi, '&').replace(/&quot;/gi, '"')
+                .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(dec));
+
             const specRegex = /(?:^|\n|<br\s*\/?>)\s*(?:<[^>]+>)*\s*(Prosessori|Suoritin|CPU|Emolevy|Motherboard|Näytönohjain|N&auml;yt&ouml;nohjain|GPU|Grafiikka|Keskusmuisti|Muisti|RAM|Massamuisti|Tallennustila|Kovalevy|SSD|Prosessorijäähdytys|Prosessorij&auml;&auml;hdytys|Jäähdytys|J&auml;&auml;hdytys|Kotelo|Virtalähde|Virtal&auml;hde|PSU|Käyttöjärjestelmä|K&auml;ytt&ouml;j&auml;rjestelm&auml;|OS)\s*(?:<[^>]+>)*\s*:\s*([^<\n\r]+)/gi;
 
             let sm;
             while ((sm = specRegex.exec(bodyHtml)) !== null) {
-                const rawKey = sm[1].trim();
-                const rawVal = sm[2].replace(/<[^>]+>/g, '').trim();
+                const rawKey = decodeHtmlEntities(sm[1].trim());
+                const rawVal = decodeHtmlEntities(sm[2].replace(/<[^>]+>/g, '').trim());
                 if (!rawVal || rawVal.length < 3 || seenNames.has(rawVal.toLowerCase())) continue;
                 seenNames.add(rawVal.toLowerCase());
 
@@ -2541,7 +2546,7 @@
                     for (const q of queriesToTry) {
                         try {
                             const searchUrl = `https://hinta.fi/haku?q=${encodeURIComponent(q)}`;
-                            const { text: html, finalUrl } = await gmFetch(searchUrl, 'text/html,application/xhtml+xml', 5000);
+                            const { text: html, finalUrl } = await gmFetch(searchUrl, 'text/html,application/xhtml+xml', 7500);
                             if (html) {
                                 const isDirect = html.includes('id="hv-oft"') || html.includes('class="hv-prh"');
                                 if (isDirect) {
@@ -2580,7 +2585,9 @@
                                         if (p && candName && href) {
                                             const candUrl = href.startsWith('http') ? href : `https://hinta.fi${href}`;
                                             const candObj = { name: fullCandText, price: p, lowestPrice: p };
-                                            const score = scoreSearchCandidate(candObj, comp.name, comp.storePrice || comp.price);
+                                            const score1 = scoreSearchCandidate(candObj, comp.name, comp.storePrice || comp.price);
+                                            const score2 = comp.cleanQuery ? scoreSearchCandidate(candObj, comp.cleanQuery, comp.storePrice || comp.price) : -999;
+                                            const score = Math.max(score1, score2);
                                             const compat = evaluateSpecCompatibility(comp.name, fullCandText);
 
                                             // Bonus if candidate matches the component partNumber/SKU
@@ -2609,7 +2616,14 @@
                                                 }
                                             }
 
-                                            const totalCandScore = score + partBonus + priceProximityBonus;
+                                            // Generic spec pricing preference: if the component name is unbranded generic spec, give a slight score boost to lower price candidates to pick the cheapest valid hardware
+                                            const isGenericSpec = !/\b(ASUS|MSI|Gigabyte|Noctua|Corsair|Kingston|Patriot|Samsung|Crucial|WD|Western\s*Digital|Antec|Lian\s*Li|NZXT|Fractal|Seasonic|be\s*quiet!?)\b/i.test(comp.name);
+                                            let priceEfficiencyBonus = 0;
+                                            if (isGenericSpec && p > 0) {
+                                                priceEfficiencyBonus = Math.max(0, 30 - Math.min(30, (p / 25)));
+                                            }
+
+                                            const totalCandScore = score + partBonus + priceProximityBonus + priceEfficiencyBonus;
                                             if (!compat.hasHardConflict && totalCandScore > bestScore) {
                                                 bestScore = totalCandScore;
                                                 bestCand = {
@@ -2623,15 +2637,21 @@
                                     });
 
                                     if (bestCand && bestScore > 10) {
-                                        try {
-                                            const { text: prodHtml } = await gmFetch(bestCand.url, 'text/html,application/xhtml+xml', 3500);
-                                            const prodDoc = parser.parseFromString(prodHtml, 'text/html');
-                                            const prod = parseHintaProductDoc(prodDoc, bestCand.url);
-                                            bestCand.cheapestStore = prod.offers?.[0]?.store || null;
-                                            bestCand.storeCount = prod.offers?.length || 1;
-                                            if (prod.lowestPrice) bestCand.lowestPrice = prod.lowestPrice;
-                                        } catch (_) {}
                                         hintaData = bestCand;
+                                        // Asynchronously resolve cheapest store name in background without blocking critical path
+                                        if (bestCand.url) {
+                                            gmFetch(bestCand.url, 'text/html,application/xhtml+xml', 3000).then(({ text: prodHtml }) => {
+                                                const parser = new DOMParser();
+                                                const prodDoc = parser.parseFromString(prodHtml, 'text/html');
+                                                const prod = parseHintaProductDoc(prodDoc, bestCand.url);
+                                                if (prod?.offers?.[0]?.store) {
+                                                    comp.cheapestStore = prod.offers[0].store;
+                                                    comp.storeCount = prod.offers.length;
+                                                    recalcTotals();
+                                                    if (typeof onProgress === 'function') onProgress(comp);
+                                                }
+                                            }).catch(() => {});
+                                        }
                                         break;
                                     }
                                 }
@@ -4021,6 +4041,9 @@
     function extractMeaningfulTokens(str) {
         if (!str) return [];
         const core = extractCoreProductTitle(str);
+        const isPsuContext = /\b(?:w\b|psu|virtalähde|80\+|power\s*supply)/i.test(str);
+        const psuEfficiencyRatings = new Set(['gold', 'platinum', 'titanium', 'bronze', 'silver']);
+
         return normalizeSwappedModelOrder(core)
             .toLowerCase()
             .replace(/\b([a-z]{1,4}\d{1,3})\+(?![a-z0-9])/gi, '$1 plus')
@@ -4033,9 +4056,10 @@
                 return ` ${num}gb `;
             })
             .replace(/\b(\d{1,2})\s*(tb|tt)\b/gi, ' $1tb ')
-            .replace(/\b\d+(?:[.,]\d+)?\s*(?:kg|g|l|dl|cl|ml|cm|mm|m|kpl|w|hz|mhz|ghz|mp|mpx|mah)\b/gi, ' ')
+            .replace(/\b(\d{3,4})\s*w\b/gi, ' $1w ')
+            .replace(/\b\d+(?:[.,]\d+)?\s*(?:kg|g|l|dl|cl|ml|cm|mm|m|kpl|hz|mhz|ghz|mp|mpx|mah)\b/gi, ' ')
             .split(/[\s/\-,()+:;|[\]]+/)
-            .filter(t => (t.length >= 2 || /^\d+$/.test(t)) && !STOP_WORDS_FOR_MATCHING.has(t));
+            .filter(t => (t.length >= 2 || /^\d+$/.test(t)) && (!STOP_WORDS_FOR_MATCHING.has(t) || (isPsuContext && psuEfficiencyRatings.has(t))));
     }
 
     function doesItemMatchQueryWords(itemTitle, queryStr) {
@@ -5430,11 +5454,11 @@
         if (productInfo?.bundleData && Array.isArray(productInfo.bundleData.components)) {
             enrichBundleComponentPrices(productInfo.bundleData, () => {
                 if (typeof onPartialUpdate === 'function') {
-                    onPartialUpdate(marketResult);
+                    onPartialUpdate(marketResult || { product: null, bundleData: productInfo.bundleData });
                 }
             }).then(() => {
                 if (typeof onPartialUpdate === 'function') {
-                    onPartialUpdate(marketResult);
+                    onPartialUpdate(marketResult || { product: null, bundleData: productInfo.bundleData });
                 }
             }).catch(() => {});
         }
