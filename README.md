@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/hero-banner.svg" width="100%" alt="HintaTutka v9.6 — Finnish & EU Real-Time Price Intelligence" />
+<img src="assets/hero-banner.svg" width="100%" alt="HintaTutka v9.7 — Finnish & EU Real-Time Price Intelligence" />
 
 <br />
 
@@ -154,7 +154,15 @@ HintaTutka works across all localized store paths (`/fi/`, `/en/`, `/sv/`) and S
 
 ## 🗺️ Changelog
 
-### 🚀 v9.6 (Latest)
+### 🚀 v9.7 (Latest)
+- **🎨 Complete Professional GUI/UX Overhaul**: Completely redesigned the sidebar into a sleek, dark glassmorphic terminal inspired by Linear, Apple, and professional financial analytics.
+- **🙈 Edge Handle Visibility Fix**: The dock handle tab (`.ufhpc-handle`) is now cleanly hidden whenever the sidebar is open, eliminating the awkward tab sticking out to the left. The open panel's top header bar is now vertically draggable (`cursor: grab`) to reposition anywhere on screen.
+- **✨ Conflict-Free Timing Banners**: Suppressed contradictory stacked banners (`TOO EXPENSIVE` stacked on top of `BUY NOW`). When the current store is expensive, market ATL/timing is integrated smoothly into the Lowest New metric box (`🟢 Markkinapohja ATL • 📉 Laskeva ❯`) and detailed on the Price History tab.
+- **📊 Unified Financial Store Table**: Replaced 14 bulky box cards with a single sleek table container featuring hairline dividers, glowing stock indicators, tabular monospace prices, and crisp `.ufhpc-here-tag` ("Täällä / Here") and `.ufhpc-lowest-tag` ("🏆 Halvin / Lowest") pills.
+- **💊 Apple / Linear Segmented Pill Tabs**: Frosted glass tab track with rounded count badges (`Kaupat [14]`, `Käytetyt [2]`, `Hintahistoria`).
+- **🔍 Spotlight-Style Search Bar**: Redesigned search bar with embedded SVG magnifying glass lens, focus ring, and glass action button.
+
+### 🚀 v9.6
 - **🔥 Automated Resale Arbitrage Bot (`scripts/arbitrage-bot.mjs`)**: Headless scraper using Tukey IQR outlier filtering and flip ROI margin math (`🔥 FLIP +XX €`), running locally or on GitHub Actions (`.github/workflows/arbitrage-bot.yml`) with instant rich Discord webhook push notifications.
 - **🇪🇺 True EU Cross-Border Sourcing & "Suomi-lisä" Index (`scripts/suomi-lisa-tracker.mjs`)**: Automated cross-border tracker comparing domestic Finnish prices vs. Amazon.de landed cost (with 25.5% Finnish VAT adjustment) across product categories, generating [`data/suomi-lisa-index.json`](data/suomi-lisa-index.json) and [`data/SUOMI-LISA-INDEX.md`](data/SUOMI-LISA-INDEX.md) to pinpoint domestic price traps.
 - **☁️ True Micro-Caching (SWR) in Cloudflare Worker (`cloudflare-worker/worker.js`)**: Structured Stale-While-Revalidate caching layer (`max-age=600, stale-while-revalidate=3600`) returning instantaneous 0ms cached responses while silently revalidating prices in the background via `ctx.waitUntil`.
