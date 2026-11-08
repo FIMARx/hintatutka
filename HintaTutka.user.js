@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HintaTutka
 // @namespace    https://github.com/FIMARx/hintatutka
-// @version      9.8.6
+// @version      9.8.7
 // @description  Suomen älykkäin hintatutka (v9.8.6): Reaaliaikainen PC-komponenttihaku, välitön DIY-optimointi, parannettu mobiili- & historiagrid & 81 kauppaa
 // @author       FIMARx
 // @icon         https://raw.githubusercontent.com/FIMARx/hintatutka/main/extension-mv3/icons/icon128.png
@@ -150,7 +150,7 @@
     // =========================================================================
     // CONFIGURATION & THRESHOLDS
     // =========================================================================
-    const SCRIPT_VERSION = '9.8.6';
+    const SCRIPT_VERSION = '9.8.7';
     const BRAND_LOGO_SVG_MINI = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 58 58" width="15" height="15" style="flex-shrink:0;display:block;"><defs><linearGradient id="htMiniBg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#065f46"/><stop offset="100%" stop-color="#0f172a"/></linearGradient><linearGradient id="htMiniBolt" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#a7f3d0"/><stop offset="100%" stop-color="#10b981"/></linearGradient></defs><rect x="1.5" y="1.5" width="55" height="55" rx="14.5" fill="url(#htMiniBg)" stroke="#10b981" stroke-opacity="0.78" stroke-width="2.4"/><circle cx="29" cy="29" r="19.5" fill="none" stroke="#34d399" stroke-opacity="0.36" stroke-width="1.8" stroke-dasharray="4 3"/><path d="M32.5 11L18.5 31H29.5L25.5 47L40.5 26.5H29.5L32.5 11Z" fill="url(#htMiniBolt)"/></svg>`;
     const IS_MV3_EXTENSION = Boolean(
         globalThis.__HT_MV3_EXTENSION__ ||
@@ -2210,15 +2210,15 @@
     // =========================================================================
     function classifyComponentRole(name, explicitKey = '') {
         const normKey = (explicitKey || '').toLowerCase();
-        if (/prosessorijäähdytys|prosessorij&auml;&auml;hdytys|jäähdytys|j&auml;&auml;hdytys|cooler|aio|nestejäähdytys/i.test(normKey)) return { roleKey: 'cooler', roleLabel: 'Jäähdytys', roleIcon: '❄️' };
-        if (/prosessori|cpu|suoritin/i.test(normKey)) return { roleKey: 'cpu', roleLabel: 'Prosessori', roleIcon: '⚡' };
-        if (/emolevy|motherboard|mainboard/i.test(normKey)) return { roleKey: 'mobo', roleLabel: 'Emolevy', roleIcon: '🔲' };
-        if (/näytönohjain|n&auml;yt&ouml;nohjain|gpu|grafiikka|video card/i.test(normKey)) return { roleKey: 'gpu', roleLabel: 'Näytönohjain', roleIcon: '🎮' };
-        if (/massamuisti|tallennustila|kovalevy|ssd|kiintolevy|storage/i.test(normKey)) return { roleKey: 'storage', roleLabel: 'Massamuisti', roleIcon: '💾' };
+        if (/prosessorijäähdyt|prosessorij&auml;&auml;hdyt|jäähdytys|j&auml;&auml;hdytys|cooler|aio|nestejäähdytys/i.test(normKey)) return { roleKey: 'cooler', roleLabel: 'Jäähdytys', roleIcon: '❄️' };
+        if (/prosessori|cpu|suoritin|processor/i.test(normKey)) return { roleKey: 'cpu', roleLabel: 'Prosessori', roleIcon: '⚡' };
+        if (/emolevy|motherboard|mainboard|piirisarja|chipset/i.test(normKey)) return { roleKey: 'mobo', roleLabel: 'Emolevy', roleIcon: '🔲' };
+        if (/näytönohjai|n&auml;yt&ouml;nohjai|gpu|grafiikka|video card|graphics/i.test(normKey)) return { roleKey: 'gpu', roleLabel: 'Näytönohjain', roleIcon: '🎮' };
+        if (/massamuisti|tallennustila|kovalevy|kiintolevy|ssd|tallennus|storage/i.test(normKey)) return { roleKey: 'storage', roleLabel: 'Massamuisti', roleIcon: '💾' };
         if (/keskusmuisti|\bmuisti\b|ram|memory/i.test(normKey)) return { roleKey: 'ram', roleLabel: 'Keskusmuisti', roleIcon: '🧠' };
         if (/kotelo|chassis|case/i.test(normKey)) return { roleKey: 'case', roleLabel: 'Kotelo', roleIcon: '📦' };
-        if (/virtalähde|virtal&auml;hde|psu|power supply/i.test(normKey)) return { roleKey: 'psu', roleLabel: 'Virtalähde', roleIcon: '🔌' };
-        if (/käyttöjärjestelmä|k&auml;ytt&ouml;j&auml;rjestelm&auml;|os/i.test(normKey)) return { roleKey: 'os', roleLabel: 'Käyttöjärjestelmä', roleIcon: '🪟' };
+        if (/virtaläh|virtal&auml;h|psu|power supply/i.test(normKey)) return { roleKey: 'psu', roleLabel: 'Virtalähde', roleIcon: '🔌' };
+        if (/käyttöjärjestelmä|k&auml;ytt&ouml;j&auml;rjestelm&auml;|operating system|os/i.test(normKey)) return { roleKey: 'os', roleLabel: 'Käyttöjärjestelmä', roleIcon: '🪟' };
 
         const n = (name || '').toLowerCase();
         if (/\b(?:ryzen\s*[3579]|core\s*i[3579]|intel\s*core|ultra\s*[579]|\d{4,5}x3d|\d{4,5}[kxf]|threadripper)\b/i.test(n)) {
@@ -2230,7 +2230,7 @@
         if (/\b(?:rtx\s*\d{4}|geforce|radeon|rx\s*\d{4}|näytönohjain|gddr\d)\b/i.test(n)) {
             return { roleKey: 'gpu', roleLabel: 'Näytönohjain', roleIcon: '🎮' };
         }
-        if (/\b(?:ddr[45]|keskusmuisti|viper\s*venom|fury\s*beast|vengeance|cl\d{2}|\d+\s*mhz\b|\(\d+\s*x\s*\d+\s*gb\))/i.test(n)) {
+        if (/\b(?:ddr[45]|keskusmuisti|viper\s*venom|fury\s*beast|vengeance|cl\d{2}|\d+\s*mhz\b|\(\d+\s*x\s*\d+\s*(?:gb|gt)\))/i.test(n)) {
             return { roleKey: 'ram', roleLabel: 'Keskusmuisti', roleIcon: '🧠' };
         }
         if (/\b(?:nvme|m\.2|ssd|pcie\s*[45]\.0|tallennustila|massamuisti|sn850|990\s*pro)\b/i.test(n)) {
@@ -2255,6 +2255,7 @@
     function cleanComponentQuery(rawName, roleKey = '') {
         const raw = String(rawName || '');
         let s = raw
+            .replace(/[®™]/g, '')
             .replace(/^[0-9.]+\s*-\s*/, '')
             .replace(/,\s*(?:ATX-emolevy|mATX-emolevy|Mini-ITX-emolevy|emolevy|musta|valkoinen|WOF|bulk|box)\b/gi, '')
             .replace(/\b(?:4\.7\s*GHz|8-Core|16-Core|24-Core|1\.\d+V)\b/gi, '')
@@ -2263,7 +2264,7 @@
             .trim();
 
         if (roleKey === 'cpu') {
-            const cpuMatch = s.match(/(?:AMD\s+Ryzen\s+[3579]\s+[0-9A-Z]+|Intel\s+Core\s+(?:Ultra\s+)?[i0-9A-Z\s]+)/i);
+            const cpuMatch = s.match(/(?:AMD\s+Ryzen\s+[3579]\s+[0-9A-Z]+|Intel\s+Core\s+(?:Ultra\s+[3579]\s+[0-9A-Z]+|i[3579][-\s][0-9A-Z]+|[0-9A-Z-]+))/i);
             if (cpuMatch) return cpuMatch[0].trim();
         }
         if (roleKey === 'mobo') {
@@ -2271,28 +2272,43 @@
             if (moboMatch) return moboMatch[1].replace(/,\s*.*$/, '').trim();
         }
         if (roleKey === 'ram') {
-            const capMatch = raw.match(/(\d+\s*GB|\d+\s*x\s*\d+\s*GB)/i);
+            const capMatch = raw.match(/(\d+\s*(?:GB|Gt)|\d+\s*x\s*\d+\s*(?:GB|Gt))/i);
             const ddrMatch = raw.match(/DDR[45]\s*\d{4}\s*MHz/i);
             const brandMatch = raw.match(/\b(Patriot|Kingston|Corsair|G\.Skill|Crucial|TeamGroup)\b/i);
             const seriesMatch = raw.match(/\b(Viper\s*Venom|Fury\s*Beast|Vengeance|Trident\s*Z\d?|Ripjaws|T-Force|Dominator)\b/i);
             const clMatch = raw.match(/\bCL\d{2}\b/i);
             if (capMatch && ddrMatch) {
-                const capStr = capMatch[1].replace(/\s+/g, '');
+                const capStr = capMatch[1].replace(/Gt/i, 'GB').replace(/\s+/g, '');
                 const ddrStr = ddrMatch[0].replace(/\s+/g, ' ');
                 return `${brandMatch ? brandMatch[0] + ' ' : ''}${seriesMatch ? seriesMatch[0] + ' ' : ''}${capStr} ${ddrStr}${clMatch ? ' ' + clMatch[0] : ''}`.trim();
+            } else if (capMatch) {
+                const capStr = capMatch[1].replace(/Gt/i, 'GB').replace(/\s+/g, '');
+                const ddrType = raw.match(/DDR[45]/i);
+                return `${brandMatch ? brandMatch[0] + ' ' : ''}${capStr} ${ddrType ? ddrType[0].toUpperCase() + ' ' : ''}RAM`.trim();
             }
         }
         if (roleKey === 'gpu') {
-            const gpuMatch = s.match(/(?:ASUS|MSI|Gigabyte|Palit|Zotac|PNY|Sapphire|PowerColor|XFX)?\s*(?:NVIDIA\s+GeForce\s+|GeForce\s+)?(RTX\s*\d{4}(?:\s*Ti|\s*Super)?|RX\s*\d{4}(?:\s*XTX|\s*XT)?)[A-Z0-9\s-]*/i);
-            if (gpuMatch) return gpuMatch[0].replace(/,\s*.*$/, '').trim();
+            const gpuMatch = s.match(/(?:ASUS(?:\s+TUF(?:\s+Gaming)?)?|MSI|Gigabyte|Palit|Zotac|PNY|Sapphire|PowerColor|XFX)?\s*(?:NVIDIA\s+GeForce\s+|GeForce\s+)?(RTX\s*\d{4}(?:\s*Ti|\s*Super)?|RX\s*\d{4}(?:\s*XTX|\s*XT)?)[A-Z0-9\s-]*/i);
+            if (gpuMatch) {
+                return gpuMatch[0].replace(/,\s*.*$/, '').replace(/\s*\d+\s*(?:GB|Gt|GDDR\d+)\b.*$/i, '').trim();
+            }
         }
         if (roleKey === 'storage') {
-            const capMatch = raw.match(/(\d+(?:\.\d+)?)\s*(TB|GB)\b/i);
+            const capMatch = raw.match(/(\d+(?:\.\d+)?)\s*(TB|GB|Tt|Gt)\b/i);
             const m2Match = /\bM\.?2\b/i.test(raw);
             const nvmeMatch = /\bNVMe\b/i.test(raw);
             const brandMatch = raw.match(/\b(Samsung|Western\s*Digital|WD|Crucial|Kingston|Corsair|Seagate)\b/i);
             if (capMatch) {
-                return `${brandMatch ? brandMatch[0] + ' ' : ''}${capMatch[1]}${capMatch[2].toUpperCase()} ${m2Match ? 'M.2 ' : ''}${nvmeMatch ? 'NVMe ' : ''}SSD`.trim();
+                let unit = capMatch[2].toUpperCase().replace('TT', 'TB').replace('GT', 'GB');
+                let capVal = capMatch[1];
+                if (capVal === '1000' && unit === 'GB') {
+                    capVal = '1';
+                    unit = 'TB';
+                } else if (capVal === '2000' && unit === 'GB') {
+                    capVal = '2';
+                    unit = 'TB';
+                }
+                return `${brandMatch ? brandMatch[0] + ' ' : ''}${capVal}${unit} ${m2Match ? 'M.2 ' : ''}${nvmeMatch ? 'NVMe ' : ''}SSD`.trim();
             }
         }
         if (roleKey === 'cooler') {
@@ -2313,7 +2329,7 @@
             }
         }
         if (roleKey === 'psu') {
-            const wattMatch = raw.match(/(\d{3,4})\s*W\b/i);
+            const wattMatch = raw.match(/(\d{3,4})\s*W\b/i) || raw.match(/\b(\d{3,4})\b/);
             const certMatch = raw.match(/\b(80\s*\+\s*(?:Bronze|Silver|Gold|Platinum|Titanium)|Bronze|Silver|Gold|Platinum|Titanium)\b/i);
             const brandMatch = raw.match(/\b(Corsair|Seasonic|be\s*quiet!?|ASUS|EVGA|MSI|Thermalright|Cooler\s*Master|Kolink|DeepCool)\b/i);
             if (wattMatch) {
@@ -2332,7 +2348,7 @@
         const isBundleTitle = /(?:-tuotepaketti|\btuotepaketti\b|\bbundle\b|\bpäivityspaketti\b|\bupgrade kit\b|\bkomponenttipaketti\b)/i.test(title) ||
             /\b\+\s*(?:\d{4,5}x3d|\d{4,5}[kxf]|ddr[45]|rtx\s*\d{4})/i.test(title);
 
-        const isPcTitle = /(?:pelitietokone|konepaketti|pöytäkone|gaming pc|pelikone|tietokonekonepaketti)/i.test(title);
+        const isPcTitle = /(?:pelitietokone|konepaketti|pöytäkone|pelipöytäkone|gaming pc|gaming desktop|desktop tower|pelikone|tietokonekonepaketti)/i.test(title);
 
         const hasBundleHeading = /tuotepaketti\s+sisältää|paketti\s+sisältää|tuotepaketti\s+sis&auml;lt&auml;&auml;/i.test(bodyHtml);
         const hasPcSpecHeading = /pelitietokoneen\s+tekniset\s+tiedot|kokoonpanon\s+tiedot/i.test(bodyHtml);
@@ -2425,33 +2441,122 @@
             }
         }
 
-        // Strategy 2: Check structured technical specs (e.g. Jimm's / Verkkokauppa Prebuilt PC specs)
-        if (components.length === 0 && bodyHtml) {
+        // Strategy 2: Check structured technical specs across retailers (Jimm's, Verkkokauppa, Gigantti, Power, Proshop, Datatronic, Multitronic)
+        if (components.length === 0) {
             const decodeHtmlEntities = (str) => String(str || '')
                 .replace(/&auml;/gi, 'ä').replace(/&ouml;/gi, 'ö').replace(/&aring;/gi, 'å')
                 .replace(/&euro;/gi, '€').replace(/&amp;/gi, '&').replace(/&quot;/gi, '"')
                 .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(dec));
 
-            const specRegex = /(?:^|\n|<br\s*\/?>)\s*(?:<[^>]+>)*\s*(Prosessori|Suoritin|CPU|Emolevy|Motherboard|Näytönohjain|N&auml;yt&ouml;nohjain|GPU|Grafiikka|Keskusmuisti|Muisti|RAM|Massamuisti|Tallennustila|Kovalevy|SSD|Prosessorijäähdytys|Prosessorij&auml;&auml;hdytys|Jäähdytys|J&auml;&auml;hdytys|Kotelo|Virtalähde|Virtal&auml;hde|PSU|Käyttöjärjestelmä|K&auml;ytt&ouml;j&auml;rjestelm&auml;|OS)\s*(?:<[^>]+>)*\s*:\s*([^<\n\r]+)/gi;
+            const isSpecKey = (k) => {
+                const norm = decodeHtmlEntities(k).toLowerCase().trim();
+                return /^(?:prosessori|suoritin|cpu|processor|emolevy|motherboard|mainboard|piirisarja|chipset|näytönohjai|n&auml;yt&ouml;nohjai|gpu|grafiikka|video card|graphics|keskusmuisti|ram|memory|tallennustila|massamuisti|kiintolevy|kovalevy|ssd|tallennus|storage|jäähdytys|j&auml;&auml;hdytys|prosessorijäähdyt|prosessorin\s+jäähdyt|cooler|aio|kotelo|tietokonekotelo|chassis|case|virtaläh|virtal&auml;h|psu|power supply|käyttöjärjestelmä|k&auml;ytt&ouml;j&auml;rjestelm&auml;|operating system|os)/i.test(norm);
+            };
 
-            let sm;
-            while ((sm = specRegex.exec(bodyHtml)) !== null) {
-                const rawKey = decodeHtmlEntities(sm[1].trim());
-                const rawVal = decodeHtmlEntities(sm[2].replace(/<[^>]+>/g, '').trim());
-                if (!rawVal || rawVal.length < 3 || seenNames.has(rawVal.toLowerCase())) continue;
-                seenNames.add(rawVal.toLowerCase());
+            const addCandidate = (rawKey, rawVal) => {
+                const cleanKey = decodeHtmlEntities(rawKey).trim();
+                const cleanVal = decodeHtmlEntities(rawVal).replace(/<[^>]+>/g, '').trim();
+                if (!cleanVal || cleanVal.length < 3 || seenNames.has(cleanVal.toLowerCase())) return;
+                // Exclude status words or non-part values
+                if (/^(?:kyllä|ei|on|ei ole|-|none|yes|no|sisäinen|valinnainen|integroitu)$/i.test(cleanVal)) return;
 
-                const role = classifyComponentRole(rawVal, rawKey);
-                const cleanQuery = cleanComponentQuery(rawVal, role.roleKey);
+                const role = classifyComponentRole(cleanVal, cleanKey);
+                if (role.roleKey === 'part' && !isSpecKey(cleanKey)) return;
+
+                seenNames.add(cleanVal.toLowerCase());
+                const cleanQuery = cleanComponentQuery(cleanVal, role.roleKey);
 
                 components.push({
                     ...role,
-                    name: rawVal,
+                    name: cleanVal,
                     cleanQuery,
                     url: null,
                     price: null,
                     priceLabel: null
                 });
+            };
+
+            // 2a. Live DOM parsing if doc is available
+            if (doc && typeof doc.querySelectorAll === 'function') {
+                // Check table rows (Power.fi, Verkkokauppa specs, Proshop, etc.)
+                const rows = doc.querySelectorAll('tr');
+                for (const tr of rows) {
+                    const cells = tr.querySelectorAll('th, td');
+                    if (cells.length >= 2) {
+                        const key = (cells[0].textContent || '').trim();
+                        const val = (cells[1].textContent || '').trim();
+                        if (isSpecKey(key)) {
+                            addCandidate(key, val);
+                        }
+                    }
+                }
+
+                // Check definition lists (Gigantti.fi, Verkkokauppa specs, etc.)
+                const dts = doc.querySelectorAll('dt');
+                for (const dt of dts) {
+                    const key = (dt.textContent || '').trim();
+                    if (isSpecKey(key)) {
+                        const dd = dt.nextElementSibling;
+                        if (dd) {
+                            addCandidate(key, (dd.textContent || '').trim());
+                        }
+                    }
+                }
+
+                // Check bullet points and paragraph lines (Verkkokauppa Blackstorm, Jimm's GtG, etc.)
+                if (components.length === 0) {
+                    const listItems = doc.querySelectorAll('li, p');
+                    for (const el of listItems) {
+                        const text = (el.textContent || '').trim();
+                        const colonIdx = text.indexOf(':');
+                        if (colonIdx > 0 && colonIdx < 40) {
+                            const k = text.substring(0, colonIdx).trim();
+                            const v = text.substring(colonIdx + 1).trim();
+                            if (isSpecKey(k)) {
+                                addCandidate(k, v);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 2b. Raw HTML regex parsing fallback (headless test harness, SSR, or rawHtml provided)
+            if (components.length === 0 && bodyHtml) {
+                // Table rows regex
+                const trRegex = /<tr[^>]*>\s*<(?:th|td)[^>]*>([\s\S]*?)<\/(?:th|td)>\s*<td[^>]*>([\s\S]*?)<\/td>/gi;
+                let tm;
+                while ((tm = trRegex.exec(bodyHtml)) !== null) {
+                    if (!tm[1] || !tm[2]) continue;
+                    const k = tm[1].replace(/<[^>]+>/g, '').trim();
+                    const v = tm[2].replace(/<[^>]+>/g, '').trim();
+                    if (isSpecKey(k)) {
+                        addCandidate(k, v);
+                    }
+                }
+
+                // Definition list dl/dt/dd regex
+                const dlRegex = /<dt[^>]*>([\s\S]*?)<\/dt>\s*<dd[^>]*>([\s\S]*?)<\/dd>/gi;
+                let dm;
+                while ((dm = dlRegex.exec(bodyHtml)) !== null) {
+                    if (!dm[1] || !dm[2]) continue;
+                    const k = dm[1].replace(/<[^>]+>/g, '').trim();
+                    const v = dm[2].replace(/<[^>]+>/g, '').trim();
+                    if (isSpecKey(k)) {
+                        addCandidate(k, v);
+                    }
+                }
+
+                // Colon list regex
+                const specRegex = /(?:^|\n|<br\s*\/?>|<li[^>]*>)\s*(?:<[^>]+>)*\s*([A-Za-zÄÖÅäöå&;()/\s-]+?)\s*(?:<[^>]+>)*\s*:\s*([^<\n\r]+)/gi;
+                let sm;
+                while ((sm = specRegex.exec(bodyHtml)) !== null) {
+                    if (!sm[1] || !sm[2]) continue;
+                    const k = sm[1].replace(/<[^>]+>/g, '').trim();
+                    const v = sm[2].replace(/<[^>]+>/g, '').trim();
+                    if (isSpecKey(k)) {
+                        addCandidate(k, v);
+                    }
+                }
             }
         }
 
@@ -2481,7 +2586,7 @@
         }
 
         const isBundle = isBundleTitle || hasBundleHeading || (components.length >= 2 && Boolean(officialStandaloneTotal));
-        const isPcBuild = isPcTitle || hasPcSpecHeading || components.filter(c => ['cpu', 'mobo', 'gpu', 'ram'].includes(c.roleKey)).length >= 3;
+        const isPcBuild = isPcTitle || hasPcSpecHeading || components.filter(c => ['cpu', 'mobo', 'gpu', 'ram', 'storage'].includes(c.roleKey)).length >= 3;
 
         if (!isBundle && !isPcBuild && components.length < 2) {
             return null;
@@ -2544,7 +2649,7 @@
 
             // Task 2: Search Hinta.fi for market lowest price across all Finnish stores
             if (!comp.marketLowest) {
-                const hintaCacheKey = `hinta_comp_v986_${comp.cleanQuery || comp.name}`;
+                const hintaCacheKey = `hinta_comp_v987_${comp.cleanQuery || comp.name}`;
                 let hintaData = getCached(hintaCacheKey);
                 if (!hintaData || !hintaData.lowestPrice || Number(hintaData.lowestPrice) <= 0) {
                     hintaData = null;
@@ -2554,9 +2659,13 @@
                         queriesToTry.push(comp.partNumber);
                     }
                     if (comp.roleKey === 'storage') {
-                        const capMatch = comp.name.match(/(\d+(?:\.\d+)?)\s*(TB|GB)\b/i);
+                        const capMatch = comp.name.match(/(\d+(?:\.\d+)?)\s*(TB|GB|Tt|Gt)\b/i);
                         if (capMatch) {
-                            const cap = `${capMatch[1]}${capMatch[2].toUpperCase()}`;
+                            let unit = capMatch[2].toUpperCase().replace('TT', 'TB').replace('GT', 'GB');
+                            let capVal = capMatch[1];
+                            if (capVal === '1000' && unit === 'GB') { capVal = '1'; unit = 'TB'; }
+                            else if (capVal === '2000' && unit === 'GB') { capVal = '2'; unit = 'TB'; }
+                            const cap = `${capVal}${unit}`;
                             const qNvme = `${cap} NVMe SSD`;
                             if (!queriesToTry.includes(qNvme)) queriesToTry.push(qNvme);
                             const qM2 = `${cap} M.2 SSD`;
@@ -2566,7 +2675,7 @@
                         }
                     }
                     if (comp.roleKey === 'psu') {
-                        const wattMatch = comp.name.match(/(\d{3,4})\s*W\b/i);
+                        const wattMatch = comp.name.match(/(\d{3,4})\s*W\b/i) || comp.name.match(/\b(\d{3,4})\b/);
                         const certMatch = comp.name.match(/\b(Bronze|Silver|Gold|Platinum|Titanium)\b/i);
                         if (wattMatch) {
                             const w = `${wattMatch[1]}W`;
@@ -2578,6 +2687,28 @@
                             }
                             const qVirt = `${w} virtalähde`;
                             if (!queriesToTry.includes(qVirt)) queriesToTry.push(qVirt);
+                        }
+                    }
+                    if (comp.roleKey === 'ram') {
+                        const capMatch = comp.name.match(/(\d+\s*(?:GB|Gt)|\d+\s*x\s*\d+\s*(?:GB|Gt))/i);
+                        const ddrMatch = comp.name.match(/DDR[45]/i);
+                        if (capMatch && ddrMatch) {
+                            const cap = capMatch[1].replace(/Gt/i, 'GB').replace(/\s+/g, '');
+                            const ddr = ddrMatch[0].toUpperCase();
+                            const qRam = `${cap} ${ddr}`;
+                            if (!queriesToTry.includes(qRam)) queriesToTry.push(qRam);
+                        }
+                    }
+                    if (comp.roleKey === 'gpu') {
+                        const m = comp.name.match(/\b(RTX\s*\d{4}(?:\s*Ti|\s*Super)?|RX\s*\d{4}(?:\s*XTX|\s*XT)?)\b/i);
+                        if (m && !queriesToTry.includes(m[1].trim())) {
+                            queriesToTry.push(m[1].trim());
+                        }
+                    }
+                    if (comp.roleKey === 'cpu') {
+                        const m = comp.name.replace(/[®™]/g, '').match(/(?:AMD\s+Ryzen\s+[3579]\s+[0-9A-Z]+|Intel\s+Core\s+(?:Ultra\s+)?[i0-9A-Z-]+)/i);
+                        if (m && !queriesToTry.includes(m[0].trim())) {
+                            queriesToTry.push(m[0].trim());
                         }
                     }
                     const fallbackQ = extractConciseModelQuery(comp.name);

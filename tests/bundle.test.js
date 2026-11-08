@@ -427,3 +427,164 @@ test('bundle: HTML entities are decoded in Strategy 2 specs', () => {
     assert.strictEqual(psu.name, '1200 W 80+ Gold, PCIe 5.0 Ready');
     assert.strictEqual(psu.cleanQuery, '1200W 80+ Gold');
 });
+
+test('bundle: Verkkokauppa.com Blackstorm PC components extracted from bullet list with Finnish units', () => {
+    const { exports: HT } = loadHintaTutka();
+
+    const mockHtml = `
+        <h1>Blackstorm Gaming 4070 Ti Super pelitietokone</h1>
+        <div class="product-description">
+            <ul>
+                <li>Prosessori: AMD Ryzen 7 7800X3D, 4.2 / 5.0 GHz</li>
+                <li>Emolevy: ASUS TUF GAMING B650-PLUS WIFI</li>
+                <li>Näytönohjain: ASUS TUF Gaming GeForce RTX 4070 Ti SUPER 16 Gt</li>
+                <li>Keskusmuisti: Kingston FURY Beast DDR5 6000 MHz CL36 32 Gt (2 x 16 Gt)</li>
+                <li>Massamuisti: Kingston KC3000 2 Tt M.2 PCIe 4.0 NVMe SSD</li>
+                <li>Prosessorijäähdytys: DeepCool LS720 SE -nestejäähdytys</li>
+                <li>Kotelo: Lian Li LANCOOL 216</li>
+                <li>Virtalähde: Corsair RM850x (2021) 850 W</li>
+            </ul>
+        </div>
+    `;
+
+    const info = { name: 'Blackstorm Gaming 4070 Ti Super pelitietokone', currentPrice: 2499.00 };
+    const bundleData = HT.detectAndExtractBundleData(info, null, 2499.00, mockHtml);
+
+    assert.ok(bundleData, 'PC build must be detected on Verkkokauppa');
+    assert.strictEqual(bundleData.isPcBuild, true);
+    assert.strictEqual(bundleData.components.length, 8);
+
+    const cpu = bundleData.components.find(c => c.roleKey === 'cpu');
+    assert.strictEqual(cpu.cleanQuery, 'AMD Ryzen 7 7800X3D');
+
+    const mobo = bundleData.components.find(c => c.roleKey === 'mobo');
+    assert.strictEqual(mobo.cleanQuery, 'ASUS TUF GAMING B650-PLUS WIFI');
+
+    const gpu = bundleData.components.find(c => c.roleKey === 'gpu');
+    assert.strictEqual(gpu.cleanQuery, 'ASUS TUF Gaming GeForce RTX 4070 Ti SUPER');
+
+    const ram = bundleData.components.find(c => c.roleKey === 'ram');
+    assert.ok(ram.cleanQuery.includes('Kingston') && ram.cleanQuery.includes('32GB'));
+
+    const ssd = bundleData.components.find(c => c.roleKey === 'storage');
+    assert.ok(ssd.cleanQuery.includes('2TB') && ssd.cleanQuery.includes('SSD'));
+
+    const psu = bundleData.components.find(c => c.roleKey === 'psu');
+    assert.strictEqual(psu.cleanQuery, 'Corsair 850W');
+});
+
+test('bundle: Gigantti definition list (dl/dt/dd) PC specifications extracted with inflected keys', () => {
+    const { exports: HT } = loadHintaTutka();
+
+    const mockHtml = `
+        <h1>Acer Predator Orion 3000 pelipöytäkone (i7/32/1TB/4070S)</h1>
+        <dl class="specification-list">
+            <dt class="specification-list__label">Prosessorin malli</dt>
+            <dd class="specification-list__value">Intel Core i7-14700F</dd>
+            <dt class="specification-list__label">Näytönohjaimen malli</dt>
+            <dd class="specification-list__value">NVIDIA GeForce RTX 4070 Super</dd>
+            <dt class="specification-list__label">Keskusmuisti (RAM)</dt>
+            <dd class="specification-list__value">32 GB DDR5</dd>
+            <dt class="specification-list__label">Tallennustilan koko</dt>
+            <dd class="specification-list__value">1000 GB SSD</dd>
+            <dt class="specification-list__label">Virtalähde (watt)</dt>
+            <dd class="specification-list__value">750 W</dd>
+        </dl>
+    `;
+
+    const info = { name: 'Acer Predator Orion 3000 pelipöytäkone (i7/32/1TB/4070S)', currentPrice: 1799.00 };
+    const bundleData = HT.detectAndExtractBundleData(info, null, 1799.00, mockHtml);
+
+    assert.ok(bundleData, 'Prebuilt PC specifications must be detected from Gigantti dl/dt/dd');
+    assert.strictEqual(bundleData.isPcBuild, true);
+    assert.strictEqual(bundleData.components.length, 5);
+
+    const cpu = bundleData.components.find(c => c.roleKey === 'cpu');
+    assert.strictEqual(cpu.cleanQuery, 'Intel Core i7-14700F');
+
+    const gpu = bundleData.components.find(c => c.roleKey === 'gpu');
+    assert.strictEqual(gpu.cleanQuery, 'NVIDIA GeForce RTX 4070 Super');
+
+    const ram = bundleData.components.find(c => c.roleKey === 'ram');
+    assert.strictEqual(ram.cleanQuery, '32GB DDR5 RAM');
+
+    const ssd = bundleData.components.find(c => c.roleKey === 'storage');
+    assert.strictEqual(ssd.cleanQuery, '1TB SSD');
+
+    const psu = bundleData.components.find(c => c.roleKey === 'psu');
+    assert.strictEqual(psu.cleanQuery, '750W');
+});
+
+test('bundle: Power.fi table rows (tr/th/td) PC specifications extracted without colons', () => {
+    const { exports: HT } = loadHintaTutka();
+
+    const mockHtml = `
+        <h1>CEPTER ALPHA GAMING DESKTOP</h1>
+        <table>
+            <tbody>
+                <tr><th>Prosessori</th><td>Intel® Core™ i5-14400F</td></tr>
+                <tr><th>Näytönohjain</th><td>NVIDIA® GeForce RTX™ 4060 Ti 8 Gt</td></tr>
+                <tr><th>Keskusmuisti</th><td>16 Gt DDR5</td></tr>
+                <tr><th>Tallennustila</th><td>1 Tt M.2 NVMe SSD</td></tr>
+                <tr><th>Virtalähde</th><td>650 W</td></tr>
+            </tbody>
+        </table>
+    `;
+
+    const info = { name: 'CEPTER ALPHA GAMING DESKTOP', currentPrice: 1299.00 };
+    const bundleData = HT.detectAndExtractBundleData(info, null, 1299.00, mockHtml);
+
+    assert.ok(bundleData, 'Prebuilt PC specifications must be detected from Power.fi table');
+    assert.strictEqual(bundleData.isPcBuild, true);
+    assert.strictEqual(bundleData.components.length, 5);
+
+    const cpu = bundleData.components.find(c => c.roleKey === 'cpu');
+    assert.strictEqual(cpu.cleanQuery, 'Intel Core i5-14400F');
+
+    const gpu = bundleData.components.find(c => c.roleKey === 'gpu');
+    assert.ok(gpu.cleanQuery.includes('RTX 4060 Ti'));
+
+    const ram = bundleData.components.find(c => c.roleKey === 'ram');
+    assert.strictEqual(ram.cleanQuery, '16GB DDR5 RAM');
+
+    const ssd = bundleData.components.find(c => c.roleKey === 'storage');
+    assert.strictEqual(ssd.cleanQuery, '1TB M.2 NVMe SSD');
+
+    const psu = bundleData.components.find(c => c.roleKey === 'psu');
+    assert.strictEqual(psu.cleanQuery, '650W');
+});
+
+test('bundle: cleanComponentQuery and classifyComponentRole handle Finnish units (Gt, Tt) and clean trademark symbols', () => {
+    const { exports: HT } = loadHintaTutka();
+
+    // Trademark symbol stripping
+    const cleanCpu = HT.cleanComponentQuery('Intel® Core™ i7-14700F -prosessori', 'cpu');
+    assert.strictEqual(cleanCpu, 'Intel Core i7-14700F');
+
+    // Finnish RAM unit (Gt)
+    const cleanRam = HT.cleanComponentQuery('32 Gt DDR5', 'ram');
+    assert.strictEqual(cleanRam, '32GB DDR5 RAM');
+
+    // Finnish Storage unit (1 Tt -> 1TB, 1000 Gt -> 1TB)
+    const cleanSsd1 = HT.cleanComponentQuery('1 Tt M.2 NVMe SSD', 'storage');
+    assert.strictEqual(cleanSsd1, '1TB M.2 NVMe SSD');
+
+    const cleanSsd2 = HT.cleanComponentQuery('1000 GB SSD', 'storage');
+    assert.strictEqual(cleanSsd2, '1TB SSD');
+
+    // Inflected Finnish keys in classifyComponentRole
+    const rCpu = HT.classifyComponentRole('Intel Core i7 14700F', 'Prosessorin malli');
+    assert.strictEqual(rCpu.roleKey, 'cpu');
+
+    const rGpu = HT.classifyComponentRole('RTX 4070 Super', 'Näytönohjaimen malli');
+    assert.strictEqual(rGpu.roleKey, 'gpu');
+
+    const rRam = HT.classifyComponentRole('32 GB', 'Keskusmuisti (RAM)');
+    assert.strictEqual(rRam.roleKey, 'ram');
+
+    const rStorage = HT.classifyComponentRole('1000 GB', 'Tallennustilan koko');
+    assert.strictEqual(rStorage.roleKey, 'storage');
+
+    const rPsu = HT.classifyComponentRole('750 W', 'Virtalähde (watt)');
+    assert.strictEqual(rPsu.roleKey, 'psu');
+});
