@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         HintaTutka
 // @namespace    https://github.com/FIMARx/hintatutka
-// @version      9.8.2
-// @description  Suomen älykkäin hintatutka (v9.8.2): PC-komponenttien & tuotepakettien erillishintahistoriat, reaaliaikainen DIY-optimointi, EU/Saksa ALV-vertailu & 81 kauppaa
+// @version      9.8.3
+// @description  Suomen älykkäin hintatutka (v9.8.3): Parannettu komponenttihaku & SKU-osumat, monikomponenttihistoria, reaaliaikainen DIY-optimointi & 81 kauppaa
 // @author       FIMARx
 // @icon         https://raw.githubusercontent.com/FIMARx/hintatutka/main/extension-mv3/icons/icon128.png
 // @homepageURL  https://github.com/FIMARx/hintatutka
@@ -150,7 +150,7 @@
     // =========================================================================
     // CONFIGURATION & THRESHOLDS
     // =========================================================================
-    const SCRIPT_VERSION = '9.8.2';
+    const SCRIPT_VERSION = '9.8.3';
     const BRAND_LOGO_SVG_MINI = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 58 58" width="15" height="15" style="flex-shrink:0;display:block;"><defs><linearGradient id="htMiniBg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#065f46"/><stop offset="100%" stop-color="#0f172a"/></linearGradient><linearGradient id="htMiniBolt" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#a7f3d0"/><stop offset="100%" stop-color="#10b981"/></linearGradient></defs><rect x="1.5" y="1.5" width="55" height="55" rx="14.5" fill="url(#htMiniBg)" stroke="#10b981" stroke-opacity="0.78" stroke-width="2.4"/><circle cx="29" cy="29" r="19.5" fill="none" stroke="#34d399" stroke-opacity="0.36" stroke-width="1.8" stroke-dasharray="4 3"/><path d="M32.5 11L18.5 31H29.5L25.5 47L40.5 26.5H29.5L32.5 11Z" fill="url(#htMiniBolt)"/></svg>`;
     const IS_MV3_EXTENSION = Boolean(
         globalThis.__HT_MV3_EXTENSION__ ||
@@ -2238,10 +2238,11 @@
     }
 
     function cleanComponentQuery(rawName, roleKey = '') {
-        let s = (rawName || '')
+        const raw = String(rawName || '');
+        let s = raw
             .replace(/^[0-9.]+\s*-\s*/, '')
             .replace(/,\s*(?:ATX-emolevy|mATX-emolevy|Mini-ITX-emolevy|emolevy|musta|valkoinen|WOF|bulk|box)\b/gi, '')
-            .replace(/\b(?:4\.7\s*GHz|8-Core|16-Core|24-Core|CL\d{2}|1\.\d+V)\b/gi, '')
+            .replace(/\b(?:4\.7\s*GHz|8-Core|16-Core|24-Core|1\.\d+V)\b/gi, '')
             .replace(/\b(?:AM5|LGA\d{3,4})\b/gi, '')
             .replace(/\s+/g, ' ')
             .trim();
@@ -2255,11 +2256,11 @@
             if (moboMatch) return moboMatch[1].replace(/,\s*.*$/, '').trim();
         }
         if (roleKey === 'ram') {
-            const capMatch = s.match(/(\d+\s*GB|\d+\s*x\s*\d+\s*GB)/i);
-            const ddrMatch = s.match(/DDR[45]\s*\d{4}MHz/i);
-            const brandMatch = s.match(/^(?:Patriot|Kingston|Corsair|G\.Skill|Crucial|TeamGroup)/i);
-            const seriesMatch = s.match(/\b(Viper\s*Venom|Fury\s*Beast|Vengeance|Trident\s*Z\d?|Ripjaws|T-Force|Dominator)\b/i);
-            const clMatch = s.match(/\bCL\d{2}\b/i);
+            const capMatch = raw.match(/(\d+\s*GB|\d+\s*x\s*\d+\s*GB)/i);
+            const ddrMatch = raw.match(/DDR[45]\s*\d{4}MHz/i);
+            const brandMatch = raw.match(/^(?:Patriot|Kingston|Corsair|G\.Skill|Crucial|TeamGroup)/i);
+            const seriesMatch = raw.match(/\b(Viper\s*Venom|Fury\s*Beast|Vengeance|Trident\s*Z\d?|Ripjaws|T-Force|Dominator)\b/i);
+            const clMatch = raw.match(/\bCL\d{2}\b/i);
             if (capMatch && ddrMatch) {
                 return `${brandMatch ? brandMatch[0] + ' ' : ''}${seriesMatch ? seriesMatch[0] + ' ' : ''}${capMatch[1]} ${ddrMatch[0]}${clMatch ? ' ' + clMatch[0] : ''}`.trim();
             }
@@ -2516,15 +2517,47 @@
                                         const p = parsePriceNumber(rawPrice);
                                         const linkEl = row.querySelector('a.hv-prt_product-a');
                                         const nameEl = row.querySelector('.hv--name');
+                                        const featEl = row.querySelector('.hv--features');
                                         const candName = nameEl ? nameEl.textContent.trim() : '';
+                                        const candFeatures = featEl ? featEl.textContent.trim() : '';
+                                        const fullCandText = candFeatures ? `${candName} ${candFeatures}` : candName;
                                         const href = linkEl ? linkEl.getAttribute('href') : '';
 
                                         if (p && candName && href) {
                                             const candUrl = href.startsWith('http') ? href : `https://hinta.fi${href}`;
-                                            const score = scoreSearchCandidate({ name: candName, price: p }, comp.name, null);
-                                            const compat = evaluateSpecCompatibility(comp.name, candName);
-                                            if (!compat.hasHardConflict && score > bestScore) {
-                                                bestScore = score;
+                                            const candObj = { name: fullCandText, price: p, lowestPrice: p };
+                                            const score = scoreSearchCandidate(candObj, comp.name, comp.storePrice || comp.price);
+                                            const compat = evaluateSpecCompatibility(comp.name, fullCandText);
+
+                                            // Bonus if candidate matches the component partNumber/SKU
+                                            let partBonus = 0;
+                                            if (comp.partNumber) {
+                                                const cleanPn = comp.partNumber.toLowerCase().replace(/[^a-z0-9]/g, '');
+                                                const cleanUrl = candUrl.toLowerCase();
+                                                const cleanText = fullCandText.toLowerCase().replace(/[^a-z0-9]/g, '');
+                                                const corePn = cleanPn.replace(/^pvv|^tuf|^rog|^prime|^ventus|^tuf-gaming-?/i, '');
+                                                if (cleanUrl.includes(cleanPn) || cleanText.includes(cleanPn)) {
+                                                    partBonus += 60;
+                                                } else if (corePn.length >= 6 && (cleanUrl.includes(corePn) || cleanText.includes(corePn))) {
+                                                    partBonus += 45;
+                                                }
+                                            }
+
+                                            // Bonus for price proximity to retailer's known price vs inflated outlier
+                                            let priceProximityBonus = 0;
+                                            const refPrice = comp.storePrice || comp.price;
+                                            if (refPrice && refPrice > 10) {
+                                                const ratio = p / refPrice;
+                                                if (ratio >= 0.75 && ratio <= 1.25) {
+                                                    priceProximityBonus += 25 - (Math.abs(1 - ratio) * 40);
+                                                } else if (ratio > 1.20) {
+                                                    priceProximityBonus -= 30; // penalize inflated overpriced listings
+                                                }
+                                            }
+
+                                            const totalCandScore = score + partBonus + priceProximityBonus;
+                                            if (!compat.hasHardConflict && totalCandScore > bestScore) {
+                                                bestScore = totalCandScore;
                                                 bestCand = {
                                                     lowestPrice: p,
                                                     lowestDelivered: parsePriceNumber(rawTotal) || p,
@@ -4135,6 +4168,9 @@
             if (!hasExactModelMatch && !hasBaseModelMatch) {
                 for (const token of targetTokens) {
                     if (/^[1-9]$/.test(token)) {
+                        // Skip pack multipliers (e.g. '2' from '2 x 16GB' or '4' from '4 x 8GB')
+                        if (specCompat.packCount > 1 && String(specCompat.packCount) === token) continue;
+                        if (/\b(?:2\s*x|4\s*x|8\s*x)\b/i.test(normTarget) && token === '2') continue;
                         const esc = token;
                         if (!new RegExp(`(?<![a-z0-9])${esc}(?![a-z0-9])`, 'i').test(normCand)) {
                             score -= 40;
@@ -4170,8 +4206,9 @@
             }
         }
 
-        if (currentPrice && candidate.lowestPrice) {
-            const ratio = candidate.lowestPrice / currentPrice;
+        const candPrice = candidate.lowestPrice || candidate.price;
+        if (currentPrice && candPrice) {
+            const ratio = candPrice / currentPrice;
             if (ratio >= 0.45 && ratio <= 2.2) {
                 score += 40 - Math.abs(1 - ratio) * 28;
             } else {
@@ -4333,7 +4370,7 @@
             'PRO', 'MAX', 'PLUS', 'MINI', 'SLIM', 'ULTRA', 'LITE', 'SE', 'CORE', 'SERIES',
             'IPV4', 'IPV6', 'HDR10', 'RJ45', 'CAT6', 'CAT6A', 'CAT7'
         ]);
-        const specUnitRx = /^(?:\d+(?:[.,]\d+)?(?:V|W|KW|HZ|MHZ|GHZ|GB|GT|TB|TT|MB|KG|G|MM|CM|M|ML|CL|DL|L|MAH|AH|LM|LUX|DB|RPM|FPS|MP|MPX|NIT|NITS|BIT|BITS|CH|SIM|ESIM|GEN|P|K|NM|BAR|PSI|XL|KPL|PACK)|IPX?\d{1,2}|WIFI-?\d[A-Z]?|BT\d(?:\.\d)?|HDMI\d(?:\.\d)?|20[1-3]\d)$/;
+        const specUnitRx = /^(?:\d+(?:[.,]\d+)?(?:V|W|KW|HZ|MHZ|GHZ|GB|GT|TB|TT|MB|KG|G|MM|CM|M|ML|CL|DL|L|MAH|AH|LM|LUX|DB|RPM|FPS|MP|MPX|NIT|NITS|BIT|BITS|CH|SIM|ESIM|GEN|P|K|NM|BAR|PSI|XL|KPL|PACK)|CL\d{1,2}|CAS\d{1,2}|IPX?\d{1,2}|WIFI-?\d[A-Z]?|BT\d(?:\.\d)?|HDMI\d(?:\.\d)?|20[1-3]\d)$/;
 
         for (const m of rawMatches) {
             const cleaned = m.replace(/^[-/]+|[-/]+$/g, '');
@@ -9181,11 +9218,12 @@
             }
             .ufhpc-bch-filter-bar {
                 display: flex;
-                gap: 4px;
+                gap: 5px;
                 overflow-x: auto;
-                padding: 2px 1px 4px 1px;
+                padding: 4px 1px 8px 1px;
                 margin-bottom: 6px;
                 scrollbar-width: none;
+                align-items: center;
             }
             .ufhpc-bch-filter-bar::-webkit-scrollbar {
                 display: none;
@@ -9194,17 +9232,19 @@
                 flex-shrink: 0;
                 display: inline-flex;
                 align-items: center;
-                gap: 3.5px;
+                gap: 4px;
                 background: rgba(255, 255, 255, 0.04);
                 border: 1px solid rgba(255, 255, 255, 0.08);
-                border-radius: 6px;
+                border-radius: 7px;
                 color: #94a3b8;
-                font-size: 10px;
+                font-size: 10.5px;
+                line-height: 1.25;
                 font-weight: 600;
-                padding: 3.5px 8px;
+                padding: 5px 9px;
                 cursor: pointer;
                 transition: all 0.15s ease;
                 user-select: none;
+                box-sizing: border-box;
             }
             .ufhpc-bch-filter-btn:hover {
                 background: rgba(255, 255, 255, 0.08);
@@ -9219,33 +9259,30 @@
             .ufhpc-bundle-comp-history-card {
                 display: flex;
                 flex-direction: column;
-                gap: 6px;
+                gap: 7px;
                 background: rgba(0, 0, 0, 0.22);
                 border: 1px solid rgba(255, 255, 255, 0.07);
                 border-radius: 12px;
-                padding: 9px 10px 8px 10px;
-                margin-bottom: 8px;
+                padding: 10px 11px 9px 11px;
+                margin-bottom: 9px;
             }
             .ufhpc-bch-header {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+            }
+            .ufhpc-bch-header-top {
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
                 gap: 8px;
             }
-            .ufhpc-bch-title-wrap {
-                display: flex;
-                align-items: center;
-                gap: 6px;
-                min-width: 0;
-                flex: 1;
-            }
             .ufhpc-bch-name {
                 font-size: 11px;
                 font-weight: 700;
                 color: #f1f5f9;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
+                line-height: 1.35;
+                word-break: break-word;
             }
             .ufhpc-bch-price-wrap {
                 display: flex;
@@ -10560,15 +10597,15 @@
                             return `
                                 <div class="ufhpc-bundle-comp-history-card">
                                     <div class="ufhpc-bch-header">
-                                        <div class="ufhpc-bch-title-wrap">
+                                        <div class="ufhpc-bch-header-top">
                                             <span class="ufhpc-component-role">${comp.roleIcon || '🧩'} ${escapeHtml(comp.roleLabel || comp.roleKey || 'Osa')}</span>
-                                            <span class="ufhpc-bch-name" title="${escapeHtml(comp.name)}">${escapeHtml(comp.name)}</span>
+                                            <div class="ufhpc-bch-price-wrap">
+                                                <span class="ufhpc-bch-price">${formatEur(comp.marketLowest || comp.storePrice || comp.price)}</span>
+                                                ${comp.cheapestStore ? `<span class="ufhpc-bch-store">(${escapeHtml(comp.cheapestStore)})</span>` : ''}
+                                                ${comp.hintaUrl ? `<a href="${escapeHtml(comp.hintaUrl)}" target="_blank" rel="noopener noreferrer" class="ufhpc-bch-link" title="Avaa Hinta.fi">Hinta.fi ↗</a>` : ''}
+                                            </div>
                                         </div>
-                                        <div class="ufhpc-bch-price-wrap">
-                                            <span class="ufhpc-bch-price">${formatEur(comp.marketLowest || comp.storePrice || comp.price)}</span>
-                                            ${comp.cheapestStore ? `<span class="ufhpc-bch-store">(${escapeHtml(comp.cheapestStore)})</span>` : ''}
-                                            ${comp.hintaUrl ? `<a href="${escapeHtml(comp.hintaUrl)}" target="_blank" rel="noopener noreferrer" class="ufhpc-bch-link" title="Avaa Hinta.fi">Hinta.fi ↗</a>` : ''}
-                                        </div>
+                                        <div class="ufhpc-bch-name" title="${escapeHtml(comp.name)}">${escapeHtml(comp.name)}</div>
                                     </div>
                                     ${singleChart}
                                 </div>

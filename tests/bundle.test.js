@@ -270,3 +270,39 @@ test('bundle: component price history charts render SVG plots, ATL stats and com
     assert.ok(chartHtml.includes('<polyline'), 'Must render SVG polyline for price curve');
     assert.ok(chartHtml.includes('<circle'), 'Must render ATL indicator circle');
 });
+
+test('bundle: RAM component matching scores correct kit over overpriced/mismatched listing', () => {
+    const { exports: HT } = loadHintaTutka();
+
+    const ramComponent = {
+        name: 'Patriot 32GB (2 x 16GB) Viper VENOM, DDR5 6000MHz, CL36, 1.35V, musta',
+        roleKey: 'ram',
+        storePrice: 529.00,
+        partNumber: 'PVVR532G600C36K'
+    };
+
+    // Query cleaning must preserve CL36
+    const cleanQuery = HT.cleanComponentQuery(ramComponent.name, ramComponent.roleKey);
+    assert.ok(cleanQuery.includes('CL36'), `RAM query must keep CAS latency CL36, got "${cleanQuery}"`);
+    assert.ok(cleanQuery.includes('Viper VENOM'), `RAM query must contain Viper VENOM, got "${cleanQuery}"`);
+
+    // Candidate 1: Genuine matching RAM kit (559.00 €)
+    const cand1 = {
+        name: 'Patriot Memory Viper Venom PVVR532G600C36K 32 GB, 2 x 16 GB, DDR5, ECC, 6000 MHz',
+        lowestPrice: 559.00,
+        price: 559.00
+    };
+
+    // Candidate 2: Overpriced variant from Proshop (651.52 €)
+    const cand2 = {
+        name: 'Patriot Memory Viper Venom RGB VV532G60C36AK 32 GB, 2 x 16 GB, DDR5, 6000 MHz',
+        lowestPrice: 651.52,
+        price: 651.52
+    };
+
+    const score1 = HT.scoreSearchCandidate(cand1, ramComponent.name, ramComponent.storePrice);
+    const score2 = HT.scoreSearchCandidate(cand2, ramComponent.name, ramComponent.storePrice);
+
+    assert.ok(score1 > score2, `Correct candidate (score: ${score1}) must outscore inflated candidate (score: ${score2})`);
+    assert.ok(score1 > 100, `Score for matching candidate must be high (>100), got ${score1}`);
+});
