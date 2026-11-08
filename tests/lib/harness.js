@@ -115,15 +115,48 @@ export function loadHintaTutka(opts = {}) {
         },
         DOMParser: class {
             parseFromString(html) {
-                const titleM = (html || '').match(/<title>([\s\S]*?)<\/title>/i);
-                const h1M = (html || '').match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+                const rawHtml = String(html || '');
+                const titleM = rawHtml.match(/<title>([\s\S]*?)<\/title>/i);
+                const h1M = rawHtml.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
                 return {
                     title: titleM ? titleM[1].trim() : '',
                     querySelector: (sel) => {
                         if (sel.includes('h1') && h1M) return { textContent: h1M[1].replace(/<[^>]+>/g, '').trim() };
                         return null;
                     },
-                    querySelectorAll: () => []
+                    querySelectorAll: (sel) => {
+                        if (sel.includes('tr.hv-prt-tr') || sel.includes('hv-prt-tr')) {
+                            const trMatches = [...rawHtml.matchAll(/<tr[^>]*class="[^"]*hv-prt-tr[^"]*"([\s\S]*?)<\/tr>/gi)];
+                            return trMatches.map((m) => {
+                                const trFull = m[0];
+                                const trInner = m[1];
+                                const getAttr = (name) => {
+                                    const am = trFull.match(new RegExp(`${name}="([^"]*)"`, 'i'));
+                                    return am ? am[1] : null;
+                                };
+                                return {
+                                    getAttribute: getAttr,
+                                    querySelector: (subSel) => {
+                                        if (subSel.includes('hv-prt_product-a') || subSel.includes('product-a')) {
+                                            const linkM = trInner.match(/<a[^>]*href="([^"]+)"[^>]*class="[^"]*hv-prt_product-a[^"]*"/i) ||
+                                                          trInner.match(/<a[^>]*class="[^"]*hv-prt_product-a[^"]*"[^>]*href="([^"]+)"/i);
+                                            return linkM ? { getAttribute: (attr) => attr === 'href' ? linkM[1] : null } : null;
+                                        }
+                                        if (subSel.includes('.hv--name')) {
+                                            const nm = trInner.match(/<strong[^>]*class="[^"]*hv--name[^"]*"[^>]*>([\s\S]*?)<\/strong>/i);
+                                            return nm ? { textContent: nm[1].replace(/<[^>]+>/g, '').trim() } : null;
+                                        }
+                                        if (subSel.includes('.hv--features')) {
+                                            const fm = trInner.match(/<div[^>]*class="[^"]*hv--features[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+                                            return fm ? { textContent: fm[1].replace(/<[^>]+>/g, '').trim() } : null;
+                                        }
+                                        return null;
+                                    }
+                                };
+                            });
+                        }
+                        return [];
+                    }
                 };
             }
         },

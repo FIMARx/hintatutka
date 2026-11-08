@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         HintaTutka
 // @namespace    https://github.com/FIMARx/hintatutka
-// @version      9.8.5
-// @description  Suomen älykkäin hintatutka (v9.8.5): Reaaliaikainen PC-komponenttihaku, välitön DIY-optimointi, parannettu mobiili- & historiagrid & 81 kauppaa
+// @version      9.8.6
+// @description  Suomen älykkäin hintatutka (v9.8.6): Reaaliaikainen PC-komponenttihaku, välitön DIY-optimointi, parannettu mobiili- & historiagrid & 81 kauppaa
 // @author       FIMARx
 // @icon         https://raw.githubusercontent.com/FIMARx/hintatutka/main/extension-mv3/icons/icon128.png
 // @homepageURL  https://github.com/FIMARx/hintatutka
@@ -150,7 +150,7 @@
     // =========================================================================
     // CONFIGURATION & THRESHOLDS
     // =========================================================================
-    const SCRIPT_VERSION = '9.8.5';
+    const SCRIPT_VERSION = '9.8.6';
     const BRAND_LOGO_SVG_MINI = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 58 58" width="15" height="15" style="flex-shrink:0;display:block;"><defs><linearGradient id="htMiniBg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#065f46"/><stop offset="100%" stop-color="#0f172a"/></linearGradient><linearGradient id="htMiniBolt" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#a7f3d0"/><stop offset="100%" stop-color="#10b981"/></linearGradient></defs><rect x="1.5" y="1.5" width="55" height="55" rx="14.5" fill="url(#htMiniBg)" stroke="#10b981" stroke-opacity="0.78" stroke-width="2.4"/><circle cx="29" cy="29" r="19.5" fill="none" stroke="#34d399" stroke-opacity="0.36" stroke-width="1.8" stroke-dasharray="4 3"/><path d="M32.5 11L18.5 31H29.5L25.5 47L40.5 26.5H29.5L32.5 11Z" fill="url(#htMiniBolt)"/></svg>`;
     const IS_MV3_EXTENSION = Boolean(
         globalThis.__HT_MV3_EXTENSION__ ||
@@ -1429,6 +1429,18 @@
             }
         }
 
+        // 2b. Power supply wattage check (e.g. 1200W vs 850W / 750W)
+        const tWattM = targetStr.match(/\b(\d{3,4})\s*w\b/i);
+        const cWattM = candStr.match(/\b(\d{3,4})\s*w\b/i);
+        if (tWattM && cWattM) {
+            if (tWattM[1] === cWattM[1]) {
+                delta += 26;
+            } else {
+                delta -= 95;
+                hasHardConflict = true;
+            }
+        }
+
         // 3. Multi-pack conflict (e.g. single item vs 2-pack / 4-pack)
         if (t.packCount !== c.packCount && (t.packCount > 1 || c.packCount > 1)) {
             delta -= 75;
@@ -2305,7 +2317,7 @@
             const certMatch = raw.match(/\b(80\s*\+\s*(?:Bronze|Silver|Gold|Platinum|Titanium)|Bronze|Silver|Gold|Platinum|Titanium)\b/i);
             const brandMatch = raw.match(/\b(Corsair|Seasonic|be\s*quiet!?|ASUS|EVGA|MSI|Thermalright|Cooler\s*Master|Kolink|DeepCool)\b/i);
             if (wattMatch) {
-                return `${brandMatch ? brandMatch[0] + ' ' : ''}${wattMatch[1]}W${certMatch ? ' ' + certMatch[0].replace(/\s+/g, '') : ''}`.trim();
+                return `${brandMatch ? brandMatch[0] + ' ' : ''}${wattMatch[1]}W${certMatch ? ' ' + certMatch[0].replace(/\s+/g, ' ') : ''}`.trim();
             }
         }
 
@@ -2532,13 +2544,41 @@
 
             // Task 2: Search Hinta.fi for market lowest price across all Finnish stores
             if (!comp.marketLowest) {
-                const hintaCacheKey = `hinta_comp_${comp.cleanQuery || comp.name}`;
+                const hintaCacheKey = `hinta_comp_v986_${comp.cleanQuery || comp.name}`;
                 let hintaData = getCached(hintaCacheKey);
-                if (!hintaData) {
+                if (!hintaData || !hintaData.lowestPrice || Number(hintaData.lowestPrice) <= 0) {
+                    hintaData = null;
                     const queriesToTry = [];
                     if (comp.cleanQuery) queriesToTry.push(comp.cleanQuery);
                     if (comp.partNumber && comp.partNumber.length > 5 && !queriesToTry.includes(comp.partNumber)) {
                         queriesToTry.push(comp.partNumber);
+                    }
+                    if (comp.roleKey === 'storage') {
+                        const capMatch = comp.name.match(/(\d+(?:\.\d+)?)\s*(TB|GB)\b/i);
+                        if (capMatch) {
+                            const cap = `${capMatch[1]}${capMatch[2].toUpperCase()}`;
+                            const qNvme = `${cap} NVMe SSD`;
+                            if (!queriesToTry.includes(qNvme)) queriesToTry.push(qNvme);
+                            const qM2 = `${cap} M.2 SSD`;
+                            if (!queriesToTry.includes(qM2)) queriesToTry.push(qM2);
+                            const qSsd = `${cap} SSD`;
+                            if (!queriesToTry.includes(qSsd)) queriesToTry.push(qSsd);
+                        }
+                    }
+                    if (comp.roleKey === 'psu') {
+                        const wattMatch = comp.name.match(/(\d{3,4})\s*W\b/i);
+                        const certMatch = comp.name.match(/\b(Bronze|Silver|Gold|Platinum|Titanium)\b/i);
+                        if (wattMatch) {
+                            const w = `${wattMatch[1]}W`;
+                            if (certMatch) {
+                                const qPlus = `${w} 80+ ${certMatch[1]}`;
+                                if (!queriesToTry.includes(qPlus)) queriesToTry.push(qPlus);
+                                const qCert = `${w} ${certMatch[1]}`;
+                                if (!queriesToTry.includes(qCert)) queriesToTry.push(qCert);
+                            }
+                            const qVirt = `${w} virtalähde`;
+                            if (!queriesToTry.includes(qVirt)) queriesToTry.push(qVirt);
+                        }
                     }
                     const fallbackQ = extractConciseModelQuery(comp.name);
                     if (fallbackQ && !queriesToTry.includes(fallbackQ)) queriesToTry.push(fallbackQ);
@@ -2566,7 +2606,8 @@
                                 } else {
                                     const parser = new DOMParser();
                                     const doc = parser.parseFromString(html, 'text/html');
-                                    const rows = doc.querySelectorAll('table.hv-prt tbody tr.hv-prt-tr');
+                                    let rows = doc.querySelectorAll('table.hv-prt tbody tr.hv-prt-tr');
+                                    if (!rows || rows.length === 0) rows = doc.querySelectorAll('tr.hv-prt-tr');
                                     let bestCand = null;
                                     let bestScore = -999;
 
@@ -2638,19 +2679,28 @@
 
                                     if (bestCand && bestScore > 10) {
                                         hintaData = bestCand;
-                                        // Asynchronously resolve cheapest store name in background without blocking critical path
+                                        comp.marketLowest = bestCand.lowestPrice;
+                                        comp.marketLowestDelivered = bestCand.lowestDelivered || bestCand.lowestPrice;
+                                        comp.hintaUrl = bestCand.url;
+                                        compUpdated = true;
+                                        recalcTotals();
+                                        if (typeof onProgress === 'function') onProgress(comp);
+
+                                        // Defer secondary store resolution so all primary searches get priority slots
                                         if (bestCand.url) {
-                                            gmFetch(bestCand.url, 'text/html,application/xhtml+xml', 3000).then(({ text: prodHtml }) => {
-                                                const parser = new DOMParser();
-                                                const prodDoc = parser.parseFromString(prodHtml, 'text/html');
-                                                const prod = parseHintaProductDoc(prodDoc, bestCand.url);
-                                                if (prod?.offers?.[0]?.store) {
-                                                    comp.cheapestStore = prod.offers[0].store;
-                                                    comp.storeCount = prod.offers.length;
-                                                    recalcTotals();
-                                                    if (typeof onProgress === 'function') onProgress(comp);
-                                                }
-                                            }).catch(() => {});
+                                            setTimeout(() => {
+                                                gmFetch(bestCand.url, 'text/html,application/xhtml+xml', 3000).then(({ text: prodHtml }) => {
+                                                    const parser = new DOMParser();
+                                                    const prodDoc = parser.parseFromString(prodHtml, 'text/html');
+                                                    const prod = parseHintaProductDoc(prodDoc, bestCand.url);
+                                                    if (prod?.offers?.[0]?.store) {
+                                                        comp.cheapestStore = prod.offers[0].store;
+                                                        comp.storeCount = prod.offers.length;
+                                                        recalcTotals();
+                                                        if (typeof onProgress === 'function') onProgress(comp);
+                                                    }
+                                                }).catch(() => {});
+                                            }, 400);
                                         }
                                         break;
                                     }
@@ -2658,16 +2708,16 @@
                             }
                         } catch (_) {}
                     }
-                    if (hintaData) {
+                    if (hintaData && hintaData.lowestPrice > 0) {
                         setCached(hintaCacheKey, hintaData);
                     }
                 }
-                if (hintaData) {
+                if (hintaData && hintaData.lowestPrice > 0) {
                     comp.marketLowest = hintaData.lowestPrice;
                     comp.marketLowestDelivered = hintaData.lowestDelivered || hintaData.lowestPrice;
                     comp.hintaUrl = hintaData.url;
-                    comp.cheapestStore = hintaData.cheapestStore || null;
-                    comp.storeCount = hintaData.storeCount || null;
+                    comp.cheapestStore = hintaData.cheapestStore || comp.cheapestStore || null;
+                    comp.storeCount = hintaData.storeCount || comp.storeCount || null;
                     compUpdated = true;
                 }
             }
@@ -4207,13 +4257,16 @@
             }
             const targetOverlap = targetTokens.length > 0 ? (matchedFromTarget / targetTokens.length) : 0;
 
+            const isGenericTarget = targetModelCodes.length === 0 &&
+                !/\b(ASUS|MSI|Gigabyte|Noctua|Corsair|Kingston|Patriot|Samsung|Crucial|WD|Western\s*Digital|Antec|Lian\s*Li|NZXT|Fractal|Seasonic|be\s*quiet!?|Apple|Sony|Bose|Intel|AMD)\b/i.test(targetName);
+
             // Reject candidates with ZERO words in common, UNLESS exact model code matched
             if (matchedFromCand === 0 && !hasExactModelMatch) {
                 return -999;
             }
 
-            // Reject candidates with poor bidirectional overlap, UNLESS exact model code matched
-            if (!hasExactModelMatch && candOverlap < 0.50 && targetOverlap < 0.30) {
+            // Reject candidates with poor bidirectional overlap, UNLESS exact model code matched or generic spec
+            if (!hasExactModelMatch && !isGenericTarget && candOverlap < 0.50 && targetOverlap < 0.30) {
                 return -999;
             }
 
@@ -4226,8 +4279,8 @@
                 score += 38;
             }
 
-            // Only apply single-digit generation penalty ("5" vs "4") if there is NO model code match
-            if (!hasExactModelMatch && !hasBaseModelMatch) {
+            // Only apply single-digit generation penalty ("5" vs "4") if there is NO model code match and not generic spec
+            if (!hasExactModelMatch && !hasBaseModelMatch && !isGenericTarget) {
                 for (const token of targetTokens) {
                     if (/^[1-9]$/.test(token)) {
                         // Skip pack multipliers (e.g. '2' from '2 x 16GB' or '4' from '4 x 8GB')

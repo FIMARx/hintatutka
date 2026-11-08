@@ -311,7 +311,7 @@ test('bundle: cleanComponentQuery extracts concise queries for all prebuilt PC c
     const { exports: HT } = loadHintaTutka();
 
     const psu = HT.cleanComponentQuery('1200 W 80+ Gold, PCIe 5.0 Ready', 'psu');
-    assert.strictEqual(psu, '1200W 80+Gold');
+    assert.strictEqual(psu, '1200W 80+ Gold');
 
     const storage = HT.cleanComponentQuery('4 TB M.2 PCIe 4.0 NVMe SSD', 'storage');
     assert.strictEqual(storage, '4TB M.2 NVMe SSD');
@@ -358,7 +358,7 @@ test('bundle: PSU wattage and 80+ efficiency ratings score high for prebuilt PC 
     };
 
     const cleanQ = HT.cleanComponentQuery(targetPsu, 'psu');
-    assert.strictEqual(cleanQ, '1200W 80+Gold');
+    assert.strictEqual(cleanQ, '1200W 80+ Gold');
 
     const score1 = HT.scoreSearchCandidate(candPsu, targetPsu, null);
     const score2 = HT.scoreSearchCandidate(candPsu, cleanQ, null);
@@ -368,6 +368,35 @@ test('bundle: PSU wattage and 80+ efficiency ratings score high for prebuilt PC 
 
     const compat = HT.evaluateSpecCompatibility(targetPsu, candPsu.name);
     assert.strictEqual(compat.hasHardConflict, false, 'PSU must not trigger hard conflict');
+
+    const mismatchCompat = HT.evaluateSpecCompatibility(targetPsu, 'Corsair RM750e 750W 80+ Gold');
+    assert.strictEqual(mismatchCompat.hasHardConflict, true, '750W PSU must trigger hard conflict against 1200W spec');
+});
+
+test('bundle: generic SSD storage specs match branded drives without overlap penalty', () => {
+    const { exports: HT } = loadHintaTutka();
+
+    const targetSsd = '4 TB M.2 PCIe 4.0 NVMe SSD';
+    const candSsd = {
+        name: 'Crucial P310 4000 GB',
+        lowestPrice: 460.9,
+        price: 460.9
+    };
+
+    const cleanQ = HT.cleanComponentQuery(targetSsd, 'storage');
+    assert.strictEqual(cleanQ, '4TB M.2 NVMe SSD');
+
+    const score1 = HT.scoreSearchCandidate(candSsd, targetSsd, null);
+    const score2 = HT.scoreSearchCandidate(candSsd, cleanQ, null);
+    const maxScore = Math.max(score1, score2);
+
+    assert.ok(maxScore >= 40, `Generic SSD candidate score must be >= 40, got maxScore: ${maxScore} (score1: ${score1}, score2: ${score2})`);
+
+    const compat = HT.evaluateSpecCompatibility(targetSsd, candSsd.name);
+    assert.strictEqual(compat.hasHardConflict, false, 'Matching 4TB SSD must not trigger hard conflict');
+
+    const mismatchCompat = HT.evaluateSpecCompatibility(targetSsd, 'Crucial P310 2000 GB');
+    assert.strictEqual(mismatchCompat.hasHardConflict, true, '2TB SSD must trigger hard conflict against 4TB target');
 });
 
 test('bundle: HTML entities are decoded in Strategy 2 specs', () => {
@@ -396,5 +425,5 @@ test('bundle: HTML entities are decoded in Strategy 2 specs', () => {
     const psu = bundleData.components.find(c => c.roleKey === 'psu');
     assert.ok(psu, 'PSU component must be present');
     assert.strictEqual(psu.name, '1200 W 80+ Gold, PCIe 5.0 Ready');
-    assert.strictEqual(psu.cleanQuery, '1200W 80+Gold');
+    assert.strictEqual(psu.cleanQuery, '1200W 80+ Gold');
 });
