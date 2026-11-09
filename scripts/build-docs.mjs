@@ -477,14 +477,14 @@ const htmlContent = `<!DOCTYPE html>
             <span class="logo-icon">⚡</span>
             <div>
                 <div class="brand-title">HintaTutka <span class="badge-version">v${HT.SCRIPT_VERSION} Studio</span></div>
-                <div class="brand-subtitle">Retail DOM Skeleton Harvester & 81-Store Registry</div>
+                <div class="brand-subtitle">Retail DOM Skeleton Harvester & ${storesData.length}-Store Registry</div>
             </div>
         </div>
 
         <nav class="nav-tabs">
             <button class="tab-btn active" onclick="switchTab('harvester')">🌾 Harvester Studio</button>
             <button class="tab-btn" onclick="switchTab('tester')">🎯 Selector Playground</button>
-            <button class="tab-btn" onclick="switchTab('stores')">🏪 81-Store Directory</button>
+            <button class="tab-btn" onclick="switchTab('stores')">🏪 ${storesData.length}-Store Directory</button>
             <button class="tab-btn" onclick="switchTab('guide')">📖 Integration Guide</button>
         </nav>
     </div>
@@ -632,22 +632,23 @@ const htmlContent = `<!DOCTYPE html>
         </div>
     </div>
 
-    <!-- TAB 3: 81 STORES DIRECTORY -->
+    <!-- TAB 3: STORES DIRECTORY -->
     <div id="tab-stores" class="tab-content">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
             <div>
-                <h2 style="font-size: 1.5rem; font-weight: 700;">🏪 81 Supported Finnish & EU Stores</h2>
+                <h2 style="font-size: 1.5rem; font-weight: 700;">🏪 ${storesData.length} Supported Finnish & EU Stores</h2>
                 <p style="font-size: 0.85rem; color: var(--text-secondary);">Complete registry of live price scraping rules, category hints, and selector fallbacks.</p>
             </div>
 
             <div class="preset-bar" style="margin-bottom: 0;">
-                <button class="pill" onclick="filterStores('all')">All (81)</button>
-                <button class="pill" onclick="filterStores('electronics')">Electronics (51)</button>
-                <button class="pill" onclick="filterStores('grocery')">Grocery (8)</button>
-                <button class="pill" onclick="filterStores('sports')">Sports (8)</button>
-                <button class="pill" onclick="filterStores('furniture')">Furniture (8)</button>
-                <button class="pill" onclick="filterStores('used')">Used (3)</button>
-                <button class="pill" onclick="filterStores('refurbished')">Refurbished (3)</button>
+                <button class="pill" onclick="filterStores('all')">All (${storesData.length})</button>
+                <button class="pill" onclick="filterStores('electronics')">Electronics (${storesData.filter(s => s.category === 'electronics').length})</button>
+                <button class="pill" onclick="filterStores('vehicles')">Vehicles (${storesData.filter(s => s.category === 'vehicles').length})</button>
+                <button class="pill" onclick="filterStores('grocery')">Grocery (${storesData.filter(s => s.category === 'grocery').length})</button>
+                <button class="pill" onclick="filterStores('sports')">Sports (${storesData.filter(s => s.category === 'sports').length})</button>
+                <button class="pill" onclick="filterStores('furniture')">Furniture (${storesData.filter(s => s.category === 'furniture').length})</button>
+                <button class="pill" onclick="filterStores('used')">Used (${storesData.filter(s => s.category === 'used').length})</button>
+                <button class="pill" onclick="filterStores('refurbished')">Refurbished (${storesData.filter(s => s.category === 'refurbished').length})</button>
             </div>
         </div>
 
