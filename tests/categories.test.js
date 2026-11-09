@@ -169,3 +169,137 @@ test('categories: automotive & vehicles (Nettiauto, Kamux, Saka) cash price and 
     assert.strictEqual(HT.parsePriceNumber('25 900 €'), 25900.00);
     assert.strictEqual(HT.parsePriceNumber('34 890 €'), 34890.00);
 });
+
+test('categories: automotive concise vehicle query extraction across Finnish market titles', () => {
+    const cases = [
+        {
+            title: 'Kia Ceed 1,0 T-GDI Mild-Hybrid 100hv LX DCT 5D Viistoperä 2025',
+            expectedBrand: 'Kia',
+            expectedModel: 'Ceed',
+            expectedMakeModel: 'Kia Ceed'
+        },
+        {
+            title: 'Skoda Karoq 2.0 TDI 115 Ambition DSG Autom. Farmari 2022',
+            expectedBrand: 'Skoda',
+            expectedModel: 'Karoq',
+            expectedMakeModel: 'Skoda Karoq'
+        },
+        {
+            title: 'Toyota Corolla Touring Sports 1.8 Hybrid Active 2021',
+            expectedBrand: 'Toyota',
+            expectedModel: 'Corolla',
+            expectedMakeModel: 'Toyota Corolla'
+        },
+        {
+            title: 'Tesla Model Y Long Range AWD 2023',
+            expectedBrand: 'Tesla',
+            expectedModel: 'Model Y',
+            expectedMakeModel: 'Tesla Model Y'
+        },
+        {
+            title: 'Volkswagen Golf Variant 1,5 eTSI 110 kW MHEV Life DSG 2023',
+            expectedBrand: 'Volkswagen',
+            expectedModel: 'Golf',
+            expectedMakeModel: 'Volkswagen Golf'
+        },
+        {
+            title: 'Mercedes-Benz C 200 EQ Boost T A 2021',
+            expectedBrand: 'Mercedes-Benz',
+            expectedModel: 'C 200',
+            expectedMakeModel: 'Mercedes-Benz C 200'
+        }
+    ];
+
+    for (const c of cases) {
+        const res = HT.extractConciseVehicleQuery(c.title);
+        assert.strictEqual(res.brand, c.expectedBrand, `Brand for "${c.title}" should be "${c.expectedBrand}"`);
+        assert.strictEqual(res.model, c.expectedModel, `Model for "${c.title}" should be "${c.expectedModel}"`);
+        assert.strictEqual(res.makeModel, c.expectedMakeModel, `MakeModel for "${c.title}" should be "${c.expectedMakeModel}"`);
+    }
+});
+
+test('categories: automotive competitor marketplace and registry lookup links (Hedin, Auto1, Kamux, Saka, Mobile.de)', () => {
+    const links = HT.buildAutomotiveMarketLinks('Kia Ceed', 'JNI-855');
+    assert.strictEqual(links.hedinUrl, 'https://www.hedinautomotive.fi/vaihtoautot/?search=Kia%20Ceed');
+    assert.strictEqual(links.auto1Url, 'https://www.auto1.fi/haku/Kia+Ceed');
+    assert.strictEqual(links.kamuxUrl, 'https://www.kamux.fi/vaihtoautot?q=Kia%20Ceed');
+    assert.strictEqual(links.sakaUrl, 'https://saka.fi/fi/vaihtoautot/?search=Kia%20Ceed');
+    assert.strictEqual(links.rintaJouppiUrl, 'https://www.rintajouppi.fi/vaihtoautot/?q=Kia%20Ceed');
+    assert.strictEqual(links.kAutoUrl, 'https://www.k-auto.fi/vaihtoautot/haku/?query=Kia%20Ceed');
+    assert.strictEqual(links.nettiautoUrl, 'https://www.nettiauto.com/vaihtoautot?q=Kia%20Ceed');
+    assert.strictEqual(links.toriAutotUrl, 'https://www.tori.fi/recommerce/forsale/search?q=Kia%20Ceed&category=car');
+    assert.strictEqual(links.mobileDeUrl, 'https://suchen.mobile.de/fahrzeuge/search.html?dam=0&isSearchRequest=true&vc=Car&sb=rel&q=Kia%20Ceed');
+    assert.strictEqual(links.autoScoutUrl, 'https://www.autoscout24.com/lst?query=Kia%20Ceed');
+    assert.strictEqual(links.motonetUrl, 'https://www.motonet.fi/rekisterihaku?reg=JNI-855');
+    assert.strictEqual(links.biltemaUrl, 'https://www.biltema.fi/etsi-rekisterinumerolla/?registrationNumber=JNI-855');
+});
+
+test('categories: automotive valuation & 5-year depreciation trajectory algorithm', () => {
+    // 2025 Kia Ceed, 24 900 €, 11 000 km
+    const dep = HT.calculateVehicleDepreciation(24900, 2025, 11000);
+    assert.ok(dep, 'Depreciation calculation must succeed');
+    assert.ok(dep.estimatedNewPrice >= 28000 && dep.estimatedNewPrice <= 31000, `Expected new price ~29 600 €, got: ${dep.estimatedNewPrice}`);
+    assert.ok(dep.annualDepreciation >= 2000 && dep.annualDepreciation <= 4500, `Expected annual deprecation ~3 500 €, got: ${dep.annualDepreciation}`);
+    assert.ok(dep.monthlyDepreciation >= 150 && dep.monthlyDepreciation <= 400, `Expected monthly deprecation ~290 €, got: ${dep.monthlyDepreciation}`);
+    assert.ok(dep.perKmDepreciation >= 0.10 && dep.perKmDepreciation <= 0.30, `Expected per-km ~0.19 €/km, got: ${dep.perKmDepreciation}`);
+    assert.ok(dep.points.length >= 6, `Must generate at least 6 trajectory points, got ${dep.points.length}`);
+
+    const curPt = dep.points.find(p => p.isCurrent);
+    assert.ok(curPt, 'Current vehicle position must be tagged in points');
+    assert.strictEqual(curPt.price, 24900);
+    assert.strictEqual(curPt.mileage, 11000);
+
+    // Render SVG depreciation chart
+    const chartHtml = HT.buildVehicleDepreciationChartHtml({ depreciation: dep }, 24900, { color: '#38bdf8' }, 'fi');
+    assert.match(chartHtml, /<svg\b/i, 'Must contain SVG element');
+    assert.match(chartHtml, /ufhpc-veh-grad/i, 'Must contain SVG gradient');
+    assert.match(chartHtml, /ufhpc-veh-stats-grid/i, 'Must render 3-column financial stats grid');
+    assert.match(chartHtml, /ufhpc-veh-table/i, 'Must render valuation projection table');
+    assert.match(chartHtml, /24\s*900/i, 'Must display current vehicle price on chart');
+});
+
+test('categories: automotive vehicle specs extraction from DOM key-value structure', () => {
+    const mockDoc = {
+        title: 'Skoda Karoq 2.0 TDI 115 Ambition DSG Autom. Farmari 2022',
+        querySelectorAll: (sel) => {
+            if (sel.includes('application/ld+json')) return [];
+            if (sel.includes('.vehicle-info-box')) {
+                return [
+                    {
+                        querySelector: (s) => s.includes('vehicle-det') ? { textContent: 'IPP-174' } : { textContent: 'Rekisterinumero' }
+                    },
+                    {
+                        querySelector: (s) => s.includes('vehicle-det') ? { textContent: '34 000 km' } : { textContent: 'Mittarilukema' }
+                    },
+                    {
+                        querySelector: (s) => s.includes('vehicle-det') ? { textContent: '2,0 l, Diesel' } : { textContent: 'Moottori' }
+                    },
+                    {
+                        querySelector: (s) => s.includes('vehicle-det') ? { textContent: '2022' } : { textContent: 'Vuosimalli' }
+                    },
+                    {
+                        querySelector: (s) => s.includes('vehicle-det') ? { textContent: 'Automaatti' } : { textContent: 'Vaihteisto' }
+                    },
+                    {
+                        querySelector: (s) => s.includes('vehicle-det') ? { textContent: 'Etuveto' } : { textContent: 'Vetotapa' }
+                    }
+                ];
+            }
+            return [];
+        },
+        querySelector: () => null
+    };
+
+    const { exports: localHT } = loadHintaTutka({ host: 'www.nettiauto.com' });
+    const vData = localHT.detectAndExtractVehicleData({ name: mockDoc.title, category: 'vehicles' }, mockDoc, 25900);
+    assert.ok(vData, 'Must extract vehicle data');
+    assert.strictEqual(vData.regPlate, 'IPP-174', 'Must extract license plate IPP-174');
+    assert.strictEqual(vData.mileage, 34000, 'Must extract mileage 34 000 km');
+    assert.strictEqual(vData.year, 2022, 'Must extract year 2022');
+    assert.strictEqual(vData.engine, '2,0 l, Diesel', 'Must extract engine 2,0 l, Diesel');
+    assert.strictEqual(vData.transmission, 'Automaatti', 'Must extract transmission Automaatti');
+    assert.strictEqual(vData.driveType, 'Etuveto', 'Must extract drive type Etuveto');
+    assert.strictEqual(vData.makeModel, 'Skoda Karoq', 'Must extract make and model Skoda Karoq');
+    assert.ok(vData.depreciation, 'Must compute depreciation curve');
+    assert.ok(vData.depreciation.estimatedNewPrice >= 40000, 'Estimated new price for Karoq should be >= 40 000 €');
+});

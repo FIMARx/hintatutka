@@ -59,6 +59,11 @@ globalThis.__HT_TEST_EXPORTS__ = {
     detectProductCategory,
     extractUnitPriceInfo,
     evaluatePrebuiltHardwareBalance,
+    extractConciseVehicleQuery,
+    buildAutomotiveMarketLinks,
+    calculateVehicleDepreciation,
+    detectAndExtractVehicleData,
+    buildVehicleDepreciationChartHtml,
     I18N
 };
 `;

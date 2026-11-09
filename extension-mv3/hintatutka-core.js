@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         HintaTutka
 // @namespace    https://github.com/FIMARx/hintatutka
-// @version      9.8.15
-// @description  Suomen älykkäin hintatutka (v9.8.15): Reaaliaikainen PC-komponenttihaku, Gigantti- & Power.fi-pelikoneiden tuki, välitön DIY-optimointi & 98 kauppaa (ml. autokaupat)
+// @version      9.8.16
+// @description  Suomen älykkäin hintatutka (v9.8.16): Autojen markkinahintavertailu, Hedin & Auto1 -autoliikkeet, 5v arvonalenemakäyrä & 98 kauppaa
 // @author       FIMARx
 // @icon         https://raw.githubusercontent.com/FIMARx/hintatutka/main/extension-mv3/icons/icon128.png
 // @homepageURL  https://github.com/FIMARx/hintatutka
@@ -167,7 +167,7 @@
     // =========================================================================
     // CONFIGURATION & THRESHOLDS
     // =========================================================================
-    const SCRIPT_VERSION = '9.8.15';
+    const SCRIPT_VERSION = '9.8.16';
     const BRAND_LOGO_SVG_MINI = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 58 58" width="15" height="15" style="flex-shrink:0;display:block;"><defs><linearGradient id="htMiniBg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#065f46"/><stop offset="100%" stop-color="#0f172a"/></linearGradient><linearGradient id="htMiniBolt" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#a7f3d0"/><stop offset="100%" stop-color="#10b981"/></linearGradient></defs><rect x="1.5" y="1.5" width="55" height="55" rx="14.5" fill="url(#htMiniBg)" stroke="#10b981" stroke-opacity="0.78" stroke-width="2.4"/><circle cx="29" cy="29" r="19.5" fill="none" stroke="#34d399" stroke-opacity="0.36" stroke-width="1.8" stroke-dasharray="4 3"/><path d="M32.5 11L18.5 31H29.5L25.5 47L40.5 26.5H29.5L32.5 11Z" fill="url(#htMiniBolt)"/></svg>`;
     const IS_MV3_EXTENSION = Boolean(
         globalThis.__HT_MV3_EXTENSION__ ||
@@ -1995,7 +1995,9 @@
 
         const hasProductUrlPattern = /\/(product|products|tuote|tuotteet|produkt|produkter|dp|gp\/product|p|recommerce\/forsale\/item|items|kohteet|varuste|mallit|item)\b/i.test(location.pathname) ||
             /\/Product\/Show\//i.test(location.pathname) ||
-            /\.html$/i.test(location.pathname);
+            /\.html$/i.test(location.pathname) ||
+            Boolean(currentStore?.categoryHint === 'vehicles') ||
+            /\/(auto|vaihtoauto|vaihtoautot|ajoneuvo|ajoneuvot)\b/i.test(location.pathname);
         const hasProductMeta = Boolean(
             document.querySelector('meta[property="og:type"][content*="product" i], meta[property="product:price:amount"], [itemtype*="schema.org/Product"]')
         );
@@ -2253,6 +2255,16 @@
             }
         }
 
+        const vehicleData = (category === 'vehicles')
+            ? detectAndExtractVehicleData(info, typeof document !== 'undefined' ? document : null, currentPrice)
+            : null;
+        if (vehicleData) {
+            info.vehicleData = vehicleData;
+            if (vehicleData.makeModel) {
+                queries.unshift({ type: 'Ajoneuvo', value: vehicleData.makeModel });
+            }
+        }
+
         return {
             ...info,
             category,
@@ -2263,8 +2275,417 @@
             queries,
             isBundle: Boolean(bundleData?.isBundle),
             isPcBuild: Boolean(bundleData?.isPcBuild),
-            bundleData: bundleData || null
+            bundleData: bundleData || null,
+            isVehicle: Boolean(vehicleData),
+            vehicleData: vehicleData || null
         };
+    }
+
+    // =========================================================================
+    // AUTOMOTIVE & VEHICLE INTELLIGENCE ENGINE (NETTIAUTO, KAMUX, SAKA, HEDIN)
+    // =========================================================================
+    function formatKm(km) {
+        if (!km || !Number.isFinite(km)) return '—';
+        return `${Math.round(km).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} km`;
+    }
+
+    function extractConciseVehicleQuery(rawTitle, explicitBrand = null, explicitModel = null) {
+        const title = (rawTitle || '').replace(/\s+/g, ' ').trim();
+        if (!title) return { brand: explicitBrand, model: explicitModel, makeModel: '' };
+
+        const KNOWN_MAKES = [
+            'Alfa Romeo', 'Aston Martin', 'Audi', 'Bentley', 'BMW', 'BYD', 'Cadillac', 'Chevrolet', 'Chrysler',
+            'Citroen', 'Cupra', 'Dacia', 'Daewoo', 'Dodge', 'DS', 'Ferrari', 'Fiat', 'Ford', 'Genesis',
+            'GMC', 'Honda', 'Hummer', 'Hyundai', 'Infiniti', 'Isuzu', 'Iveco', 'Jaguar', 'Jeep', 'Kia',
+            'Lada', 'Lamborghini', 'Lancia', 'Land Rover', 'Lexus', 'Lincoln', 'Lotus', 'Maserati', 'Maybach',
+            'Mazda', 'McLaren', 'Mercedes-Benz', 'Mercedes', 'MG', 'Mini', 'Mitsubishi', 'Nio', 'Nissan',
+            'Opel', 'Peugeot', 'Polestar', 'Pontiac', 'Porsche', 'Renault', 'Rolls-Royce', 'Rover', 'Saab',
+            'Seat', 'Skoda', 'Smart', 'SsangYong', 'Subaru', 'Suzuki', 'Tesla', 'Toyota', 'Volkswagen', 'Volvo',
+            'Voyah', 'Xpeng'
+        ];
+
+        let foundBrand = explicitBrand || null;
+        let foundModel = explicitModel || null;
+
+        if (!foundBrand) {
+            for (const make of KNOWN_MAKES) {
+                const re = new RegExp(`\\b${make.replace(/[-]/g, '[- ]')}\\b`, 'i');
+                if (re.test(title)) {
+                    foundBrand = make;
+                    break;
+                }
+            }
+        }
+
+        if (foundBrand && !foundModel) {
+            const bMatch = title.match(new RegExp(`\\b${foundBrand.replace(/[-]/g, '[- ]')}\\b`, 'i'));
+            if (bMatch) {
+                const rest = title.slice(bMatch.index + bMatch[0].length).trim();
+                const cutoff = /\b(?:\d+[.,]\d+|\d+\s*(?:hv|kw|pk|hp)|Touring(?:\s+Sports)?|Variant|Avant|Combi|Sportback|Shooting\s+Brake|Farmari|Sedan|Viistoperä|Katumaasturi|SUV|Crossover|Cabriolet|Coupe|Autom\.?|Automaatti|Manuaali|DSG|DCT|EDC|CVT|S\s*Tronic|Tiptronic|AWD|4WD|4x4|4Motion|Quattro|xDrive|sDrive|Etuveto|Takaveto|Neliveto|Mild-Hybrid|MHEV|PHEV|Hybrid|Plug-in|eTSI|TDI|TSI|TFSI|T-GDI|GDI|CDI|DMS|dCi|BlueHDi|EcoBoost|PureTech|SkyActiv|Twin\s*Engine|Recharge|EQ\s*Boost|EV|Electric|Long\s+Range|Standard\s+Range|Performance|Active|Ambition|Style|Life|Business|Comfort|Premium|Inscription|R-Line|S-Line|M\s+Sport|AMG|Alltrack|GT-Line|N-Line|Cross|[345]D|19\d{2}|20\d{2})\b/i;
+                const idx = rest.search(cutoff);
+                const rawModel = (idx !== -1 ? rest.slice(0, idx) : rest).trim();
+                const model = rawModel.split(/\s+/).slice(0, 2).join(' ').trim();
+                if (model) foundModel = model;
+            }
+        }
+
+        const makeModel = (foundBrand && foundModel)
+            ? `${foundBrand} ${foundModel}`.trim()
+            : (foundBrand || title.split(/\s+/).slice(0, 2).join(' '));
+
+        return {
+            brand: foundBrand,
+            model: foundModel,
+            makeModel: makeModel.trim()
+        };
+    }
+
+    function buildAutomotiveMarketLinks(makeModel, regPlate = null) {
+        const q = encodeURIComponent(makeModel || '');
+        const qPlus = q.replace(/%20/g, '+');
+        const reg = regPlate ? encodeURIComponent(regPlate.trim().toUpperCase()) : '';
+        return {
+            hedinUrl: `https://www.hedinautomotive.fi/vaihtoautot/?search=${q}`,
+            auto1Url: `https://www.auto1.fi/haku/${qPlus}`,
+            kamuxUrl: `https://www.kamux.fi/vaihtoautot?q=${q}`,
+            sakaUrl: `https://saka.fi/fi/vaihtoautot/?search=${q}`,
+            rintaJouppiUrl: `https://www.rintajouppi.fi/vaihtoautot/?q=${q}`,
+            kAutoUrl: `https://www.k-auto.fi/vaihtoautot/haku/?query=${q}`,
+            nettiautoUrl: `https://www.nettiauto.com/vaihtoautot?q=${q}`,
+            toriAutotUrl: `https://www.tori.fi/recommerce/forsale/search?q=${q}&category=car`,
+            mobileDeUrl: `https://suchen.mobile.de/fahrzeuge/search.html?dam=0&isSearchRequest=true&vc=Car&sb=rel&q=${q}`,
+            autoScoutUrl: `https://www.autoscout24.com/lst?query=${q}`,
+            motonetUrl: reg ? `https://www.motonet.fi/rekisterihaku?reg=${reg}` : null,
+            biltemaUrl: reg ? `https://www.biltema.fi/etsi-rekisterinumerolla/?registrationNumber=${reg}` : null
+        };
+    }
+
+    function calculateVehicleDepreciation(currentPrice, year, mileage) {
+        if (!currentPrice || currentPrice <= 0) return null;
+        const nowYear = 2026;
+        const carYear = (year && year >= 1990 && year <= nowYear + 1) ? year : (nowYear - 2);
+        const carMileage = (mileage && mileage > 0) ? mileage : Math.max(5000, (nowYear - carYear) * 18000);
+        const carAge = Math.max(0, nowYear - carYear);
+
+        const cumFactors = [1.0, 0.84, 0.722, 0.636, 0.566, 0.509, 0.463, 0.424, 0.390, 0.360];
+        const ageFactor = carAge < cumFactors.length ? cumFactors[carAge] : Math.max(0.18, 0.36 * Math.pow(0.92, carAge - 9));
+
+        const estimatedNewPrice = Math.round(currentPrice / ageFactor);
+        const startYear = Math.min(carYear, nowYear);
+        const endYear = Math.max(nowYear + 4, carYear + 5);
+        const points = [];
+
+        for (let y = startYear; y <= endYear; y++) {
+            const pointAge = y - carYear;
+            let ptPrice;
+            if (y === nowYear) {
+                ptPrice = currentPrice;
+            } else if (pointAge <= 0) {
+                ptPrice = estimatedNewPrice;
+            } else {
+                const f = pointAge < cumFactors.length ? cumFactors[pointAge] : Math.max(0.15, 0.36 * Math.pow(0.92, pointAge - 9));
+                ptPrice = Math.round(estimatedNewPrice * f);
+            }
+
+            const ptMileage = (y === nowYear)
+                ? carMileage
+                : Math.max(0, carMileage + (y - nowYear) * 18000);
+
+            points.push({
+                year: y,
+                age: pointAge,
+                price: ptPrice,
+                mileage: ptMileage,
+                isCurrent: (y === nowYear)
+            });
+        }
+
+        const nextPt = points.find(p => p.year === nowYear + 1);
+        const annualDepreciation = nextPt ? Math.max(400, currentPrice - nextPt.price) : Math.round(currentPrice * 0.12);
+        const monthlyDepreciation = Math.round(annualDepreciation / 12);
+        const perKmDepreciation = +(annualDepreciation / 18000).toFixed(2);
+        const savingsVsNew = Math.max(0, estimatedNewPrice - currentPrice);
+        const savingsVsNewPct = Math.round((savingsVsNew / estimatedNewPrice) * 100);
+
+        return {
+            estimatedNewPrice,
+            annualDepreciation,
+            monthlyDepreciation,
+            perKmDepreciation,
+            savingsVsNew,
+            savingsVsNewPct,
+            points,
+            carYear,
+            carMileage,
+            carAge,
+            nowYear
+        };
+    }
+
+    function detectAndExtractVehicleData(info, doc, currentPrice) {
+        const documentRef = doc || (typeof document !== 'undefined' ? document : null);
+        if (!documentRef) return null;
+
+        const rawTitle = info?.name || documentRef.title || '';
+        const currentStore = detectCurrentStore();
+        const isVehicleContext = Boolean(currentStore?.categoryHint === 'vehicles') ||
+            (info?.category === 'vehicles') ||
+            detectProductCategory(rawTitle, currentStore) === 'vehicles';
+
+        if (!isVehicleContext) return null;
+
+        const vData = {
+            isVehicle: true,
+            brand: info?.brand || null,
+            model: null,
+            makeModel: null,
+            regPlate: null,
+            mileage: null,
+            year: null,
+            engine: null,
+            transmission: null,
+            driveType: null,
+            fuel: null,
+            power: null,
+            bodyType: null,
+            vin: null,
+            seller: null,
+            depreciation: null
+        };
+
+        // 1. JSON-LD Schema
+        const jsonLdScripts = documentRef.querySelectorAll('script[type="application/ld+json"]');
+        for (const sc of jsonLdScripts) {
+            try {
+                const raw = JSON.parse(sc.textContent);
+                const queue = Array.isArray(raw) ? [...raw] : [raw];
+                while (queue.length > 0) {
+                    const item = queue.shift();
+                    if (!item || typeof item !== 'object') continue;
+                    if (Array.isArray(item['@graph'])) queue.push(...item['@graph']);
+
+                    const type = item['@type'];
+                    const isCar = type === 'Car' || (Array.isArray(type) && (type.includes('Car') || type.includes('Vehicle')));
+                    if (isCar || item.vehicleModelDate || item.mileageFromOdometer) {
+                        if (item.brand) {
+                            vData.brand = typeof item.brand === 'string' ? item.brand : (item.brand.name || vData.brand);
+                        }
+                        if (item.model) {
+                            vData.model = typeof item.model === 'string' ? item.model : (item.model.name || vData.model);
+                        }
+                        if (item.vehicleModelDate) {
+                            const y = parseInt(item.vehicleModelDate, 10);
+                            if (y >= 1990 && y <= 2035) vData.year = y;
+                        }
+                        if (item.mileageFromOdometer) {
+                            const m = parseInt(item.mileageFromOdometer.value ?? item.mileageFromOdometer, 10);
+                            if (m > 0) vData.mileage = m;
+                        }
+                        if (item.vehicleIdentificationNumber) {
+                            vData.vin = String(item.vehicleIdentificationNumber).trim();
+                        }
+                        if (item.offers?.seller?.name) {
+                            vData.seller = String(item.offers.seller.name).trim();
+                        }
+                    }
+                }
+            } catch (_) {}
+        }
+
+        // 2. DOM Box Extraction (Nettiauto .vehicle-info-box, Kamux, Saka, K-Auto, Hedin)
+        const infoBoxes = documentRef.querySelectorAll('.vehicle-info-box, .car-spec-box, .technical-information .grid-x, dl, tr');
+        for (const box of infoBoxes) {
+            const keyEl = box.querySelector('.vehicle-info-box__vehicle-info, dt, th, .spec-label, .car-details__label');
+            const valEl = box.querySelector('.vehicle-info-box__vehicle-det, dd, td, .spec-value, .car-details__value');
+            if (!keyEl || !valEl) continue;
+            const key = keyEl.textContent.trim().toLowerCase();
+            const val = valEl.textContent.replace(/\s+/g, ' ').trim();
+
+            if (/rekisterinumero|rekisteritunnus|rek\.?\s*nro/i.test(key) && !vData.regPlate) {
+                const m = val.match(/\b([A-ZÅÄÖ]{2,3}-\d{1,3})\b/);
+                if (m) vData.regPlate = m[1].toUpperCase();
+            } else if (/mittarilukema|ajomäärä|ajettu/i.test(key) && !vData.mileage) {
+                const m = val.replace(/\s+/g, '').match(/(\d+)(?:km)?/i);
+                if (m) vData.mileage = parseInt(m[1], 10);
+            } else if (/vuosimalli|mallivuosi/i.test(key) && !vData.year) {
+                const m = val.match(/\b(19\d{2}|20\d{2})\b/);
+                if (m) vData.year = parseInt(m[1], 10);
+            } else if (/moottori/i.test(key) && !vData.engine) {
+                vData.engine = val;
+            } else if (/vaihteisto/i.test(key) && !vData.transmission) {
+                vData.transmission = val;
+            } else if (/vetotapa/i.test(key) && !vData.driveType) {
+                vData.driveType = val;
+            } else if (/käyttövoima|polttoaine/i.test(key) && !vData.fuel) {
+                vData.fuel = val;
+            } else if (/teho/i.test(key) && !vData.power) {
+                vData.power = val;
+            } else if (/korimalli|auton\s*tyyppi/i.test(key) && !vData.bodyType) {
+                vData.bodyType = val;
+            }
+        }
+
+        // 3. Fallbacks from body text / title
+        const rootText = (documentRef.querySelector('main') || documentRef.body)?.innerText || '';
+        if (!vData.regPlate) {
+            const plateMatch = rootText.match(/(?:Rekisterinumero|Rekisteritunnus|Rek\.?\s*nro)\s*[:\n\t ]+([A-ZÅÄÖ]{2,3}-\d{1,3})\b/i);
+            if (plateMatch) vData.regPlate = plateMatch[1].toUpperCase();
+        }
+        if (!vData.mileage) {
+            const kmMatch = rootText.match(/(?:Mittarilukema|Ajettu)\s*[:\n\t ]+([\d\s]+)\s*km/i);
+            if (kmMatch) {
+                const num = parseInt(kmMatch[1].replace(/\s+/g, ''), 10);
+                if (num > 0) vData.mileage = num;
+            }
+        }
+        if (!vData.year) {
+            const yrMatch = rawTitle.match(/\b(20\d{2}|19\d{2})\b/);
+            if (yrMatch) vData.year = parseInt(yrMatch[1], 10);
+        }
+        if (!vData.transmission) {
+            if (/\b(Automaatti|Automaattivaihteisto|DSG|DCT|S\s*tronic|Geartronic)\b/i.test(rawTitle + ' ' + rootText)) {
+                vData.transmission = 'Automaatti';
+            } else if (/\b(Manuaali|Käsivalintainen)\b/i.test(rawTitle + ' ' + rootText)) {
+                vData.transmission = 'Manuaali';
+            }
+        }
+        if (!vData.driveType) {
+            if (/\b(Neliveto|4WD|AWD|4x4|quattro|4Motion|xDrive|4Matic)\b/i.test(rawTitle + ' ' + rootText)) {
+                vData.driveType = 'Neliveto';
+            } else if (/\b(Etuveto|FWD)\b/i.test(rawTitle + ' ' + rootText)) {
+                vData.driveType = 'Etuveto';
+            } else if (/\b(Takaveto|RWD)\b/i.test(rawTitle + ' ' + rootText)) {
+                vData.driveType = 'Takaveto';
+            }
+        }
+
+        const concise = extractConciseVehicleQuery(rawTitle, vData.brand, vData.model);
+        vData.brand = concise.brand || vData.brand;
+        vData.model = concise.model || vData.model;
+        vData.makeModel = concise.makeModel || (vData.brand && vData.model ? `${vData.brand} ${vData.model}` : rawTitle);
+
+        const priceToUse = currentPrice || info?.currentPrice || info?.schemaPrice;
+        if (priceToUse && priceToUse > 0) {
+            vData.depreciation = calculateVehicleDepreciation(priceToUse, vData.year, vData.mileage);
+        }
+
+        return vData;
+    }
+
+    function buildVehicleDepreciationChartHtml(vData, currentPrice, theme, lang = 'fi') {
+        const dep = vData?.depreciation || calculateVehicleDepreciation(currentPrice, vData?.year, vData?.mileage);
+        if (!dep || !dep.points || dep.points.length < 2) {
+            return `
+                <div class="ufhpc-empty">
+                    📈 ${lang === 'en' ? 'No vehicle depreciation data available.' : 'Ajoneuvon arvonalenematietoja ei saatavilla.'}
+                </div>
+            `;
+        }
+
+        const pts = dep.points;
+        const width = 308;
+        const height = 118;
+        const padLeft = 14;
+        const padRight = 14;
+        const padTop = 18;
+        const padBottom = 22;
+        const plotW = width - padLeft - padRight;
+        const plotH = height - padTop - padBottom;
+
+        const prices = pts.map(p => p.price);
+        const minPrice = Math.min(...prices) * 0.94;
+        const maxPrice = Math.max(...prices) * 1.05;
+        const span = Math.max(1, maxPrice - minPrice);
+
+        const coords = pts.map((p, idx) => ({
+            x: padLeft + (idx / (pts.length - 1)) * plotW,
+            y: padTop + plotH - ((p.price - minPrice) / span) * plotH,
+            p
+        }));
+
+        const pathD = coords.map((c, i) => `${i === 0 ? 'M' : 'L'} ${c.x.toFixed(1)} ${c.y.toFixed(1)}`).join(' ');
+        const areaD = `${pathD} L ${coords[coords.length - 1].x.toFixed(1)} ${(padTop + plotH).toFixed(1)} L ${coords[0].x.toFixed(1)} ${(padTop + plotH).toFixed(1)} Z`;
+
+        const curCoord = coords.find(c => c.p.isCurrent) || coords[0];
+
+        const svgHtml = `
+            <div class="ufhpc-veh-chart-wrap">
+                <div class="ufhpc-chart-meta">
+                    <span class="ufhpc-chart-title">📈 ${lang === 'en' ? 'Depreciation Curve (5-Yr Trajectory)' : 'Arvonalenemakäyrä (5v ennuste)'}</span>
+                    <span class="ufhpc-chart-atl">Uutena: ~${formatEur(dep.estimatedNewPrice, 0)}</span>
+                </div>
+                <svg viewBox="0 0 ${width} ${height}" class="ufhpc-chart-svg" style="width:100%;height:${height}px;display:block;">
+                    <defs>
+                        <linearGradient id="ufhpc-veh-grad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.38"/>
+                            <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.02"/>
+                        </linearGradient>
+                    </defs>
+                    <line x1="${padLeft}" y1="${padTop}" x2="${width - padRight}" y2="${padTop}" stroke="rgba(255,255,255,0.08)" stroke-dasharray="3 3"/>
+                    <line x1="${padLeft}" y1="${padTop + plotH / 2}" x2="${width - padRight}" y2="${padTop + plotH / 2}" stroke="rgba(255,255,255,0.06)" stroke-dasharray="3 3"/>
+                    <line x1="${padLeft}" y1="${padTop + plotH}" x2="${width - padRight}" y2="${padTop + plotH}" stroke="rgba(255,255,255,0.12)"/>
+                    <path d="${areaD}" fill="url(#ufhpc-veh-grad)"/>
+                    <path d="${pathD}" fill="none" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    ${coords.map(c => `
+                        ${c.p.isCurrent ? `
+                            <circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="8" fill="none" stroke="#10b981" stroke-width="1.5" stroke-opacity="0.55"/>
+                            <circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="4.5" fill="#10b981" stroke="#ffffff" stroke-width="2"/>
+                            <text x="${c.x.toFixed(1)}" y="${(c.y - 8).toFixed(1)}" text-anchor="middle" fill="#34d399" font-size="10" font-weight="700">${formatEur(c.p.price, 0)}</text>
+                        ` : `
+                            <circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="3" fill="#0f172a" stroke="#38bdf8" stroke-width="2"/>
+                        `}
+                        <text x="${c.x.toFixed(1)}" y="${(height - 6).toFixed(1)}" text-anchor="middle" fill="${c.p.isCurrent ? '#34d399' : '#94a3b8'}" font-size="9" font-weight="${c.p.isCurrent ? '700' : '500'}">${c.p.year}</text>
+                    `).join('')}
+                </svg>
+            </div>
+        `;
+
+        const statsHtml = `
+            <div class="ufhpc-veh-stats-grid">
+                <div class="ufhpc-veh-stat">
+                    <div class="ufhpc-veh-stat-label">${lang === 'en' ? 'Depreciation/yr' : 'Arvonalenema/v'}</div>
+                    <div class="ufhpc-veh-stat-value">~${formatEur(dep.annualDepreciation, 0)}</div>
+                    <div class="ufhpc-veh-stat-sub">~${formatEur(dep.monthlyDepreciation, 0)} / kk</div>
+                </div>
+                <div class="ufhpc-veh-stat">
+                    <div class="ufhpc-veh-stat-label">${lang === 'en' ? 'Est. New Price' : 'Arvio uushinnasta'}</div>
+                    <div class="ufhpc-veh-stat-value">~${formatEur(dep.estimatedNewPrice, 0)}</div>
+                    <div class="ufhpc-veh-stat-sub">-${dep.savingsVsNewPct}% vs. uusi</div>
+                </div>
+                <div class="ufhpc-veh-stat">
+                    <div class="ufhpc-veh-stat-label">${lang === 'en' ? 'Cost per km' : 'Arvonalenema/km'}</div>
+                    <div class="ufhpc-veh-stat-value">~${dep.perKmDepreciation.toFixed(2)} €/km</div>
+                    <div class="ufhpc-veh-stat-sub">18 tkm / vuosi</div>
+                </div>
+            </div>
+        `;
+
+        const tableHtml = `
+            <div class="ufhpc-veh-table">
+                <div class="ufhpc-veh-table-head">
+                    <span>${lang === 'en' ? 'Year' : 'Vuosi'}</span>
+                    <span>${lang === 'en' ? 'Mileage' : 'Mittarilukema'}</span>
+                    <span>${lang === 'en' ? 'Est. Value' : 'Arviohinta'}</span>
+                    <span>${lang === 'en' ? 'Trajectory' : 'Kehitys'}</span>
+                </div>
+                ${pts.map(p => `
+                    <div class="ufhpc-veh-table-row ${p.isCurrent ? 'is-current' : ''}">
+                        <span class="ufhpc-veh-yr">${p.year} ${p.isCurrent ? (lang === 'en' ? '(Now)' : '(Nyt)') : ''}</span>
+                        <span>${p.mileage ? formatKm(p.mileage) : '—'}</span>
+                        <span class="ufhpc-veh-val">${formatEur(p.price, 0)}</span>
+                        <span class="ufhpc-veh-delta ${p.year > dep.nowYear ? 'is-loss' : ''}">
+                            ${p.year === dep.carYear ? (lang === 'en' ? 'As New' : 'Uutena') : (p.isCurrent ? (lang === 'en' ? 'This Car' : 'Tämä auto') : `-${formatEur(Math.max(0, currentPrice - p.price), 0)}`)}
+                        </span>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+
+        return `
+            ${svgHtml}
+            ${statsHtml}
+            ${tableHtml}
+        `;
     }
 
     // =========================================================================
@@ -6180,6 +6601,41 @@
             ? detectProductCategory(customQuery)
             : (productInfo.category || detectProductCategory(productInfo.name));
 
+        if (effectiveCategory === 'vehicles') {
+            const vData = (!customQuery && productInfo.vehicleData)
+                ? productInfo.vehicleData
+                : detectAndExtractVehicleData(
+                    customQuery ? { name: customQuery, category: 'vehicles' } : productInfo,
+                    typeof document !== 'undefined' ? document : null,
+                    targetPriceForScoring
+                );
+            if (vData && !productInfo.vehicleData) productInfo.vehicleData = vData;
+
+            const concise = vData?.makeModel || extractConciseVehicleQuery(targetNameForScoring).makeModel || targetNameForScoring;
+            const vLinks = buildAutomotiveMarketLinks(concise, vData?.regPlate);
+
+            const vehicleResult = {
+                matchedQuery: { type: 'Ajoneuvohaku', value: concise },
+                product: {
+                    title: targetNameForScoring,
+                    url: location.href,
+                    lowestPrice: targetPriceForScoring,
+                    offers: [],
+                    isVehicle: true,
+                    vehicleData: vData,
+                    marketLinks: vLinks
+                },
+                alternatives: [],
+                isLearnedMatch: false,
+                tori: {
+                    query: concise,
+                    items: [],
+                    stats: null
+                }
+            };
+            return vehicleResult;
+        }
+
         const host = location.hostname.toLowerCase();
 
         // If user is currently browsing a Hinta.fi product page directly, parse current document directly
@@ -10090,6 +10546,237 @@
             .ufhpc-bch-link:hover {
                 background: rgba(96, 165, 250, 0.18);
             }
+
+            /* Automotive & Vehicle Intelligence Styles */
+            .ufhpc-veh-specs-card {
+                background: rgba(15, 23, 42, 0.65);
+                border: 1px solid rgba(56, 189, 248, 0.25);
+                border-radius: 10px;
+                padding: 10px 12px;
+                margin-bottom: 8px;
+            }
+            .ufhpc-veh-specs-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+                font-size: 12.5px;
+                font-weight: 700;
+                color: #f8fafc;
+            }
+            .ufhpc-veh-plate-pill {
+                display: inline-flex;
+                align-items: center;
+                padding: 2px 7px;
+                background: #0f172a;
+                border: 1.5px solid #38bdf8;
+                border-radius: 4px;
+                color: #38bdf8;
+                font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+                font-size: 11px;
+                font-weight: 800;
+                letter-spacing: 0.08em;
+                box-shadow: 0 0 8px rgba(56, 189, 248, 0.2);
+            }
+            .ufhpc-veh-specs-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 4px 8px;
+                margin-top: 8px;
+                font-size: 11px;
+            }
+            .ufhpc-vspec-item {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 4px;
+            }
+            .ufhpc-vspec-lbl {
+                color: #94a3b8;
+            }
+            .ufhpc-vspec-val {
+                color: #e2e8f0;
+                font-weight: 600;
+            }
+            .ufhpc-veh-dealers-list {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+                margin-top: 6px;
+            }
+            .ufhpc-veh-dealer-row {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 6.5px 9px;
+                background: rgba(30, 41, 59, 0.6);
+                border: 1px solid rgba(255, 255, 255, 0.07);
+                border-radius: 7px;
+                text-decoration: none;
+                color: #f1f5f9;
+                font-size: 11.5px;
+                transition: all 0.15s ease;
+            }
+            .ufhpc-veh-dealer-row:hover {
+                background: rgba(56, 189, 248, 0.12);
+                border-color: rgba(56, 189, 248, 0.4);
+                transform: translateX(1px);
+            }
+            .ufhpc-veh-dealer-left {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+            .ufhpc-veh-dot {
+                width: 7px;
+                height: 7px;
+                border-radius: 50%;
+                flex-shrink: 0;
+            }
+            .ufhpc-veh-dealer-name {
+                font-weight: 600;
+            }
+            .ufhpc-veh-dealer-badge {
+                font-size: 9.5px;
+                padding: 1px 5px;
+                border-radius: 4px;
+                background: rgba(255, 255, 255, 0.08);
+                color: #94a3b8;
+            }
+            .ufhpc-veh-dealer-arrow {
+                font-size: 10.5px;
+                color: #38bdf8;
+                font-weight: 700;
+            }
+            .ufhpc-veh-stats-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr 1fr;
+                gap: 5px;
+                margin: 8px 0;
+            }
+            .ufhpc-veh-stat {
+                background: rgba(15, 23, 42, 0.6);
+                border: 1px solid rgba(255, 255, 255, 0.07);
+                border-radius: 7px;
+                padding: 5px 6px;
+                text-align: center;
+            }
+            .ufhpc-veh-stat-label {
+                font-size: 8.5px;
+                text-transform: uppercase;
+                letter-spacing: 0.03em;
+                color: #94a3b8;
+                font-weight: 700;
+            }
+            .ufhpc-veh-stat-value {
+                font-size: 12.5px;
+                font-weight: 800;
+                color: #38bdf8;
+                margin: 2px 0;
+            }
+            .ufhpc-veh-stat-sub {
+                font-size: 8.5px;
+                color: #64748b;
+            }
+            .ufhpc-veh-table {
+                background: rgba(15, 23, 42, 0.7);
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                border-radius: 8px;
+                overflow: hidden;
+                font-size: 10.5px;
+                margin-top: 6px;
+            }
+            .ufhpc-veh-table-head {
+                display: grid;
+                grid-template-columns: 1.1fr 1.2fr 1.1fr 1fr;
+                padding: 5px 8px;
+                background: rgba(255, 255, 255, 0.04);
+                color: #94a3b8;
+                font-size: 9.5px;
+                font-weight: 700;
+            }
+            .ufhpc-veh-table-row {
+                display: grid;
+                grid-template-columns: 1.1fr 1.2fr 1.1fr 1fr;
+                padding: 4.5px 8px;
+                border-top: 1px solid rgba(255, 255, 255, 0.04);
+                color: #cbd5e1;
+                align-items: center;
+            }
+            .ufhpc-veh-table-row.is-current {
+                background: rgba(16, 185, 129, 0.12);
+                color: #34d399;
+                font-weight: 700;
+            }
+            .ufhpc-veh-val {
+                font-variant-numeric: tabular-nums;
+            }
+            .ufhpc-veh-delta.is-loss {
+                color: #94a3b8;
+            }
+            .ufhpc-btn-hedin {
+                background: rgba(56, 189, 248, 0.16);
+                color: #38bdf8;
+                border: 1px solid rgba(56, 189, 248, 0.38);
+            }
+            .ufhpc-btn-hedin:hover {
+                background: rgba(56, 189, 248, 0.28);
+                color: #7dd3fc;
+            }
+            .ufhpc-btn-auto1 {
+                background: rgba(245, 158, 11, 0.16);
+                color: #fbbf24;
+                border: 1px solid rgba(245, 158, 11, 0.38);
+            }
+            .ufhpc-btn-auto1:hover {
+                background: rgba(245, 158, 11, 0.28);
+                color: #fde68a;
+            }
+            .ufhpc-btn-kamux {
+                background: rgba(16, 185, 129, 0.16);
+                color: #34d399;
+                border: 1px solid rgba(16, 185, 129, 0.38);
+            }
+            .ufhpc-btn-kamux:hover {
+                background: rgba(16, 185, 129, 0.28);
+                color: #6ee7b7;
+            }
+            .ufhpc-btn-saka {
+                background: rgba(239, 68, 68, 0.16);
+                color: #f87171;
+                border: 1px solid rgba(239, 68, 68, 0.38);
+            }
+            .ufhpc-btn-saka:hover {
+                background: rgba(239, 68, 68, 0.28);
+                color: #fca5a5;
+            }
+            .ufhpc-btn-rintajouppi {
+                background: rgba(99, 102, 241, 0.16);
+                color: #818cf8;
+                border: 1px solid rgba(99, 102, 241, 0.38);
+            }
+            .ufhpc-btn-rintajouppi:hover {
+                background: rgba(99, 102, 241, 0.28);
+                color: #a5b4fc;
+            }
+            .ufhpc-btn-kauto {
+                background: rgba(236, 72, 153, 0.16);
+                color: #f472b6;
+                border: 1px solid rgba(236, 72, 153, 0.38);
+            }
+            .ufhpc-btn-kauto:hover {
+                background: rgba(236, 72, 153, 0.28);
+                color: #fbcfe8;
+            }
+            .ufhpc-btn-nettiauto {
+                background: rgba(249, 115, 22, 0.16);
+                color: #fb923c;
+                border: 1px solid rgba(249, 115, 22, 0.38);
+            }
+            .ufhpc-btn-nettiauto:hover {
+                background: rgba(249, 115, 22, 0.28);
+                color: #fdba74;
+            }
         `;
     }
 
@@ -10722,6 +11409,9 @@
 
             const storeName = detectCurrentStore().name;
             const marketProd = comparison?.product;
+            const isVehicle = productInfo.category === 'vehicles' || Boolean(productInfo.vehicleData) || Boolean(marketProd?.isVehicle);
+            const vData = productInfo.vehicleData || marketProd?.vehicleData;
+            const vLinks = marketProd?.marketLinks || buildAutomotiveMarketLinks(vData?.makeModel || productInfo.name, vData?.regPlate);
             const { offers, lowestPrice, lowestNonClubPrice, lowestNonClubOffer } = getFilteredOffersAndLowest(
                 marketProd,
                 this.includeShipping,
@@ -10749,6 +11439,10 @@
                 const sign = verdict.diffEur > 0 ? '+' : '';
                 deltaText = `${sign}${formatEur(verdict.diffEur)} (${sign}${verdict.diffPct.toFixed(1)}%)`;
                 handleLabel = `${theme.icon} ${verdict.diffEur < 0 ? (this.lang === 'en' ? 'Savings' : 'Säästö') : (this.lang === 'en' ? 'Difference' : 'Erotus')} (${sign}${Math.round(verdict.diffEur)} €)`;
+            } else if (isVehicle) {
+                const dep = vData?.depreciation || calculateVehicleDepreciation(productInfo.currentPrice, vData?.year, vData?.mileage);
+                deltaText = dep ? `Uutena ~${formatEur(dep.estimatedNewPrice, 0)}` : 'Ajoneuvo';
+                handleLabel = `🚗 ${vData?.makeModel || 'Auto'} • ${formatEur(productInfo.currentPrice)}`;
             } else if (verdict.diffEur !== null && lowestPrice) {
                 if (!productInfo.isUsedSite && verdict.diffEur <= 0.05) {
                     deltaText = t.cheapestBadge;
@@ -10807,7 +11501,53 @@
             ` : '';
 
             let storesHtml = '';
-            if (marketProd && offers.length > 0) {
+            if (isVehicle) {
+                const conciseMakeModel = vData?.makeModel || extractConciseVehicleQuery(productInfo.name).makeModel || productInfo.name;
+                const dealerRows = [
+                    { name: 'Hedin Automotive', url: vLinks.hedinUrl, tag: 'Liikeketju', color: '#38bdf8' },
+                    { name: 'Auto1.fi', url: vLinks.auto1Url, tag: 'Autohaku', color: '#f59e0b' },
+                    { name: 'Kamux', url: vLinks.kamuxUrl, tag: 'Suuri ketju', color: '#10b981' },
+                    { name: 'Saka', url: vLinks.sakaUrl, tag: 'Suuri ketju', color: '#ef4444' },
+                    { name: 'J. Rinta-Jouppi', url: vLinks.rintaJouppiUrl, tag: 'Liikeketju', color: '#6366f1' },
+                    { name: 'K-Auto', url: vLinks.kAutoUrl, tag: 'Merkkiliike', color: '#ec4899' },
+                    { name: 'Nettiauto', url: vLinks.nettiautoUrl, tag: 'Markkinapaikka', color: '#f97316' },
+                    { name: 'Tori Autot', url: vLinks.toriAutotUrl, tag: 'Käytetyt', color: '#06b6d4' }
+                ];
+
+                storesHtml = `
+                    <div class="ufhpc-veh-specs-card">
+                        <div class="ufhpc-veh-specs-header">
+                            <span class="ufhpc-veh-title-text">🚗 ${escapeHtml(conciseMakeModel)}</span>
+                            ${vData?.regPlate ? `<span class="ufhpc-veh-plate-pill">${escapeHtml(vData.regPlate)}</span>` : ''}
+                        </div>
+                        <div class="ufhpc-veh-specs-grid">
+                            ${vData?.year ? `<div class="ufhpc-vspec-item"><span class="ufhpc-vspec-lbl">${this.lang === 'en' ? 'Year' : 'Vuosimalli'}:</span><span class="ufhpc-vspec-val">${vData.year}</span></div>` : ''}
+                            ${vData?.mileage ? `<div class="ufhpc-vspec-item"><span class="ufhpc-vspec-lbl">${this.lang === 'en' ? 'Mileage' : 'Mittarilukema'}:</span><span class="ufhpc-vspec-val">${formatKm(vData.mileage)}</span></div>` : ''}
+                            ${vData?.engine ? `<div class="ufhpc-vspec-item"><span class="ufhpc-vspec-lbl">${this.lang === 'en' ? 'Engine' : 'Moottori'}:</span><span class="ufhpc-vspec-val">${escapeHtml(vData.engine)}</span></div>` : ''}
+                            ${vData?.transmission ? `<div class="ufhpc-vspec-item"><span class="ufhpc-vspec-lbl">${this.lang === 'en' ? 'Transmission' : 'Vaihteisto'}:</span><span class="ufhpc-vspec-val">${escapeHtml(vData.transmission)}</span></div>` : ''}
+                            ${vData?.driveType ? `<div class="ufhpc-vspec-item"><span class="ufhpc-vspec-lbl">${this.lang === 'en' ? 'Drivetrain' : 'Vetotapa'}:</span><span class="ufhpc-vspec-val">${escapeHtml(vData.driveType)}</span></div>` : ''}
+                            ${vData?.power ? `<div class="ufhpc-vspec-item"><span class="ufhpc-vspec-lbl">${this.lang === 'en' ? 'Power' : 'Teho'}:</span><span class="ufhpc-vspec-val">${escapeHtml(vData.power)}</span></div>` : ''}
+                            ${vData?.seller ? `<div class="ufhpc-vspec-item" style="grid-column: span 2;"><span class="ufhpc-vspec-lbl">${this.lang === 'en' ? 'Seller' : 'Myyjä'}:</span><span class="ufhpc-vspec-val">${escapeHtml(vData.seller)}</span></div>` : ''}
+                        </div>
+                    </div>
+
+                    <div class="ufhpc-section-bar" style="margin-top: 10px;">
+                        <span class="ufhpc-section-title">🏢 ${this.lang === 'en' ? 'Dealer & Market Benchmark (8)' : 'Autoliikkeet & Markkinahaku (8)'}</span>
+                    </div>
+                    <div class="ufhpc-veh-dealers-list">
+                        ${dealerRows.map(d => `
+                            <a class="ufhpc-veh-dealer-row" href="${escapeHtml(d.url)}" target="_blank" rel="noopener noreferrer">
+                                <div class="ufhpc-veh-dealer-left">
+                                    <span class="ufhpc-veh-dot" style="background: ${d.color};"></span>
+                                    <span class="ufhpc-veh-dealer-name">${escapeHtml(d.name)}</span>
+                                    <span class="ufhpc-veh-dealer-badge">${escapeHtml(d.tag)}</span>
+                                </div>
+                                <span class="ufhpc-veh-dealer-arrow">Etsi ↗</span>
+                            </a>
+                        `).join('')}
+                    </div>
+                `;
+            } else if (marketProd && offers.length > 0) {
                 const topOffers = offers.slice(0, CONFIG.maxStoresShown);
                 const firstOfferIsClub = Boolean(topOffers[0]?.isClubOffer);
                 storesHtml = `
@@ -10957,6 +11697,28 @@
                     ? (unitInfo.quantityStr ? `Pakkauskoko: ${unitInfo.quantityStr}` : storeName)
                     : (toriData.stats ? (this.lang === 'en' ? `Used median: ${formatEur(toriData.stats.medianPrice, 0)}` : `Käytettyjen mediaani: ${formatEur(toriData.stats.medianPrice, 0)}`) : low30dSub));
 
+            if (isVehicle) {
+                const dep = vData?.depreciation || calculateVehicleDepreciation(productInfo.currentPrice, vData?.year, vData?.mileage);
+                thisStoreLabel = this.lang === 'en' ? 'THIS VEHICLE' : 'TÄMÄ AUTO';
+                thisStoreSub = [
+                    vData?.mileage ? formatKm(vData.mileage) : null,
+                    vData?.year ? String(vData.year) : null,
+                    vData?.regPlate ? vData.regPlate : null
+                ].filter(Boolean).join(' • ') || storeName;
+
+                if (dep && dep.estimatedNewPrice) {
+                    rightMetricLabel = this.lang === 'en' ? 'EST. NEW PRICE' : 'UUTENA (ARVIO)';
+                    rightMetricValue = `~${formatEur(dep.estimatedNewPrice, 0)}`;
+                    rightMetricSub = this.lang === 'en'
+                        ? `Deprec. ~${formatEur(dep.monthlyDepreciation, 0)}/mo (-${dep.savingsVsNewPct}%)`
+                        : `Arvonalenema ~${formatEur(dep.monthlyDepreciation, 0)}/kk (-${dep.savingsVsNewPct}%)`;
+                } else {
+                    rightMetricLabel = this.lang === 'en' ? 'MARKET BENCHMARK' : 'MARKKINATASO';
+                    rightMetricValue = 'VERTAA';
+                    rightMetricSub = this.lang === 'en' ? 'Compare dealers below' : 'Vertaa autoliikkeitä alla';
+                }
+            }
+
             if (productInfo.bundleData) {
                 const bData = productInfo.bundleData;
                 const marketDiy = bData.marketDiyTotal;
@@ -11010,7 +11772,32 @@
 
             const vintedSearchUrl = `https://www.vinted.fi/catalog?search_text=${encodeURIComponent(toriData.vintedQuery || toriData.query || extractConciseModelQuery(productInfo.name) || searchTermRaw)}`;
 
-            const actionBtnsHtml = productInfo.category === 'grocery' ? `
+            const actionBtnsHtml = (productInfo.category === 'vehicles' || isVehicle) ? `
+                <a class="ufhpc-btn ufhpc-btn-hedin" href="${escapeHtml(vLinks.hedinUrl)}" target="_blank" rel="noopener noreferrer">
+                    Hedin ↗
+                </a>
+                <a class="ufhpc-btn ufhpc-btn-auto1" href="${escapeHtml(vLinks.auto1Url)}" target="_blank" rel="noopener noreferrer">
+                    Auto1 ↗
+                </a>
+                <a class="ufhpc-btn ufhpc-btn-kamux" href="${escapeHtml(vLinks.kamuxUrl)}" target="_blank" rel="noopener noreferrer">
+                    Kamux ↗
+                </a>
+                <a class="ufhpc-btn ufhpc-btn-saka" href="${escapeHtml(vLinks.sakaUrl)}" target="_blank" rel="noopener noreferrer">
+                    Saka ↗
+                </a>
+                <a class="ufhpc-btn ufhpc-btn-rintajouppi is-secondary" href="${escapeHtml(vLinks.rintaJouppiUrl)}" target="_blank" rel="noopener noreferrer">
+                    Rinta-Jouppi ↗
+                </a>
+                <a class="ufhpc-btn ufhpc-btn-kauto is-secondary" href="${escapeHtml(vLinks.kAutoUrl)}" target="_blank" rel="noopener noreferrer">
+                    K-Auto ↗
+                </a>
+                <a class="ufhpc-btn ufhpc-btn-nettiauto is-secondary" href="${escapeHtml(vLinks.nettiautoUrl)}" target="_blank" rel="noopener noreferrer">
+                    Nettiauto ↗
+                </a>
+                <a class="ufhpc-btn ufhpc-btn-tori is-secondary" href="${escapeHtml(vLinks.toriAutotUrl)}" target="_blank" rel="noopener noreferrer">
+                    Tori Autot ↗
+                </a>
+            ` : (productInfo.category === 'grocery' ? `
                 <a class="ufhpc-btn ufhpc-btn-hinta" href="https://www.s-kaupat.fi/haku?q=${encodedSearch}" target="_blank" rel="noopener noreferrer">
                     S-kaupat ↗
                 </a>
@@ -11056,7 +11843,7 @@
                 <a class="ufhpc-btn ufhpc-btn-hintaopas ${fallbackSecondaryClass}" href="https://hintaopas.fi/search?query=${encodedSearch}" target="_blank" rel="noopener noreferrer" title="Hae Hintaoppaasta">
                     Hintaopas ↗
                 </a>
-            `));
+            `)));
 
             const usedActionBtnsHtml = `
                 <a class="ufhpc-btn ufhpc-btn-tori ${toriCount === 0 ? 'is-zero' : ''}" href="${escapeHtml(toriSearchUrl)}" target="_blank" rel="noopener noreferrer">
@@ -11169,7 +11956,23 @@
 
             // v9.4: Cross-Border EU Shipping & Finnish VAT Optimizer ("Suomi-lisä" detector)
             let euCrossBorderHtml = '';
-            if (productInfo.category !== 'grocery' && productInfo.category !== 'furniture') {
+            if (isVehicle) {
+                euCrossBorderHtml = `
+                    <div class="ufhpc-eu-card">
+                        <div class="ufhpc-eu-head">
+                            <span class="ufhpc-eu-title">🇩🇪 ${this.lang === 'en' ? 'Germany & EU Car Market (Import Benchmark)' : 'Saksa & EU-tuontiautojen hintataso'}</span>
+                        </div>
+                        <div class="ufhpc-eu-hubs">
+                            <a class="ufhpc-eu-hub-btn" href="${escapeHtml(vLinks.mobileDeUrl)}" target="_blank" rel="noopener noreferrer">🇩🇪 Mobile.de (Saksa) ↗</a>
+                            <a class="ufhpc-eu-hub-btn" href="${escapeHtml(vLinks.autoScoutUrl)}" target="_blank" rel="noopener noreferrer">🇪🇺 AutoScout24 (EU) ↗</a>
+                            ${vData?.regPlate ? `
+                                <a class="ufhpc-eu-hub-btn" href="${escapeHtml(vLinks.motonetUrl)}" target="_blank" rel="noopener noreferrer">🔧 Motonet (${escapeHtml(vData.regPlate)}) ↗</a>
+                                <a class="ufhpc-eu-hub-btn" href="${escapeHtml(vLinks.biltemaUrl)}" target="_blank" rel="noopener noreferrer">🚗 Biltema (${escapeHtml(vData.regPlate)}) ↗</a>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            } else if (productInfo.category !== 'grocery' && productInfo.category !== 'furniture') {
                 const euLinks = buildEuHubLinks(bestModelQuery || searchTermRaw, productInfo.ean);
                 let euData = comparison?.euCrossBorder;
                 const currentProductTitle = productInfo?.name || bestModelQuery || searchTermRaw || '';
@@ -11309,17 +12112,23 @@
                     </div>
                 `;
             } else if (effectiveMainTab === 'history') {
-                const hasMainHistory = Boolean(marketProd?.history && Array.isArray(marketProd.history.points) && marketProd.history.points.length >= 2);
-                const chartHtml = buildDualChartSectionHtml(
-                    marketProd?.history,
-                    toriData,
-                    productInfo.currentPrice,
-                    lowestPrice,
-                    theme,
-                    this.lang,
-                    this.chartTab,
-                    'main'
-                );
+                if (isVehicle) {
+                    const chartHtml = buildVehicleDepreciationChartHtml(vData, productInfo.currentPrice, theme, this.lang);
+                    tabPaneContentHtml = `
+                        ${chartHtml}
+                    `;
+                } else {
+                    const hasMainHistory = Boolean(marketProd?.history && Array.isArray(marketProd.history.points) && marketProd.history.points.length >= 2);
+                    const chartHtml = buildDualChartSectionHtml(
+                        marketProd?.history,
+                        toriData,
+                        productInfo.currentPrice,
+                        lowestPrice,
+                        theme,
+                        this.lang,
+                        this.chartTab,
+                        'main'
+                    );
 
                 if (productInfo.bundleData && Array.isArray(productInfo.bundleData.components)) {
                     const allComps = productInfo.bundleData.components;
@@ -11440,6 +12249,7 @@
                             📈 ${this.lang === 'en' ? 'No price history points recorded for this item yet.' : 'Tuotteelle ei ole vielä kertynyt hintahistoriapisteitä.'}
                         </div>
                     `;
+                }
                 }
             }
 
@@ -11631,15 +12441,15 @@
                                     </button>
                                 ` : ''}
                                 <button type="button" class="ufhpc-tab ${effectiveMainTab === 'stores' ? 'is-active is-active-stores' : ''}" data-main-tab="stores">
-                                    <span>🏪 ${this.lang === 'en' ? 'Stores' : 'Kaupat'}</span>
-                                    <span class="ufhpc-tab-badge">${offers.length}</span>
+                                    <span>${isVehicle ? '🚗 ' + (this.lang === 'en' ? 'Dealers' : 'Liikkeet') : '🏪 ' + (this.lang === 'en' ? 'Stores' : 'Kaupat')}</span>
+                                    <span class="ufhpc-tab-badge">${isVehicle ? 8 : offers.length}</span>
                                 </button>
                                 <button type="button" class="ufhpc-tab ${effectiveMainTab === 'used' ? 'is-active is-active-used' : ''}" data-main-tab="used">
                                     <span>${comparison?.isPartialStage ? '⏳' : '♻️'} ${this.lang === 'en' ? 'Used' : 'Käytetyt'}</span>
                                     <span class="ufhpc-tab-badge">${totalUsedCount}</span>
                                 </button>
                                 <button type="button" class="ufhpc-tab ${effectiveMainTab === 'history' ? 'is-active is-active-history' : ''}" data-main-tab="history">
-                                    <span>📈 ${escapeHtml(t.tabHistory)}</span>
+                                    <span>📈 ${isVehicle ? (this.lang === 'en' ? 'Depreciation' : 'Arvonalenema') : escapeHtml(t.tabHistory)}</span>
                                 </button>
                             </div>
 
