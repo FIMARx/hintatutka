@@ -56,19 +56,28 @@ console.log('===================================================================
 // Step 1: Guards & File Parity Tripwires
 step('Guards, Byte-Parity & Version Sync', npm, ['run', 'test:guards']);
 
-// Step 2: Precision Matrix & Cross-Model Shields
+// Step 2: Component Quality & Hardware Invariants
+step('Hardware Invariants & Quality Contracts', npm, ['run', 'test:invariants']);
+
+// Step 3: Real-World Prebuilt PC Fixtures
+step('Retail Prebuilt PC Fixture Snapshots', npm, ['run', 'test:fixtures']);
+
+// Step 4: End-to-End Component Priceability Contracts
+step('End-to-End Component Priceability Contracts', npm, ['run', 'test:priceability']);
+
+// Step 5: Precision Matrix & Cross-Model Shields
 step('Precision Matrix (iPhone, B850M, GPU, Storage)', npm, ['run', 'test:precision']);
 
-// Step 3: DOM Price Parsers & Finnish VAT Landed Cost
+// Step 6: DOM Price Parsers & Finnish VAT Landed Cost
 step('DOM Price Parsers, Thousands & ALV Landed Cost', npm, ['run', 'test:parsers']);
 
-// Step 4: Flip Arbitrage, Used Stats & Seasonal Forecast
+// Step 7: Flip Arbitrage, Used Stats & Seasonal Forecast
 step('Algorithms, Flip ROI & Seasonal Forecasting', npm, ['run', 'test:algorithms']);
 
-// Step 5: Cache Isolation & Stale Eviction
+// Step 8: Cache Isolation & Stale Eviction
 step('Cache Namespace Isolation & Stale Purge', npm, ['run', 'test:cache']);
 
-// Step 6: Real-time Live Store Canaries (skipped on --quick)
+// Step 9: Real-time Live Store Canaries (skipped on --quick)
 if (!quick) {
     step('Real-Time Live Store Query Verification', npm, ['run', 'test:realtime']);
 } else {

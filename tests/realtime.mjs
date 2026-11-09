@@ -97,6 +97,57 @@ const CANARY_TARGETS = [
     }
 ];
 
+const HINTA_PREBUILT_CANARY_TARGETS = [
+    {
+        name: 'Prebuilt Storage Live Canary (1TB M.2 NVMe SSD)',
+        searchQuery: '1TB NVMe SSD',
+        roleKey: 'storage',
+        validate: (html) => {
+            const trMatches = [...html.matchAll(/<tr[^>]*class="[^"]*hv-prt-tr[^"]*"([\s\S]*?)<\/tr>/gi)];
+            if (trMatches.length === 0) return { pass: false, note: 'Hinta.fi returned 0 results for "1TB NVMe SSD"' };
+            const firstTr = trMatches[0][0];
+            const pMatch = firstTr.match(/data-price="([^"]*)"/);
+            const p = pMatch ? HT.parsePriceNumber(pMatch[1]) : 0;
+            if (p >= 35 && p <= 190) {
+                return { pass: true, note: `Resolved live 1TB SSD listings (${p} €)` };
+            }
+            return { pass: false, note: `Price ${p} € outside expected SSD range (35-190 €)` };
+        }
+    },
+    {
+        name: 'Prebuilt Motherboard Chipset Live Canary (B760)',
+        searchQuery: 'B760',
+        roleKey: 'mobo',
+        validate: (html) => {
+            const trMatches = [...html.matchAll(/<tr[^>]*class="[^"]*hv-prt-tr[^"]*"([\s\S]*?)<\/tr>/gi)];
+            if (trMatches.length === 0) return { pass: false, note: 'Hinta.fi returned 0 results for "B760"' };
+            const firstTr = trMatches[0][0];
+            const pMatch = firstTr.match(/data-price="([^"]*)"/);
+            const p = pMatch ? HT.parsePriceNumber(pMatch[1]) : 0;
+            if (p >= 50 && p <= 320) {
+                return { pass: true, note: `Resolved live B760 motherboard listings (${p} €)` };
+            }
+            return { pass: false, note: `Price ${p} € outside expected B760 mobo range (50-320 €)` };
+        }
+    },
+    {
+        name: 'Prebuilt PSU Wattage Live Canary (750W 80+ Gold)',
+        searchQuery: '750W 80+ Gold',
+        roleKey: 'psu',
+        validate: (html) => {
+            const trMatches = [...html.matchAll(/<tr[^>]*class="[^"]*hv-prt-tr[^"]*"([\s\S]*?)<\/tr>/gi)];
+            if (trMatches.length === 0) return { pass: false, note: 'Hinta.fi returned 0 results for "750W 80+ Gold"' };
+            const firstTr = trMatches[0][0];
+            const pMatch = firstTr.match(/data-price="([^"]*)"/);
+            const p = pMatch ? HT.parsePriceNumber(pMatch[1]) : 0;
+            if (p >= 50 && p <= 250) {
+                return { pass: true, note: `Resolved live 750W PSU listings (${p} €)` };
+            }
+            return { pass: false, note: `Price ${p} € outside expected 750W PSU range (50-250 €)` };
+        }
+    }
+];
+
 async function runRealTimeCanarySuite() {
     console.log('========================================================================');
     console.log('  HINTATUTKA REAL-TIME LIVE STORE TESTING');
@@ -132,6 +183,31 @@ async function runRealTimeCanarySuite() {
         );
 
         const check = canary.checkResults(parsed, res.text);
+        if (check.pass) {
+            console.log(`  ✔ PASS: ${check.note}`);
+            passedTests++;
+        } else {
+            console.error(`  ✖ FAIL: ${check.note}`);
+            failedTests++;
+        }
+        console.log('');
+    }
+
+    for (const canary of HINTA_PREBUILT_CANARY_TARGETS) {
+        totalTests++;
+        console.log(`▶ [TEST ${totalTests}] ${canary.name}`);
+        console.log(`  Live Hinta.fi Query: "${canary.searchQuery}"`);
+
+        const hintaUrl = `https://hinta.fi/haku?q=${encodeURIComponent(canary.searchQuery)}`;
+        const res = await fetchWithTimeout(hintaUrl, 9000);
+
+        if (!res.ok) {
+            console.log(`  ⚠ Network notice: Hinta.fi returned status ${res.status || res.error} (live check skipped gracefully)`);
+            skippedTests++;
+            continue;
+        }
+
+        const check = canary.validate(res.text);
         if (check.pass) {
             console.log(`  ✔ PASS: ${check.note}`);
             passedTests++;
