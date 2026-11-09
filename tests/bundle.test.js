@@ -961,3 +961,144 @@ test("bundle: Jimm's price element selection excludes strikethrough original pri
     const anchor = HT.findBestPriceAnchor(priceDom.element);
     assert.strictEqual(anchor, pdpSpan, 'Anchor must resolve to .price--pdp');
 });
+
+test("bundle: Gigantti prebuilt PC deconstruction with Ryzen 7 8745HX & RTX 5060 Ti", () => {
+    const { exports: HT } = loadHintaTutka({ host: 'www.gigantti.fi' });
+
+    const mockHtml = `
+        <h1>Lenovo LOQ Tower 26L R7-8745HX/16/512GB/5060Ti pelitietokone</h1>
+        <dl class="specification-list">
+            <dt>Prosessorin malli</dt><dd>AMD Ryzen 7 8745HX</dd>
+            <dt>Näytönohjaimen malli</dt><dd>NVIDIA GeForce RTX 5060 Ti</dd>
+            <dt>Asennettu RAM</dt><dd>16 GB DDR5</dd>
+            <dt>Tallennuskapasiteetti</dt><dd>512 GB SSD</dd>
+            <dt>Virtalähde (watt)</dt><dd>500 W</dd>
+        </dl>
+    `;
+
+    const info = { name: 'Lenovo LOQ Tower 26L R7-8745HX/16/512GB/5060Ti pelitietokone', currentPrice: 1299.00 };
+    const bundleData = HT.detectAndExtractBundleData(info, null, 1299.00, mockHtml);
+
+    assert.ok(bundleData, 'Prebuilt PC must be detected on Gigantti');
+    assert.strictEqual(bundleData.isPcBuild, true);
+    assert.strictEqual(bundleData.components.length, 5);
+
+    const cpu = bundleData.components.find(c => c.roleKey === 'cpu');
+    assert.strictEqual(cpu.cleanQuery, 'AMD Ryzen 7 8745HX');
+
+    const gpu = bundleData.components.find(c => c.roleKey === 'gpu');
+    assert.strictEqual(gpu.cleanQuery, 'NVIDIA GeForce RTX 5060 Ti');
+
+    const ram = bundleData.components.find(c => c.roleKey === 'ram');
+    assert.strictEqual(ram.cleanQuery, '16GB DDR5 RAM');
+
+    const ssd = bundleData.components.find(c => c.roleKey === 'storage');
+    assert.strictEqual(ssd.cleanQuery, '512GB SSD');
+
+    const psu = bundleData.components.find(c => c.roleKey === 'psu');
+    assert.strictEqual(psu.cleanQuery, '500W');
+});
+
+test("bundle: Gigantti prebuilt PC deconstruction with RX 9070 XT & i7-14700F", () => {
+    const { exports: HT } = loadHintaTutka({ host: 'www.gigantti.fi' });
+
+    const mockHtml = `
+        <h1>PCSpecialist Prime 504 i7-14/16/1TB/RX9070XT pelitietokone</h1>
+        <dl class="specification-list">
+            <dt>Suorittimen malli</dt><dd>Intel Core i7-14700F</dd>
+            <dt>Erillinen näytönohjain</dt><dd>AMD Radeon RX 9070 XT</dd>
+            <dt>Keskusmuisti</dt><dd>16 GB DDR5</dd>
+            <dt>Ensisijainen tallennustila</dt><dd>1 TB M.2 NVMe SSD</dd>
+            <dt>Virtalähde</dt><dd>750 W 80+ Gold</dd>
+        </dl>
+    `;
+
+    const info = { name: 'PCSpecialist Prime 504 i7-14/16/1TB/RX9070XT pelitietokone', currentPrice: 1799.00 };
+    const bundleData = HT.detectAndExtractBundleData(info, null, 1799.00, mockHtml);
+
+    assert.ok(bundleData);
+    assert.strictEqual(bundleData.isPcBuild, true);
+    assert.strictEqual(bundleData.components.length, 5);
+
+    const cpu = bundleData.components.find(c => c.roleKey === 'cpu');
+    assert.strictEqual(cpu.cleanQuery, 'Intel Core i7-14700F');
+
+    const gpu = bundleData.components.find(c => c.roleKey === 'gpu');
+    assert.strictEqual(gpu.cleanQuery, 'AMD Radeon RX 9070 XT');
+
+    const ram = bundleData.components.find(c => c.roleKey === 'ram');
+    assert.strictEqual(ram.cleanQuery, '16GB DDR5 RAM');
+
+    const ssd = bundleData.components.find(c => c.roleKey === 'storage');
+    assert.strictEqual(ssd.cleanQuery, '1TB M.2 NVMe SSD');
+
+    const psu = bundleData.components.find(c => c.roleKey === 'psu');
+    assert.strictEqual(psu.cleanQuery, '750W 80+ Gold');
+});
+
+test("bundle: Gigantti Next.js __NEXT_DATA__ prebuilt technical specifications extraction", () => {
+    const { exports: HT } = loadHintaTutka({ host: 'www.gigantti.fi' });
+
+    const mockHtml = `
+        <h1>Asus TUF T500MV Core5-210H/16/512/5050 pelitietokone</h1>
+        <script id="__NEXT_DATA__" type="application/json">
+        {
+          "props": {
+            "pageProps": {
+              "product": {
+                "name": "Asus TUF T500MV Core5-210H/16/512/5050 pelitietokone",
+                "technicalSpecifications": [
+                  { "name": "Prosessorin malli", "value": "Intel Core 5 210H" },
+                  { "name": "Näytönohjaimen malli", "value": "NVIDIA GeForce RTX 5050" },
+                  { "name": "Keskusmuisti (RAM)", "value": "16 GB DDR5" },
+                  { "name": "Tallennustila", "value": "512 GB SSD" }
+                ]
+              }
+            }
+          }
+        }
+        </script>
+    `;
+
+    const info = { name: 'Asus TUF T500MV Core5-210H/16/512/5050 pelitietokone', currentPrice: 1199.00 };
+    const bundleData = HT.detectAndExtractBundleData(info, null, 1199.00, mockHtml);
+
+    assert.ok(bundleData);
+    assert.strictEqual(bundleData.isPcBuild, true);
+    assert.strictEqual(bundleData.components.length, 4);
+
+    const cpu = bundleData.components.find(c => c.roleKey === 'cpu');
+    assert.strictEqual(cpu.cleanQuery, 'Intel Core 5 210H');
+
+    const gpu = bundleData.components.find(c => c.roleKey === 'gpu');
+    assert.strictEqual(gpu.cleanQuery, 'NVIDIA GeForce RTX 5050');
+
+    const ram = bundleData.components.find(c => c.roleKey === 'ram');
+    assert.strictEqual(ram.cleanQuery, '16GB DDR5 RAM');
+
+    const ssd = bundleData.components.find(c => c.roleKey === 'storage');
+    assert.strictEqual(ssd.cleanQuery, '512GB SSD');
+});
+
+test("bundle: Prebuilt PC title slash format fallback deconstructs CPU, RAM, SSD, and GPU", () => {
+    const { exports: HT } = loadHintaTutka({ host: 'www.gigantti.fi' });
+
+    const info = { name: 'Acer Predator PO3-665 i7-14700F/16/1024/RTX5070 pelitietokone', currentPrice: 1699.00 };
+    const bundleData = HT.detectAndExtractBundleData(info, null, 1699.00, '');
+
+    assert.ok(bundleData, 'Title slash format must deconstruct when DOM table is absent');
+    assert.strictEqual(bundleData.isPcBuild, true);
+    assert.strictEqual(bundleData.components.length, 4);
+
+    const cpu = bundleData.components.find(c => c.roleKey === 'cpu');
+    assert.strictEqual(cpu.cleanQuery, 'Intel Core i7-14700F');
+
+    const ram = bundleData.components.find(c => c.roleKey === 'ram');
+    assert.strictEqual(ram.cleanQuery, '16GB RAM');
+
+    const ssd = bundleData.components.find(c => c.roleKey === 'storage');
+    assert.strictEqual(ssd.cleanQuery, '1TB SSD');
+
+    const gpu = bundleData.components.find(c => c.roleKey === 'gpu');
+    assert.strictEqual(gpu.cleanQuery, 'NVIDIA GeForce RTX 5070');
+});
