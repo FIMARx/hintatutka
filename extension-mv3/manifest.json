@@ -2,8 +2,8 @@
   "manifest_version": 3,
   "name": "HintaTutka — Finnish & EU Price Intelligence",
   "short_name": "HintaTutka",
-  "version": "9.8.14",
-  "description": "Zero-CLS price intelligence across 86 Finnish stores + Amazon.de FI-VAT landed cost, Tori/Vinted/Huuto flip arbitrage & club deal audit.",
+  "version": "9.8.15",
+  "description": "Zero-CLS price intelligence across 98 Finnish stores + Amazon.de FI-VAT landed cost, Tori/Vinted/Huuto flip arbitrage & club deal audit.",
   "author": "FIMARx",
   "homepage_url": "https://github.com/FIMARx/hintatutka",
   "icons": {
@@ -13,7 +13,7 @@
     "128": "icons/icon128.png"
   },
   "action": {
-    "default_title": "HintaTutka v9.8.14",
+    "default_title": "HintaTutka v9.8.15",
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon16.png",
@@ -47,7 +47,24 @@
     "https://html.duckduckgo.com/*",
     "https://raw.githubusercontent.com/*",
     "https://api.github.com/*",
-    "https://*.workers.dev/*"
+    "https://*.workers.dev/*",
+    "https://*.nettiauto.com/*",
+    "https://*.kamux.fi/*",
+    "https://*.saka.fi/*",
+    "https://*.rinta-jouppi.com/*",
+    "https://*.autotie.fi/*",
+    "https://*.k-auto.fi/*",
+    "https://*.hedinautomotive.fi/*",
+    "https://*.bilar99e.fi/*",
+    "https://*.vaihtoplus.fi/*",
+    "https://*.autolle.com/*",
+    "https://*.veho.fi/*",
+    "https://*.delta.fi/*",
+    "https://*.ms-auto.fi/*",
+    "https://*.nettimoto.com/*",
+    "https://*.nettikaravaani.com/*",
+    "https://*.nettivene.com/*",
+    "https://*.nettikone.com/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -136,7 +153,24 @@
         "https://*.clasohlson.com/*",
         "https://*.jula.fi/*",
         "https://*.rusta.com/*",
-        "https://*.stockmann.com/*"
+        "https://*.stockmann.com/*",
+        "https://*.nettiauto.com/*",
+        "https://*.kamux.fi/*",
+        "https://*.saka.fi/*",
+        "https://*.rinta-jouppi.com/*",
+        "https://*.autotie.fi/*",
+        "https://*.k-auto.fi/*",
+        "https://*.hedinautomotive.fi/*",
+        "https://*.bilar99e.fi/*",
+        "https://*.vaihtoplus.fi/*",
+        "https://*.autolle.com/*",
+        "https://*.veho.fi/*",
+        "https://*.delta.fi/*",
+        "https://*.ms-auto.fi/*",
+        "https://*.nettimoto.com/*",
+        "https://*.nettikaravaani.com/*",
+        "https://*.nettivene.com/*",
+        "https://*.nettikone.com/*"
       ],
       "js": [
         "content-bridge.js",

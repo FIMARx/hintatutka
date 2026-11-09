@@ -485,6 +485,7 @@
                     <button class="pill" onclick="loadPreset('grocery')">Grocery (€/kg)</button>
                     <button class="pill" onclick="loadPreset('nettiauto')">🚗 Nettiauto (Skoda)</button>
                     <button class="pill" onclick="loadPreset('newstore')">✨ New Store</button>
+                    <a href="javascript:(function(){const h=document.documentElement.outerHTML;navigator.clipboard.writeText(h).then(()=>alert('✅ Sivun koko HTML kopioitu leikepöydälle! Liitä se Harvester Studioon (Ctrl+V).'));})();" class="pill" style="color: #60a5fa; border-color: rgba(59, 130, 246, 0.4); text-decoration: none;" title="Raahaa kirjanmerkkeihin ja klikkaa millä tahansa suojatulla sivulla (esim. Nettiauto) kopioidaksesi sivun DOM:in leikepöydälle!">📌 Harvester Bookmarklet</a>
                 </div>
 
                 <textarea id="htmlInput" class="code-input" placeholder="Paste product page HTML source code here (Inspect Element -> Edit as HTML or View Source)..."></textarea>
@@ -733,6 +734,23 @@ function parsePriceNumber(str) {
     return Number.isFinite(val) ? val : null;
 }
 
+function isBotChallenge(text) {
+    if (!text || typeof text !== 'string') return false;
+    const lower = text.toLowerCase();
+    return (
+        lower.includes('challenges.cloudflare.com') ||
+        lower.includes('<title>just a moment...</title>') ||
+        lower.includes('cf-browser-verification') ||
+        lower.includes('attention required! | cloudflare') ||
+        lower.includes('enable javascript and cookies to continue') ||
+        lower.includes('checking your browser before accessing') ||
+        lower.includes('security check by cloudflare') ||
+        lower.includes('ddos-guard') ||
+        lower.includes('shieldsquare') ||
+        (lower.includes('turnstile') && lower.includes('moment'))
+    );
+}
+
 async function runHarvest() {
     const rawInput = document.getElementById('htmlInput').value.trim();
     if (!rawInput) return;
@@ -742,7 +760,9 @@ async function runHarvest() {
         const url = rawInput;
         const emptyState = document.getElementById('emptyState');
         const reportContainer = document.getElementById('reportContainer');
+        const reportActions = document.getElementById('reportActions');
         reportContainer.style.display = 'none';
+        reportActions.style.display = 'none';
         emptyState.style.display = 'block';
         emptyState.innerHTML = '<div style="font-size: 2.5rem; margin-bottom: 0.5rem; animation: pulse 1.5s infinite;">🌐</div>' +
             '<div style="font-size: 1rem; font-weight: 600; color: #60a5fa;">Live URL havaittu: ' + escapeHtml(url) + '</div>' +
@@ -754,7 +774,9 @@ async function runHarvest() {
             if (res.ok) {
                 const text = await res.text();
                 if (text && text.length > 500 && (text.includes('<html') || text.includes('<!DOCTYPE') || text.includes('<body'))) {
-                    fetchedHtml = text;
+                    if (!isBotChallenge(text)) {
+                        fetchedHtml = text;
+                    }
                 }
             }
         } catch (_) {}
@@ -765,7 +787,9 @@ async function runHarvest() {
                 if (res.ok) {
                     const text = await res.text();
                     if (text && text.length > 500 && (text.includes('<html') || text.includes('<!DOCTYPE') || text.includes('<body'))) {
-                        fetchedHtml = text;
+                        if (!isBotChallenge(text)) {
+                            fetchedHtml = text;
+                        }
                     }
                 }
             } catch (_) {}
@@ -780,16 +804,22 @@ async function runHarvest() {
         // Direct browser fetching blocked by Cloudflare/SSO/CORS
         emptyState.innerHTML = '<div style="text-align: left; background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 0.5rem; padding: 1.25rem;">' +
             '<div style="font-size: 1.05rem; font-weight: 700; color: #fbbf24; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">' +
-                '⚠️ Live URL syötetty selaimessa (' + escapeHtml(url) + ')' +
+                '🛡️ Sivusto on suojattu Cloudflare / Bot-estolla (esim. Nettiauto)' +
             '</div>' +
             '<p style="font-size: 0.875rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 0.75rem;">' +
-                'Sivuston <strong>Cloudflare / SSO / CORS</strong> -suojaus estää ulkoisen sivun suoran lataamisen selaimesta ilman taustapalvelinta. Pelkkä URL-osoite ei sisällä sivun HTML-rakennetta, joten analyysi tarvitsee sivun lähdekoodin.' +
+                'Sivuston suojaus (kuten Nettiauto / Alma Media Turnstile) vaatii selaimen ihmistarkistuksen. Julkinen välityspalvelin saa vain Cloudflaren <code>&lt;title&gt;Just a moment...&lt;/title&gt;</code> -varmistussivun.' +
             '</p>' +
-            '<div style="font-size: 0.85rem; font-weight: 600; color: #e2e8f0; margin-bottom: 0.5rem;">Näin saat tulokset heti:</div>' +
-            '<div style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.85rem; color: var(--text-secondary);">' +
-                '<div><strong>1. Helpoin selaimessa:</strong> Avaa autonsivu &rarr; Paina <kbd style="background: rgba(255,255,255,0.1); padding: 0.15rem 0.4rem; border-radius: 3px;">Ctrl + U</kbd> (tai hiiren oikealla &rarr; <em>Näytä sivun lähdekoodi</em>) &rarr; Valitse kaikki (<kbd>Ctrl + A</kbd>) &rarr; Kopioi (<kbd>Ctrl + C</kbd>) &rarr; Liitä tähän tekstikenttään.</div>' +
-                '<div><strong>2. Tiedostona:</strong> Tallenna sivu koneelle (<kbd>Ctrl + S</kbd>) &rarr; Klikkaa <strong>📁 Upload HTML File</strong>.</div>' +
-                '<div><strong>3. Komentoriviltä (ohittaa CORS-rajat suoraan):</strong>' +
+            '<div style="font-size: 0.85rem; font-weight: 600; color: #e2e8f0; margin-bottom: 0.5rem;">Näin saat auton oikean HTML-koodin sekunnissa:</div>' +
+            '<div style="display: flex; flex-direction: column; gap: 0.6rem; font-size: 0.85rem; color: var(--text-secondary);">' +
+                '<div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 6px; padding: 0.75rem;">' +
+                    '<div style="color: #60a5fa; font-weight: 600; margin-bottom: 0.25rem;">✨ Tapa 1: 1-Klikkaus Harvester Bookmarklet (Suositus):</div>' +
+                    '<div>Raahaa tämä painike kirjanmerkkipalkkiisi tai tallenna se kirjanmerkiksi:</div>' +
+                    '<a href="javascript:(function(){const h=document.documentElement.outerHTML;navigator.clipboard.writeText(h).then(()=>alert(\'✅ Sivun koko HTML kopioitu leikepöydälle! Voit nyt liittää sen Harvester Studioon (Ctrl+V).\'));})();" class="btn btn-sm btn-secondary" style="margin-top: 0.4rem; display: inline-flex; cursor: move;" onclick="alert(\'Raahaa tämä nappi selaimesi kirjanmerkkipalkkiin, tai kopioi sen linkki kirjanmerkiksi!\'); return false;">📌 ⚡ HintaTutka DOM Harvester</a>' +
+                    '<div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.35rem;">Kun olet Nettiautossa tai millä tahansa sivulla, klikkaa tätä kirjanmerkkiä ja paina täällä <b>Ctrl + V</b>!</div>' +
+                '</div>' +
+                '<div><strong>Tapa 2 (Lähdekoodi):</strong> Avaa autonsivu &rarr; Paina <kbd style="background: rgba(255,255,255,0.1); padding: 0.15rem 0.4rem; border-radius: 3px;">Ctrl + U</kbd> &rarr; Valitse kaikki (<kbd>Ctrl + A</kbd>) &rarr; Kopioi (<kbd>Ctrl + C</kbd>) &rarr; Liitä tähän tekstikenttään.</div>' +
+                '<div><strong>Tapa 3 (Esivalinta):</strong> Testaa Nettiautoa heti valmiilla Skoda Karoq -fixtuurella klikkaamalla ylhäältä <strong>🚗 Nettiauto (Skoda)</strong>!</div>' +
+                '<div><strong>Tapa 4 (Komentoriviltä):</strong>' +
                     '<div style="background: rgba(0,0,0,0.5); padding: 0.5rem 0.75rem; border-radius: 4px; font-family: monospace; color: #34d399; margin-top: 0.25rem;">node scripts/harvest-store.mjs ' + escapeHtml(url) + '</div>' +
                 '</div>' +
             '</div>' +
@@ -805,6 +835,30 @@ function escapeHtml(str) {
 }
 
 function executeHarvest(rawHtml, sourceUrl) {
+    if (isBotChallenge(rawHtml)) {
+        const emptyState = document.getElementById('emptyState');
+        const reportContainer = document.getElementById('reportContainer');
+        const reportActions = document.getElementById('reportActions');
+        reportContainer.style.display = 'none';
+        reportActions.style.display = 'none';
+        emptyState.style.display = 'block';
+        emptyState.innerHTML = '<div style="text-align: left; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 0.5rem; padding: 1.25rem;">' +
+            '<div style="font-size: 1.05rem; font-weight: 700; color: #f87171; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">' +
+                '⛔ Syötetty HTML on Cloudflaren robottitarkistus ("Just a moment..."), ei oikea tuotesivu!' +
+            '</div>' +
+            '<p style="font-size: 0.875rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 0.75rem;">' +
+                'Tämä koodi sisältää vain Cloudflaren Turnstile-haasteen, joten autojen hintoja tai teknisiä tietoja ei ole ladattu vielä tähän dokumenttiin.' +
+            '</p>' +
+            '<div style="font-size: 0.85rem; font-weight: 600; color: #e2e8f0; margin-bottom: 0.5rem;">Miten saat oikeat tiedot:</div>' +
+            '<div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6;">' +
+                '<div>1. Avaa autonsivu selaimessa &rarr; Paina <kbd style="background: rgba(255,255,255,0.1); padding: 0.15rem 0.4rem; border-radius: 3px;">Ctrl + U</kbd> (tai hiiren oikealla &rarr; <em>Näytä sivun lähdekoodi</em>).</div>' +
+                '<div>2. Kopioi koko teksti (<kbd>Ctrl + A</kbd> ja <kbd>Ctrl + C</kbd>).</div>' +
+                '<div>3. Tyhjennä tämä kenttä ja liitä oikea lähdekoodi tähän, tai klikkaa ylhäältä <strong>🚗 Nettiauto (Skoda)</strong>!</div>' +
+            '</div>' +
+        '</div>';
+        return;
+    }
+
     const parser = new DOMParser();
     const doc = parser.parseFromString(rawHtml, 'text/html');
 

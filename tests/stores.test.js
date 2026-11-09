@@ -11,11 +11,11 @@ const ROOT_DIR = resolve(__dirname, '..');
 
 const { exports: HT } = loadHintaTutka();
 
-test('stores matrix: STORES contains all 86 supported stores with unique configs', () => {
+test('stores matrix: STORES contains all 98 supported stores with unique configs', () => {
     assert.strictEqual(
         HT.STORES.length,
-        86,
-        `Expected exactly 86 stores in STORES registry, found ${HT.STORES.length}`
+        98,
+        `Expected exactly 98 stores in STORES registry, found ${HT.STORES.length}`
     );
 
     const matchesSeen = new Set();
@@ -127,7 +127,7 @@ test('stores matrix: detectCurrentStore accurately matches every one of the 81 s
     }
 });
 
-test('stores matrix: all major category archetypes are represented in the 86-store registry', () => {
+test('stores matrix: all major category archetypes are represented in the 98-store registry', () => {
     const counts = {
         used: 0,
         refurbished: 0,
@@ -153,6 +153,6 @@ test('stores matrix: all major category archetypes are represented in the 86-sto
     assert.strictEqual(counts.grocery, 8, 'Grocery / Consumables (S-kaupat, K-Ruoka, Fiksuruoka, etc.)');
     assert.strictEqual(counts.sports, 8, 'Sports / Apparel (XXL, Intersport, Stadium, Budget Sport, etc.)');
     assert.strictEqual(counts.furniture, 8, 'Furniture (IKEA, JYSK, Masku, Asko, Sotka, etc.)');
-    assert.strictEqual(counts.vehicles, 5, 'Vehicles / Automotive (Nettiauto, Kamux, Saka, Rinta-Jouppi, Autotie)');
+    assert.strictEqual(counts.vehicles, 17, 'Vehicles / Automotive (Nettiauto, Kamux, Saka, K-Auto, Hedin, etc.)');
     assert.strictEqual(counts.retailTech, 51, 'Electronics / Tech / Department retail');
 });

@@ -35,9 +35,12 @@ test('studio: all button onclick handlers reference functions defined in the scr
 
     const onclickRegex = /onclick="([a-zA-Z0-9_]+)\(/g;
     const calledFunctions = new Set();
+    const BROWSER_BUILTINS = new Set(['alert', 'confirm', 'prompt']);
     let m;
     while ((m = onclickRegex.exec(html)) !== null) {
-        calledFunctions.add(m[1]);
+        if (!BROWSER_BUILTINS.has(m[1])) {
+            calledFunctions.add(m[1]);
+        }
     }
 
     assert.ok(calledFunctions.size >= 5, `Expected multiple onclick functions, found ${calledFunctions.size}`);

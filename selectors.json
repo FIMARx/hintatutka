@@ -85,6 +85,114 @@
         ".price",
         "[data-price]"
       ]
+    },
+    "k-auto.fi": {
+      "prependSelectors": [],
+      "anchorSelectors": [
+        ".price__amount",
+        "[data-testid*=\"price\"]",
+        ".vehicle-price",
+        ".price"
+      ]
+    },
+    "hedinautomotive.fi": {
+      "prependSelectors": [],
+      "anchorSelectors": [
+        ".price-current",
+        ".car-price",
+        ".vehicle-price",
+        ".price"
+      ]
+    },
+    "bilar99e.fi": {
+      "prependSelectors": [],
+      "anchorSelectors": [
+        ".car-price",
+        "[data-price]",
+        ".price-current",
+        ".price"
+      ]
+    },
+    "vaihtoplus.fi": {
+      "prependSelectors": [],
+      "anchorSelectors": [
+        ".price-value",
+        ".vehicle-price",
+        ".car-price",
+        ".price"
+      ]
+    },
+    "autolle.com": {
+      "prependSelectors": [],
+      "anchorSelectors": [
+        ".price-tag",
+        ".car-price",
+        ".vehicle-price",
+        ".price"
+      ]
+    },
+    "veho.fi": {
+      "prependSelectors": [],
+      "anchorSelectors": [
+        ".vehicle-price",
+        "[data-price]",
+        ".price-current",
+        ".price"
+      ]
+    },
+    "delta.fi": {
+      "prependSelectors": [],
+      "anchorSelectors": [
+        ".price-main",
+        ".vehicle-price",
+        ".car-price",
+        ".price"
+      ]
+    },
+    "ms-auto.fi": {
+      "prependSelectors": [],
+      "anchorSelectors": [
+        ".car-price",
+        ".vehicle-price",
+        ".price-tag",
+        ".price"
+      ]
+    },
+    "nettimoto.com": {
+      "prependSelectors": [],
+      "anchorSelectors": [
+        ".details-page-header__item-price-main",
+        "[data-price]",
+        ".details-page-header__item-price",
+        ".price"
+      ]
+    },
+    "nettikaravaani.com": {
+      "prependSelectors": [],
+      "anchorSelectors": [
+        ".details-page-header__item-price-main",
+        "[data-price]",
+        ".details-page-header__item-price",
+        ".price"
+      ]
+    },
+    "nettivene.com": {
+      "prependSelectors": [],
+      "anchorSelectors": [
+        ".details-page-header__item-price-main",
+        "[data-price]",
+        ".details-page-header__item-price",
+        ".price"
+      ]
+    },
+    "nettikone.com": {
+      "prependSelectors": [],
+      "anchorSelectors": [
+        ".details-page-header__item-price-main",
+        "[data-price]",
+        ".details-page-header__item-price",
+        ".price"
+      ]
     }
   },
   "globalAnchorSelectors": [],
