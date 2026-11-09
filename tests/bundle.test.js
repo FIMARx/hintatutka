@@ -854,3 +854,110 @@ test('bundle: Verkkokauppa.com PC Cases (Blackstorm Artemis) reject false-positi
 
     assert.strictEqual(bundleData, null, 'Standalone PC case must return null and not trigger bundle or PC build detection');
 });
+
+test("bundle: Jimm's hardware product metadata extraction (EAN, MPN, SKU, Brand, Price)", () => {
+    const metaMap = {
+        'meta[property="product:ean"], meta[name="ean"], meta[property="og:ean"]': { content: '0730143315289', getAttribute: () => '0730143315289' },
+        'meta[property="product:mfr_part_no"], meta[name="mpn"], meta[property="product:mpn"]': { content: '100-100001084WOF', getAttribute: () => '100-100001084WOF' },
+        'meta[property="product:brand"], meta[property="og:brand"], meta[name="brand"]': { content: 'AMD', getAttribute: () => 'AMD' },
+        'meta[property="product:price:currency"], meta[property="og:price:currency"]': { content: 'EUR', getAttribute: () => 'EUR' },
+        'meta[property="product:price:amount"], meta[property="og:price:amount"], [itemprop="price"][content]': { content: '429.90', getAttribute: () => '429.90' },
+        'meta[itemprop="sku"], [itemprop="sku"]': { content: '207359', getAttribute: () => '207359' },
+        'h1[data-testid="object-title"], h1': { innerText: 'AMD Ryzen 7 9800X3D, AM5, 4.7 GHz, 8-Core, WOF', textContent: 'AMD Ryzen 7 9800X3D, AM5, 4.7 GHz, 8-Core, WOF' }
+    };
+
+    const mockDoc = {
+        querySelector: (sel) => {
+            for (const [key, val] of Object.entries(metaMap)) {
+                if (key.includes(sel) || sel.includes(key) || (sel.includes('h1') && key.includes('h1')) || (sel.includes('product:brand') && key.includes('brand')) || (sel.includes('product:price:amount') && key.includes('amount')) || (sel.includes('sku') && key.includes('sku')) || (sel.includes('product:ean') && key.includes('ean')) || (sel.includes('product:mfr_part_no') && key.includes('mfr_part_no'))) {
+                    return val;
+                }
+            }
+            return null;
+        },
+        querySelectorAll: (sel) => {
+            if (sel.includes('ld+json')) return [];
+            if (sel.includes('script:not([src])')) return [];
+            return [];
+        }
+    };
+
+    const { exports: HT } = loadHintaTutka({
+        host: 'www.jimms.fi',
+        pathname: '/fi/Product/Show/207359/100-100001084wof/amd-ryzen-7-9800x3d-am5-4-7-ghz-8-core-wof',
+        document: mockDoc
+    });
+
+    const info = HT.extractProductInfo();
+    assert.ok(info, 'Product info must be extracted on Jimm\'s');
+    assert.strictEqual(info.brand, 'AMD');
+    assert.strictEqual(info.sku, '207359');
+    assert.strictEqual(info.mpn, '100-100001084WOF');
+    assert.strictEqual(info.ean, '0730143315289');
+    assert.strictEqual(info.schemaPrice, 429.90);
+});
+
+test("bundle: Jimm's price element selection excludes strikethrough original prices and anchors cleanly", () => {
+    const origPriceEl = {
+        isConnected: true,
+        classList: { contains: () => false },
+        innerText: '549,00 €',
+        textContent: '549,00 €',
+        getBoundingClientRect: () => ({ width: 80, height: 20 }),
+        closest: (sel) => {
+            if (sel.includes('price__amount--original') || sel.includes('--original')) return true;
+            return null;
+        }
+    };
+
+    const offersDiv = {
+        tagName: 'DIV',
+        isConnected: true,
+        parentElement: { tagName: 'DIV', parentElement: null }
+    };
+
+    const pdpSpan = {
+        tagName: 'SPAN',
+        isConnected: true,
+        parentElement: offersDiv,
+        closest: (sel) => (sel.includes('.price--pdp') ? pdpSpan : null)
+    };
+
+    const salePriceEl = {
+        isConnected: true,
+        classList: { contains: () => false },
+        innerText: '429,90 €',
+        textContent: '429,90 €',
+        getBoundingClientRect: () => ({ width: 100, height: 25 }),
+        parentElement: pdpSpan,
+        closest: (sel) => {
+            if (sel.includes('price__amount--original') || sel.includes('--original')) return null;
+            if (sel.includes('.price--pdp')) return pdpSpan;
+            if (sel.includes('[itemprop="offers"]')) return offersDiv;
+            return null;
+        }
+    };
+
+    const mockDoc = {
+        querySelector: () => null,
+        querySelectorAll: (sel) => {
+            if (sel.includes('.price--pdp') || sel.includes('.price__amount')) {
+                return [origPriceEl, salePriceEl];
+            }
+            return [];
+        }
+    };
+
+    const { exports: HT } = loadHintaTutka({
+        host: 'www.jimms.fi',
+        pathname: '/fi/Product/Show/207359/test',
+        document: mockDoc
+    });
+
+    const priceDom = HT.findPrimaryPriceElement(429.90);
+    assert.ok(priceDom, 'Price element must be found');
+    assert.strictEqual(priceDom.price, 429.90, 'Sale price 429.90 must be selected over 549.00');
+
+    const anchor = HT.findBestPriceAnchor(priceDom.element);
+    assert.strictEqual(anchor, pdpSpan, 'Anchor must resolve to .price--pdp');
+});

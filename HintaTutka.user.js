@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         HintaTutka
 // @namespace    https://github.com/FIMARx/hintatutka
-// @version      9.8.10
-// @description  Suomen älykkäin hintatutka (v9.8.10): Reaaliaikainen PC-komponenttihaku, Verkkokauppa.com-pelikoneiden tuki, välitön DIY-optimointi, parannettu mobiili- & historiagrid & 81 kauppaa
+// @version      9.8.11
+// @description  Suomen älykkäin hintatutka (v9.8.11): Reaaliaikainen PC-komponenttihaku, täysi Jimm's-tuki, Verkkokauppa.com-pelikoneet, välitön DIY-optimointi & 81 kauppaa
 // @author       FIMARx
 // @icon         https://raw.githubusercontent.com/FIMARx/hintatutka/main/extension-mv3/icons/icon128.png
 // @homepageURL  https://github.com/FIMARx/hintatutka
@@ -150,7 +150,7 @@
     // =========================================================================
     // CONFIGURATION & THRESHOLDS
     // =========================================================================
-    const SCRIPT_VERSION = '9.8.10';
+    const SCRIPT_VERSION = '9.8.11';
     const BRAND_LOGO_SVG_MINI = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 58 58" width="15" height="15" style="flex-shrink:0;display:block;"><defs><linearGradient id="htMiniBg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#065f46"/><stop offset="100%" stop-color="#0f172a"/></linearGradient><linearGradient id="htMiniBolt" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#a7f3d0"/><stop offset="100%" stop-color="#10b981"/></linearGradient></defs><rect x="1.5" y="1.5" width="55" height="55" rx="14.5" fill="url(#htMiniBg)" stroke="#10b981" stroke-opacity="0.78" stroke-width="2.4"/><circle cx="29" cy="29" r="19.5" fill="none" stroke="#34d399" stroke-opacity="0.36" stroke-width="1.8" stroke-dasharray="4 3"/><path d="M32.5 11L18.5 31H29.5L25.5 47L40.5 26.5H29.5L32.5 11Z" fill="url(#htMiniBolt)"/></svg>`;
     const IS_MV3_EXTENSION = Boolean(
         globalThis.__HT_MV3_EXTENSION__ ||
@@ -216,7 +216,7 @@
         { match: 'gigantti.fi', name: 'Gigantti', selectors: ['[data-testid="price-container"]', '[data-testid="price-container"] span', '[class*="price-box"] [class*="price"]', '.product-price-container'] },
         { match: 'power.fi', name: 'Power', selectors: ['pwr-price', '.product-price', 'pwr-price [class*="price"]'] },
         { match: 'proshop.fi', name: 'Proshop', selectors: ['#site-product-price .site-currency-attention', '.site-currency-attention'] },
-        { match: 'jimms.fi', name: "Jimm's", selectors: ['.price__amount', '.product-box-price [itemprop="price"]', '[itemprop="price"]'] },
+        { match: 'jimms.fi', name: "Jimm's", selectors: ['.price--pdp', '.price--pdp [itemprop="price"]', '.price.price--sale-colored', '.price__amount', '.product-box-price [itemprop="price"]', '[itemprop="price"]'] },
         { match: 'datatronic.fi', name: 'Datatronic', selectors: ['.current-price span[itemprop="price"]', '.current-price .price', '.product-price'] },
         { match: 'multitronic.fi', name: 'Multitronic', selectors: ['#product-price', '.price-box .price', '[itemprop="price"]'] },
         { match: 'tietokonekauppa.fi', name: 'Tietokonekauppa.fi', selectors: ['.product-price', '[itemprop="price"]', '.price-new'] },
@@ -2023,7 +2023,14 @@
         const isPrivateLabelStore = /^(ikea\.com|jysk\.fi|sotka\.fi|asko\.fi|masku\.com|isku\.fi|veke\.fi|ruohonjuuri\.fi|s-kaupat\.fi|k-ruoka\.fi|fiksuruoka\.fi|matsmart\.fi)$/i.test(currentStore.match);
 
         if (!info.sku) {
-            const urlSkuMatch = location.pathname.match(/\/p\/([0-9]{2}-[0-9]{3,6})\b/i);
+            const sMeta = document.querySelector('meta[itemprop="sku"], [itemprop="sku"]');
+            if (sMeta) {
+                const sVal = (sMeta.getAttribute('content') || sMeta.innerText || sMeta.textContent || '').trim();
+                if (sVal) info.sku = sVal;
+            }
+        }
+        if (!info.sku) {
+            const urlSkuMatch = location.pathname.match(/\/p\/([0-9]{2}-[0-9]{3,6})\b/i) || location.pathname.match(/\/Product\/Show\/(\d+)/i);
             if (urlSkuMatch) info.sku = urlSkuMatch[1];
         }
 
@@ -2032,6 +2039,12 @@
                 ? ((document.querySelector('main') || document.body)?.innerText || '')
                 : '';
 
+            if (!info.mpn) {
+                const mpnMeta = document.querySelector('meta[property="product:mfr_part_no"], meta[name="mpn"], meta[property="product:mpn"]');
+                if (mpnMeta && mpnMeta.content && mpnMeta.content.trim().length >= 3) {
+                    info.mpn = mpnMeta.content.trim();
+                }
+            }
             if (!info.mpn) {
                 const mpnMatch = bodyText.match(/(?:Valmistajan\s+tuotekoodi|Valmistajan\s+koodi|Tuotekoodi|Malli|Manufacturer\s+Part\s+Number|Model\s+Number|MPN)\s*[:\n\t]+\s*([A-Z0-9][A-Z0-9._/-]{3,24})/i);
                 if (mpnMatch && mpnMatch[1] && /[A-Z]/i.test(mpnMatch[1]) && /\d/.test(mpnMatch[1])) {
@@ -2050,7 +2063,7 @@
 
                 // 1. Check explicit microdata / data-ean attributes
                 if (!verifiedEan) {
-                    const eanAttrEl = document.querySelector('[itemprop="gtin13"], [itemprop="gtin"], [itemprop="gtin12"], [itemprop="gtin14"], [itemprop="ean"], [data-ean], [data-gtin]');
+                    const eanAttrEl = document.querySelector('[itemprop="gtin13"], [itemprop="gtin"], [itemprop="gtin12"], [itemprop="gtin14"], [itemprop="ean"], [data-ean], [data-gtin], meta[property="product:ean"], meta[name="ean"], meta[property="og:ean"]');
                     const attrCand = (
                         eanAttrEl?.getAttribute('content') ||
                         eanAttrEl?.getAttribute('data-ean') ||
@@ -2083,6 +2096,15 @@
                             verifiedEan = stateMatch[1];
                             break;
                         }
+                    }
+                }
+
+                // 4. Fallback to product:ean meta tag if present
+                if (!verifiedEan) {
+                    const eMeta = document.querySelector('meta[property="product:ean"], meta[name="ean"], meta[property="og:ean"]');
+                    const c = eMeta?.getAttribute('content')?.trim();
+                    if (c && /^\d{8,14}$/.test(c)) {
+                        verifiedEan = c;
                     }
                 }
 
@@ -2390,8 +2412,8 @@
 
     function detectAndExtractBundleData(info, doc, currentPrice, rawHtml = '') {
         const title = (info?.name || (doc && doc.title ? doc.title : '') || '').toLowerCase();
-        const bodyText = doc ? ((doc.querySelector && (doc.querySelector('main') || doc.body)?.innerText) || (doc.body ? doc.body.textContent : (typeof doc === 'string' ? doc : ''))) : (typeof rawHtml === 'string' ? rawHtml : '');
-        const bodyHtml = rawHtml || (doc ? ((doc.querySelector && (doc.querySelector('main') || doc.body)?.innerHTML) || (typeof doc === 'string' ? doc : '')) : '');
+        const bodyText = (doc ? ((doc.querySelector && (doc.querySelector('main') || doc.body)?.innerText) || (doc.body ? (doc.body.innerText || doc.body.textContent) : (typeof doc === 'string' ? doc : ''))) : (typeof rawHtml === 'string' ? rawHtml : '')) || '';
+        const bodyHtml = (rawHtml || (doc ? ((doc.querySelector && (doc.querySelector('main') || doc.body)?.innerHTML) || (doc.body ? doc.body.innerHTML : (typeof doc === 'string' ? doc : ''))) : '')) || '';
 
         const isBundleTitle = /(?:-tuotepaketti|\btuotepaketti\b|\bbundle\b|\bpäivityspaketti\b|\bupgrade kit\b|\bkomponenttipaketti\b)/i.test(title) ||
             /\b\+\s*(?:\d{4,5}x3d|\d{4,5}[kxf]|ddr[45]|rtx\s*\d{4})/i.test(title);
@@ -2749,7 +2771,7 @@
 
             // Task 2: Search Hinta.fi for market lowest price across all Finnish stores
             if (!comp.marketLowest) {
-                const hintaCacheKey = `hinta_comp_v9810_${comp.cleanQuery || comp.name}`;
+                const hintaCacheKey = `hinta_comp_v9811_${comp.cleanQuery || comp.name}`;
                 let hintaData = getCached(hintaCacheKey);
                 if (!hintaData || !hintaData.lowestPrice || Number(hintaData.lowestPrice) <= 0) {
                     hintaData = null;
@@ -3273,7 +3295,7 @@
 
         const isInvalidPriceNode = (el) => {
             if (!el || !el.isConnected) return true;
-            if (el.closest('#ufhpc-root, del, s, strike, [data-a-strike="true"], .a-text-price, .basisPrice, [class*="basisPrice" i], [class*="old-price" i], [class*="original-price" i], [class*="strikethrough" i], [class*="was-price" i], [class*="ex-vat" i], [class*="without-vat" i], [class*="unit-price" i], [class*="comparison-price" i]')) {
+            if (el.closest('#ufhpc-root, del, s, strike, [data-a-strike="true"], .a-text-price, .basisPrice, [class*="basisPrice" i], [class*="old-price" i], [class*="original-price" i], [class*="--original" i], [class*="price__amount--original" i], [class*="strikethrough" i], [class*="was-price" i], [class*="ex-vat" i], [class*="without-vat" i], [class*="unit-price" i], [class*="comparison-price" i]')) {
                 return true;
             }
             const rect = el.getBoundingClientRect();
@@ -7121,6 +7143,8 @@
             '[class*="product-price-container"], ' +
             '[class*="product-box-price"], ' +
             '[class*="price-box"], ' +
+            '.price--pdp, ' +
+            '[itemprop="offers"], ' +
             '#site-product-price, ' +
             'pwr-price'
         );

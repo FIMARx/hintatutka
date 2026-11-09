@@ -32,6 +32,8 @@ globalThis.__HT_TEST_EXPORTS__ = {
     parseAmazonDeSearchHtml,
     parseHintaProductDoc,
     findPrimaryPriceElement,
+    findBestPriceAnchor,
+    extractProductInfo,
     computeRobustUsedStats,
     evaluateItemFlipArbitrage,
     findBestFlipArbitrageListing,
@@ -176,13 +178,14 @@ export function loadHintaTutka(opts = {}) {
             visibilityState: 'hidden',
             readyState: 'complete',
             title: opts.pageTitle || 'HintaTutka Test',
-            body: { appendChild: () => {}, children: [] },
+            body: { appendChild: () => {}, children: [], innerText: '', textContent: '', innerHTML: '' },
             documentElement: {},
             addEventListener: () => {},
             removeEventListener: () => {},
-            querySelector: () => null,
-            querySelectorAll: () => [],
-            createTreeWalker: () => ({ currentNode: null, nextNode: () => null })
+            querySelector: (sel) => (opts.document && typeof opts.document.querySelector === 'function' ? opts.document.querySelector(sel) : null),
+            querySelectorAll: (sel) => (opts.document && typeof opts.document.querySelectorAll === 'function' ? opts.document.querySelectorAll(sel) : []),
+            createTreeWalker: () => ({ currentNode: null, nextNode: () => null }),
+            ...(opts.document || {})
         },
         window: null,
         fetch: globalThis.fetch

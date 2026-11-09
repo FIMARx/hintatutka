@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-08",
+  "updatedAt": "2026-11-09",
   "description": "Remote hot-patch selector & scraper registry for HintaTutka (synced automatically every 12h without reinstalling the script).",
   "storeOverrides": {
     "verkkokauppa.com": {
@@ -22,6 +22,14 @@
       "anchorSelectors": [
         "pwr-price",
         ".product-price"
+      ]
+    },
+    "jimms.fi": {
+      "prependSelectors": [],
+      "anchorSelectors": [
+        ".price--pdp",
+        ".price.price--sale-colored",
+        ".price__amount"
       ]
     },
     "ikea.com": {
