@@ -1,0 +1,31 @@
+name: Store Contribution Abuse-Shield Gatekeeper
+
+on:
+  issues:
+    types: [opened, edited]
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  validate-contribution:
+    if: contains(github.event.issue.title, '[Store Contribution]') || contains(github.event.pull_request.title, '[Store Contribution]')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Run 6-Stage Abuse-Shield Gatekeeper
+        run: |
+          BODY="${{ github.event.issue.body || github.event.pull_request.body }}"
+          DOMAIN=$(echo "$BODY" | grep -ioE '`[a-z0-9.-]+\.[a-z]{2,}`' | head -1 | tr -d '`')
+          if [ -z "$DOMAIN" ]; then
+            DOMAIN="unknown-store.fi"
+          fi
+          echo "Validating store proposal for domain: $DOMAIN"
+          node scripts/validate-store-proposal.mjs --domain "$DOMAIN" --selector "[class*=\"price\"]"

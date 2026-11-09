@@ -58,6 +58,7 @@ globalThis.__HT_TEST_EXPORTS__ = {
     detectCurrentStore,
     detectProductCategory,
     extractUnitPriceInfo,
+    evaluatePrebuiltHardwareBalance,
     I18N
 };
 `;

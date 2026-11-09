@@ -3206,6 +3206,105 @@
         return bundleData;
     }
 
+    // Hardware advisor: analyzes CPU, GPU, RAM and PSU balance for Prebuilt PCs
+    function evaluatePrebuiltHardwareBalance(bundleData, lang = 'fi') {
+        if (!bundleData || !Array.isArray(bundleData.components) || !bundleData.isPcBuild) return [];
+        const isEn = lang === 'en';
+        const insights = [];
+
+        const cpuComp = bundleData.components.find(c => c.roleKey === 'cpu');
+        const gpuComp = bundleData.components.find(c => c.roleKey === 'gpu');
+        const ramComp = bundleData.components.find(c => c.roleKey === 'ram');
+        const psuComp = bundleData.components.find(c => c.roleKey === 'psu');
+
+        const cpuName = (cpuComp?.cleanQuery || cpuComp?.name || '').toLowerCase();
+        const gpuName = (gpuComp?.cleanQuery || gpuComp?.name || '').toLowerCase();
+
+        // 1. GPU Tier
+        let gpuTier = 0;
+        if (/rtx\s*5090|rtx\s*4090|rtx\s*5080|rtx\s*4080/i.test(gpuName)) gpuTier = 4;
+        else if (/rtx\s*5070\s*ti|rtx\s*5070|rtx\s*4070|rx\s*9070|rx\s*7900/i.test(gpuName)) gpuTier = 3;
+        else if (/rtx\s*5060|rtx\s*4060|rx\s*7600/i.test(gpuName)) gpuTier = 2;
+        else if (/rtx\s*3050|gtx\s*1650|rx\s*6500/i.test(gpuName)) gpuTier = 1;
+
+        // 2. CPU Tier
+        let cpuTier = 0;
+        if (/9850x3d|9800x3d|7800x3d|9950x|7950x|i9-|core\s*ultra\s*9/i.test(cpuName)) cpuTier = 4;
+        else if (/9700x|7700x|9600x|7600x|i7-|core\s*ultra\s*7/i.test(cpuName)) cpuTier = 3;
+        else if (/i5-14|i5-13|i5-12|7500f|5600x|core\s*ultra\s*5/i.test(cpuName)) cpuTier = 2;
+        else if (/ryzen\s*5\s*5500|i3-/i.test(cpuName)) cpuTier = 1;
+
+        // Bottleneck Analysis
+        if (gpuTier >= 3 && cpuTier === 1) {
+            insights.push({
+                type: 'warning',
+                icon: '⚠️',
+                title: isEn ? 'CPU Bottleneck Risk' : 'Pullonkaulariski',
+                text: isEn
+                    ? 'High-end graphics card may be bottlenecked by entry-level processor in CPU-heavy games.'
+                    : 'Tehokas näytönohjain voi kohdata pullonkaulan perusprosessorilla raskaissa peleissä.'
+            });
+        }
+
+        // PSU Headroom
+        if (psuComp) {
+            const psuText = (psuComp.cleanQuery || psuComp.name || '');
+            const wattM = psuText.match(/(\d{3,4})\s*w/i);
+            if (wattM) {
+                const watt = parseInt(wattM[1], 10);
+                if (gpuTier >= 4 && watt < 850) {
+                    insights.push({
+                        type: 'warning',
+                        icon: '⚡',
+                        title: isEn ? 'PSU Headroom Warning' : 'Virtalähdevaroitus',
+                        text: isEn
+                            ? `Recommended at least 850W-1000W for flagship GPU (current: ${watt}W).`
+                            : `Suositeltu vähintään 850W-1000W lippulaivanäytönohjaimelle (nykyinen: ${watt}W).`
+                    });
+                } else if (gpuTier >= 3 && watt < 650) {
+                    insights.push({
+                        type: 'warning',
+                        icon: '⚡',
+                        title: isEn ? 'PSU Headroom Warning' : 'Virtalähdevaroitus',
+                        text: isEn
+                            ? `Recommended at least 650W-750W for modern high-tier graphics (current: ${watt}W).`
+                            : `Suositeltu vähintään 650W-750W tehokkaalle näytönohjaimelle (nykyinen: ${watt}W).`
+                    });
+                } else if (watt <= 310) {
+                    insights.push({
+                        type: 'info',
+                        icon: 'ℹ️',
+                        title: isEn ? 'Upgrade Limitation' : 'Päivitysrajoitus',
+                        text: isEn
+                            ? 'Compact 310W power supply limits future GPU upgrade potential without replacing PSU.'
+                            : 'Kompakti 310W virtalähde rajoittaa tulevia näytönohjainpäivityksiä ilman virtalähteen vaihtoa.'
+                    });
+                }
+            }
+        }
+
+        // RAM Headroom
+        if (ramComp) {
+            const ramText = (ramComp.cleanQuery || ramComp.name || '');
+            const ramGbM = ramText.match(/\b(\d{1,3})\s*(?:GB|Gt)\b/i);
+            if (ramGbM) {
+                const gb = parseInt(ramGbM[1], 10);
+                if (gb <= 8) {
+                    insights.push({
+                        type: 'info',
+                        icon: '💡',
+                        title: isEn ? 'RAM Upgrade Recommended' : 'Muistisuositus',
+                        text: isEn
+                            ? '8 GB RAM is suitable for casual use, but 16-32 GB is recommended for modern gaming.'
+                            : '8 Gt RAM riittää kevyeen käyttöön, mutta 16-32 Gt on suositus nykypeleille ja moniajolle.'
+                    });
+                }
+            }
+        }
+
+        return insights;
+    }
+
     function buildBundleBreakdownHtml(bundleData, productInfo, t, lang) {
         if (!bundleData || !Array.isArray(bundleData.components) || bundleData.components.length === 0) {
             return `<div class="ufhpc-empty">${lang === 'en' ? 'No component specs found' : 'Ei komponentteja löydetty'}</div>`;
@@ -3215,6 +3314,20 @@
         const marketDiy = bundleData.marketDiyTotal;
         const storeSeparate = bundleData.officialStandaloneTotal || bundleData.storeSeparateTotal || bundleData.computedStandaloneTotal;
         const storeName = detectCurrentStore().name || (lang === 'en' ? 'This store' : 'Tämä kauppa');
+
+        const hardwareInsights = evaluatePrebuiltHardwareBalance(bundleData, lang);
+        let insightsHtml = '';
+        if (hardwareInsights.length > 0) {
+            insightsHtml = `
+                <div class="ufhpc-bundle-insights">
+                    ${hardwareInsights.map(ins => `
+                        <div class="ufhpc-insight-pill is-${ins.type}">
+                            <span>${ins.icon} <b>${escapeHtml(ins.title)}:</b> ${escapeHtml(ins.text)}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
 
         let summaryHtml = '';
         if (bundlePrice && (marketDiy || storeSeparate)) {
@@ -3295,7 +3408,14 @@
                         <div class="ufhpc-bundle-verdict-note">
                             <strong>${escapeHtml(verdictHeadline)}:</strong> ${escapeHtml(verdictExplanation)}
                         </div>
+                        ${insightsHtml}
                     </div>
+                </div>
+            `;
+        } else if (insightsHtml) {
+            summaryHtml = `
+                <div class="ufhpc-bundle-summary">
+                    ${insightsHtml}
                 </div>
             `;
         }
@@ -9676,6 +9796,31 @@
                 line-height: 1.35;
                 border-top: 1px solid rgba(255, 255, 255, 0.06);
                 padding-top: 4px;
+            }
+            .ufhpc-bundle-insights {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+                margin-top: 5px;
+            }
+            .ufhpc-insight-pill {
+                font-size: 9.5px;
+                padding: 3.5px 7px;
+                border-radius: 6px;
+                line-height: 1.35;
+                display: flex;
+                align-items: center;
+                gap: 5px;
+            }
+            .ufhpc-insight-pill.is-warning {
+                background: rgba(245, 158, 11, 0.12);
+                border: 1px solid rgba(245, 158, 11, 0.35);
+                color: #fde68a;
+            }
+            .ufhpc-insight-pill.is-info {
+                background: rgba(59, 130, 246, 0.12);
+                border: 1px solid rgba(59, 130, 246, 0.3);
+                color: #93c5fd;
             }
             .ufhpc-component-price-stack {
                 display: flex;

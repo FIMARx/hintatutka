@@ -1171,3 +1171,45 @@ test("bundle: Gigantti multi-attribute storage spec without title capacity merge
     assert.strictEqual(storageComponents.length, 1, 'Must have exactly 1 storage drive');
     assert.strictEqual(storageComponents[0].cleanQuery, '1TB M.2 NVMe SSD');
 });
+
+test("bundle: evaluatePrebuiltHardwareBalance calculates bottleneck risk, PSU headroom, and RAM recommendations", () => {
+    const { exports: HT } = loadHintaTutka({ host: 'www.gigantti.fi' });
+
+    // Scenario 1: Budget CPU with Flagship GPU + Weak PSU (Dual Bottleneck)
+    const unbalancedBuild = {
+        isPcBuild: true,
+        components: [
+            { roleKey: 'cpu', cleanQuery: 'AMD Ryzen 5 5500', name: 'Ryzen 5 5500 3.6GHz' },
+            { roleKey: 'gpu', cleanQuery: 'NVIDIA GeForce RTX 5080', name: 'GeForce RTX 5080 16GB' },
+            { roleKey: 'ram', cleanQuery: '8GB DDR5', name: '8 GB DDR5' },
+            { roleKey: 'psu', cleanQuery: '500W', name: '500 W Virtalähde' }
+        ]
+    };
+
+    const insights1 = HT.evaluatePrebuiltHardwareBalance(unbalancedBuild, 'fi');
+    assert.ok(insights1.length >= 2, 'Expected multiple warnings for severely unbalanced build');
+
+    const cpuWarning = insights1.find(i => i.title.includes('Pullonkaula'));
+    assert.ok(cpuWarning, 'Must flag CPU bottleneck when pairing Ryzen 5 5500 with RTX 5080');
+
+    const psuWarning = insights1.find(i => i.title.includes('Virtalähde'));
+    assert.ok(psuWarning, 'Must flag 500W PSU as insufficient for RTX 5080');
+
+    const ramAdvice = insights1.find(i => i.title.includes('Muisti'));
+    assert.ok(ramAdvice, 'Must recommend upgrading from 8GB RAM');
+
+    // Scenario 2: Well-balanced premium build (Zero warnings)
+    const balancedBuild = {
+        isPcBuild: true,
+        components: [
+            { roleKey: 'cpu', cleanQuery: 'AMD Ryzen 7 9800X3D', name: 'AMD Ryzen 7 9800X3D' },
+            { roleKey: 'gpu', cleanQuery: 'PNY NVIDIA GeForce RTX 5070 Ti', name: 'GeForce RTX 5070 Ti 16GB' },
+            { roleKey: 'ram', cleanQuery: '32GB DDR5 6000MHz', name: '32 GB DDR5' },
+            { roleKey: 'psu', cleanQuery: '850W 80+ Gold', name: '850 W 80+ Gold' }
+        ]
+    };
+
+    const insights2 = HT.evaluatePrebuiltHardwareBalance(balancedBuild, 'fi');
+    const severeWarnings = insights2.filter(i => i.type === 'warning');
+    assert.strictEqual(severeWarnings.length, 0, 'Balanced 9800X3D + 5070 Ti + 850W PSU build must have 0 severe warnings');
+});
