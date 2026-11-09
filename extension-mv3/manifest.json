@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "HintaTutka — Finnish & EU Price Intelligence",
   "short_name": "HintaTutka",
-  "version": "9.8.9",
+  "version": "9.8.10",
   "description": "Zero-CLS price intelligence across 81 Finnish stores + Amazon.de FI-VAT landed cost, Tori/Vinted/Huuto flip arbitrage & club deal audit.",
   "author": "FIMARx",
   "homepage_url": "https://github.com/FIMARx/hintatutka",

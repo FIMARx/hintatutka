@@ -745,3 +745,112 @@ test('bundle: Jimm\'s GtG PCs with single <p> containing <br> and nav menu items
     assert.strictEqual(cooler.name, 'Phanteks Glacier One 360S25-SE, 360 mm AIO-nestejäähdytys');
     assert.strictEqual(cooler.cleanQuery, 'Phanteks Glacier One 360S25-SE');
 });
+
+test('bundle: Verkkokauppa.com Blackstorm R9 5090 prebuilt deconstructed with 9 components', () => {
+    const { exports: HT } = loadHintaTutka({ host: 'www.verkkokauppa.com' });
+
+    const mockVkHtml = `
+        <title>Blackstorm R9 5090 Gaming Computer – Verkkokauppa.com</title>
+        <script id="__NEXT_DATA__">
+        {"props":{"pageProps":{"product":{"name":"Blackstorm R9 5090 Gaming Computer","description":"\\u003Ch3\\u003EFeatures\\u003C/h3\\u003E\\u003Cul\\u003E\\u003Cli\\u003EProcessor: AMD Ryzen 9 9950X3D\\u003C/li\\u003E\\u003Cli\\u003EGraphics card: ASUS TUF Gaming GeForce RTX 5090 OC, 32 GB GDDR7\\u003C/li\\u003E\\u003Cli\\u003EMemory: 32 GB Kingston DDR5 6000 MT/s CL30\\u003C/li\\u003E\\u003Cli\\u003ESSD: Kingston NV3 PCIe 4.0 NVMe 2 TB\\u003C/li\\u003E\\u003Cli\\u003ECase: A31 Plus TG ARGB Black\\u003C/li\\u003E\\u003Cli\\u003ECooling: ASUS PRIME LC 360 ARGB\\u003C/li\\u003E\\u003Cli\\u003EMotherboard: ASUS X870 MAX GAMING WIFI7 (4 × DDR5, multiple M.2 slots, WiFi 7)\\u003C/li\\u003E\\u003Cli\\u003EPower supply: ASUS TUF Gaming 1000W Gold\\u003C/li\\u003E\\u003Cli\\u003EOperating system: Windows 11 Pro 64-bit (FI)\\u003C/li\\u003E\\u003Cli\\u003EWireless and wired networks: WiFi 7, Ethernet\\u003C/li\\u003E\\u003Cli\\u003EStorage: M.2 slots (PCIe 4.0), SATA III\\u003C/li\\u003E\\u003C/ul\\u003E"}}}}
+        </script>
+    `;
+
+    const info = { name: 'Blackstorm R9 5090 Gaming Computer', currentPrice: 5999.00 };
+    const bundleData = HT.detectAndExtractBundleData(info, null, 5999.00, mockVkHtml);
+
+    assert.ok(bundleData, 'Blackstorm PC build must be detected');
+    assert.strictEqual(bundleData.isPcBuild, true);
+    assert.strictEqual(bundleData.components.length, 9, 'Must extract all 9 hardware components without expansion slots');
+
+    const cpu = bundleData.components.find(c => c.roleKey === 'cpu');
+    assert.strictEqual(cpu.cleanQuery, 'AMD Ryzen 9 9950X3D');
+
+    const gpu = bundleData.components.find(c => c.roleKey === 'gpu');
+    assert.strictEqual(gpu.cleanQuery, 'ASUS TUF Gaming GeForce RTX 5090 OC');
+
+    const ram = bundleData.components.find(c => c.roleKey === 'ram');
+    assert.strictEqual(ram.cleanQuery, 'Kingston 32GB DDR5 RAM');
+
+    const ssd = bundleData.components.find(c => c.roleKey === 'storage');
+    assert.strictEqual(ssd.cleanQuery, 'Kingston 2TB NVMe SSD');
+
+    const mobo = bundleData.components.find(c => c.roleKey === 'mobo');
+    assert.strictEqual(mobo.cleanQuery, 'ASUS X870 MAX GAMING WIFI7');
+
+    const cooler = bundleData.components.find(c => c.roleKey === 'cooler');
+    assert.strictEqual(cooler.cleanQuery, 'ASUS PRIME LC 360 ARGB');
+
+    const psu = bundleData.components.find(c => c.roleKey === 'psu');
+    assert.strictEqual(psu.cleanQuery, 'ASUS 1000W Gold');
+
+    const os = bundleData.components.find(c => c.roleKey === 'os');
+    assert.strictEqual(os.cleanQuery, 'Windows 11 Pro');
+});
+
+test('bundle: Verkkokauppa.com HP OMEN Gaming Desktop deconstructed from bullet list without colons', () => {
+    const { exports: HT } = loadHintaTutka({ host: 'www.verkkokauppa.com' });
+
+    const mockOmenHtml = `
+        <title>HP OMEN 16L TG03-0006 Gaming Desktop Computer – Verkkokauppa.com</title>
+        <h3>Features</h3>
+        <ul>
+            <li>AMD Ryzen™ 5 8400F processor (4.7 GHz boost)</li>
+            <li>NVIDIA GeForce RTX 5060 graphics card (8 GB GDDR7)</li>
+            <li>16 GB DDR5-5200 memory</li>
+            <li>1 TB PCIe Gen4 NVMe M.2 SSD</li>
+            <li>Windows 11 Home operating system</li>
+            <li>500W 80 PLUS Platinum power supply</li>
+            <li>Motherboard chipset: AMD B650</li>
+            <li>Memory clock speed: 5200 MHz</li>
+            <li>SSD interface: PCI Express 4.0, NVMe</li>
+        </ul>
+    `;
+
+    const info = { name: 'HP OMEN 16L TG03-0006 Gaming Desktop Computer', currentPrice: 1199.00 };
+    const bundleData = HT.detectAndExtractBundleData(info, null, 1199.00, mockOmenHtml);
+
+    assert.ok(bundleData, 'HP OMEN PC build must be detected');
+    assert.strictEqual(bundleData.isPcBuild, true);
+    assert.strictEqual(bundleData.components.length, 7, 'Must extract core components and reject speed/interface sub-specs');
+
+    const cpu = bundleData.components.find(c => c.roleKey === 'cpu');
+    assert.strictEqual(cpu.cleanQuery, 'AMD Ryzen 5 8400F');
+
+    const gpu = bundleData.components.find(c => c.roleKey === 'gpu');
+    assert.strictEqual(gpu.cleanQuery, 'NVIDIA GeForce RTX 5060');
+
+    const ram = bundleData.components.find(c => c.roleKey === 'ram');
+    assert.strictEqual(ram.cleanQuery, '16GB DDR5 RAM');
+
+    const ssd = bundleData.components.find(c => c.roleKey === 'storage');
+    assert.strictEqual(ssd.cleanQuery, '1TB M.2 NVMe SSD');
+
+    const psu = bundleData.components.find(c => c.roleKey === 'psu');
+    assert.strictEqual(psu.cleanQuery, '500W Platinum');
+
+    const mobo = bundleData.components.find(c => c.roleKey === 'mobo');
+    assert.strictEqual(mobo.cleanQuery, 'AMD B650');
+});
+
+test('bundle: Verkkokauppa.com PC Cases (Blackstorm Artemis) reject false-positive bundle or PC build detection', () => {
+    const { exports: HT } = loadHintaTutka({ host: 'www.verkkokauppa.com' });
+
+    const mockCaseHtml = `
+        <title>Blackstorm Artemis FT1B ATX case with a panoramic window, black – Verkkokauppa.com</title>
+        <h3>Features</h3>
+        <ul>
+            <li>Case type: Dual Chamber ATX Mid-Tower</li>
+            <li>Motherboard support: ATX, Micro-ATX, Mini-ITX</li>
+            <li>Power supply support: ATX</li>
+            <li>Maximum CPU cooler height: 160 mm</li>
+            <li>Maximum graphics card length: 445 mm</li>
+            <li>Dimensions: 420 x 285 x 380 mm</li>
+        </ul>
+    `;
+
+    const info = { name: 'Blackstorm Artemis FT1B ATX case with a panoramic window, black', currentPrice: 89.99 };
+    const bundleData = HT.detectAndExtractBundleData(info, null, 89.99, mockCaseHtml);
+
+    assert.strictEqual(bundleData, null, 'Standalone PC case must return null and not trigger bundle or PC build detection');
+});
