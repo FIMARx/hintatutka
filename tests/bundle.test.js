@@ -1102,3 +1102,72 @@ test("bundle: Prebuilt PC title slash format fallback deconstructs CPU, RAM, SSD
     const gpu = bundleData.components.find(c => c.roleKey === 'gpu');
     assert.strictEqual(gpu.cleanQuery, 'NVIDIA GeForce RTX 5070');
 });
+
+test("bundle: Gigantti Lenovo LOQ 17IRR9 multi-attribute storage spec deconstruction and Intel B760 motherboard", () => {
+    const { exports: HT } = loadHintaTutka({ host: 'www.gigantti.fi' });
+
+    const mockHtml = `
+        <h1>Lenovo LOQ 17IRR9 i5-14/8/1TB/3050 pelitietokone</h1>
+        <dl class="specification-list">
+            <dt>Prosessorin malli</dt><dd>Intel Core i5-14400</dd>
+            <dt>Näytönohjaimen malli</dt><dd>NVIDIA GeForce RTX 3050</dd>
+            <dt>Asennettu RAM (GB)</dt><dd>8</dd>
+            <dt>Tallennustilan tyyppi</dt><dd>Sisäinen SSD-levy</dd>
+            <dt>Tallennusliitäntä</dt><dd>M.2 PCIe NVMe SSD</dd>
+            <dt>Tallennuskapasiteetti (GB)</dt><dd>1000</dd>
+            <dt>Piirisarja</dt><dd>Intel B760</dd>
+        </dl>
+    `;
+
+    const info = { name: 'Lenovo LOQ 17IRR9 i5-14/8/1TB/3050 pelitietokone', currentPrice: 1299.00 };
+    const bundleData = HT.detectAndExtractBundleData(info, null, 1299.00, mockHtml);
+
+    assert.ok(bundleData, 'Prebuilt PC must be detected');
+    assert.strictEqual(bundleData.isPcBuild, true);
+
+    // Verify storage components: exactly 1 storage drive (no duplicate Sisäinen SSD-levy or bare M.2 PCIe NVMe SSD)
+    const storageComponents = bundleData.components.filter(c => c.roleKey === 'storage');
+    assert.strictEqual(storageComponents.length, 1, 'Must merge multi-attribute storage into exactly 1 storage component');
+    assert.strictEqual(storageComponents[0].cleanQuery, '1TB M.2 NVMe SSD', 'Clean query must normalize to 1TB M.2 NVMe SSD');
+
+    // Verify CPU
+    const cpu = bundleData.components.find(c => c.roleKey === 'cpu');
+    assert.ok(cpu);
+    assert.strictEqual(cpu.cleanQuery, 'Intel Core i5-14400');
+
+    // Verify GPU
+    const gpu = bundleData.components.find(c => c.roleKey === 'gpu');
+    assert.ok(gpu);
+    assert.strictEqual(gpu.cleanQuery, 'NVIDIA GeForce RTX 3050');
+
+    // Verify RAM (unit parsed from key)
+    const ram = bundleData.components.find(c => c.roleKey === 'ram');
+    assert.ok(ram);
+    assert.strictEqual(ram.cleanQuery, '8GB RAM');
+
+    // Verify Motherboard
+    const mobo = bundleData.components.find(c => c.roleKey === 'mobo');
+    assert.ok(mobo);
+    assert.strictEqual(mobo.cleanQuery, 'Intel B760');
+});
+
+test("bundle: Gigantti multi-attribute storage spec without title capacity merges into valid capacity drive", () => {
+    const { exports: HT } = loadHintaTutka({ host: 'www.gigantti.fi' });
+
+    const mockHtml = `
+        <h1>Lenovo LOQ pelitietokone</h1>
+        <dl class="specification-list">
+            <dt>Tallennustilan tyyppi</dt><dd>Sisäinen SSD-levy</dd>
+            <dt>Tallennusliitäntä</dt><dd>M.2 PCIe NVMe SSD</dd>
+            <dt>Tallennuskapasiteetti (GB)</dt><dd>1000</dd>
+        </dl>
+    `;
+
+    const info = { name: 'Lenovo LOQ pelitietokone', currentPrice: 1099.00 };
+    const bundleData = HT.detectAndExtractBundleData(info, null, 1099.00, mockHtml);
+
+    assert.ok(bundleData);
+    const storageComponents = bundleData.components.filter(c => c.roleKey === 'storage');
+    assert.strictEqual(storageComponents.length, 1, 'Must have exactly 1 storage drive');
+    assert.strictEqual(storageComponents[0].cleanQuery, '1TB M.2 NVMe SSD');
+});

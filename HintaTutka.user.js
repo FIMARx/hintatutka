@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         HintaTutka
 // @namespace    https://github.com/FIMARx/hintatutka
-// @version      9.8.12
-// @description  Suomen älykkäin hintatutka (v9.8.12): Reaaliaikainen PC-komponenttihaku, Gigantti- & Power.fi-pelikoneiden tuki, välitön DIY-optimointi & 81 kauppaa
+// @version      9.8.13
+// @description  Suomen älykkäin hintatutka (v9.8.13): Reaaliaikainen PC-komponenttihaku, Gigantti- & Power.fi-pelikoneiden tuki, välitön DIY-optimointi & 81 kauppaa
 // @author       FIMARx
 // @icon         https://raw.githubusercontent.com/FIMARx/hintatutka/main/extension-mv3/icons/icon128.png
 // @homepageURL  https://github.com/FIMARx/hintatutka
@@ -150,7 +150,7 @@
     // =========================================================================
     // CONFIGURATION & THRESHOLDS
     // =========================================================================
-    const SCRIPT_VERSION = '9.8.12';
+    const SCRIPT_VERSION = '9.8.13';
     const BRAND_LOGO_SVG_MINI = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 58 58" width="15" height="15" style="flex-shrink:0;display:block;"><defs><linearGradient id="htMiniBg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#065f46"/><stop offset="100%" stop-color="#0f172a"/></linearGradient><linearGradient id="htMiniBolt" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#a7f3d0"/><stop offset="100%" stop-color="#10b981"/></linearGradient></defs><rect x="1.5" y="1.5" width="55" height="55" rx="14.5" fill="url(#htMiniBg)" stroke="#10b981" stroke-opacity="0.78" stroke-width="2.4"/><circle cx="29" cy="29" r="19.5" fill="none" stroke="#34d399" stroke-opacity="0.36" stroke-width="1.8" stroke-dasharray="4 3"/><path d="M32.5 11L18.5 31H29.5L25.5 47L40.5 26.5H29.5L32.5 11Z" fill="url(#htMiniBolt)"/></svg>`;
     const IS_MV3_EXTENSION = Boolean(
         globalThis.__HT_MV3_EXTENSION__ ||
@@ -2522,6 +2522,26 @@
                 .replace(/&euro;/gi, '€').replace(/&amp;/gi, '&').replace(/&quot;/gi, '"')
                 .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(dec));
 
+            let pendingStorageDesc = '';
+            let knownStorageCap = '';
+
+            let titleStorageCap = '';
+            const titleCapMatch = rawTitle.match(/\b(\d+(?:\.\d+)?)\s*(TB|GB|Tt|Gt)\b/i);
+            if (titleCapMatch) {
+                let u = titleCapMatch[2].toUpperCase().replace('TT', 'TB').replace('GT', 'GB');
+                let v = titleCapMatch[1];
+                if (v === '1000' && u === 'GB') { v = '1'; u = 'TB'; }
+                else if (v === '2000' && u === 'GB') { v = '2'; u = 'TB'; }
+                titleStorageCap = `${v}${u}`;
+            } else {
+                const slashNum = rawTitle.match(/\/(512|1000|1024|2000|2048)\b/);
+                if (slashNum) {
+                    if (slashNum[1] === '512') titleStorageCap = '512GB';
+                    else if (slashNum[1] === '1000' || slashNum[1] === '1024') titleStorageCap = '1TB';
+                    else if (slashNum[1] === '2000' || slashNum[1] === '2048') titleStorageCap = '2TB';
+                }
+            }
+
             const isSpecKey = (k) => {
                 const norm = decodeHtmlEntities(k).toLowerCase().trim();
                 // Reject non-component keys (support/compatibility/dimensions/slots/speeds/interfaces)
@@ -2533,23 +2553,83 @@
 
             const addCandidate = (rawKey, rawVal) => {
                 const cleanKey = decodeHtmlEntities(rawKey).trim();
-                const cleanVal = decodeHtmlEntities(rawVal).replace(/<[^>]+>/g, '').trim();
-                if (!cleanVal || cleanVal.length < 3 || seenNames.has(cleanVal.toLowerCase())) return;
+                let cleanVal = decodeHtmlEntities(rawVal).replace(/<[^>]+>/g, '').trim();
+                if (!cleanVal) return;
                 // Exclude status words or non-part values
                 if (/^(?:kyllä|ei|on|ei ole|-|none|yes|no|sisäinen|valinnainen|integroitu|ei sisällä|no drive included.*)$/i.test(cleanVal)) return;
 
+                // If cleanKey contains a unit in parentheses and cleanVal is purely numeric, attach unit
+                if (/^\d+[\s\d]*$/.test(cleanVal)) {
+                    const unitMatch = cleanKey.match(/\((GB|TB|Gt|Tt|watt|wattia|W|MHz)\)/i);
+                    if (unitMatch) {
+                        let u = unitMatch[1].toUpperCase();
+                        if (u === 'WATT' || u === 'WATTIA') u = 'W';
+                        cleanVal = `${cleanVal.replace(/\s+/g, '')} ${u}`;
+                    }
+                }
+
+                if (cleanVal.length < 2) return;
+
                 // Filter out storage expansion slots/connectors that don't specify drive capacity
-                if (/storage|tallennus|massamuisti/i.test(cleanKey) && !/\b\d+\s*(?:TB|GB|Tt|Gt)\b/i.test(cleanVal) && /\b(?:slots?|connectors?|liitännät|sata|pcie)\b/i.test(cleanVal)) {
+                if (/storage|tallennus|massamuisti/i.test(cleanKey) && !/\b\d+\s*(?:TB|GB|Tt|Gt)\b/i.test(cleanVal) && /\b(?:slots?|connectors?|vapaat?\s*paikat|vapaana)\b/i.test(cleanVal)) {
                     return;
                 }
 
                 const role = classifyComponentRole(cleanVal, cleanKey);
                 if (role.roleKey === 'part' && !isSpecKey(cleanKey)) return;
 
+                // Smart Storage handling & deduplication:
+                // Prebuilts often split storage across multiple attributes (type: 'Sisäinen SSD-levy', interface: 'M.2 PCIe NVMe', capacity: '1000 GB')
+                if (role.roleKey === 'storage') {
+                    const valCapMatch = cleanVal.match(/(\d+(?:\.\d+)?)\s*(TB|GB|Tt|Gt)\b/i);
+                    const cap = valCapMatch ? valCapMatch[0] : (titleStorageCap || knownStorageCap);
+
+                    if (!valCapMatch) {
+                        if (/\b(?:m\.2|nvme|pcie|ssd|hdd)\b/i.test(cleanVal)) {
+                            if (!pendingStorageDesc || /\b(?:m\.2|nvme)\b/i.test(cleanVal)) {
+                                pendingStorageDesc = cleanVal;
+                            }
+                        }
+                        if (cap) {
+                            cleanVal = `${cap} ${cleanVal}`;
+                        } else {
+                            return; // Do not create naked, unpriceable capacity-less storage cards
+                        }
+                    } else {
+                        knownStorageCap = valCapMatch[0];
+                        if (pendingStorageDesc && !/\b(?:m\.2|nvme)\b/i.test(cleanVal)) {
+                            cleanVal = `${cleanVal} ${pendingStorageDesc}`;
+                        }
+                    }
+
+                    const existingStorageIdx = components.findIndex(c => c.roleKey === 'storage');
+                    if (existingStorageIdx !== -1) {
+                        const existing = components[existingStorageIdx];
+                        const existingHasCap = /\b\d+\s*(?:TB|GB|Tt|Gt)\b/i.test(existing.name);
+                        const newHasBetterDesc = /\b(?:m\.2|nvme)\b/i.test(cleanVal) && !/\b(?:m\.2|nvme)\b/i.test(existing.name);
+
+                        if (!existingHasCap || newHasBetterDesc) {
+                            const newCleanQuery = cleanComponentQuery(cleanVal, 'storage');
+                            components[existingStorageIdx] = {
+                                ...role,
+                                name: cleanVal,
+                                cleanQuery: newCleanQuery,
+                                url: null,
+                                price: null,
+                                priceLabel: null
+                            };
+                            seenNames.add(cleanVal.toLowerCase());
+                        }
+                        return; // Deduplicate primary storage
+                    }
+                }
+
                 // Avoid duplicate primary roles (e.g. repeated RAM, Mobo chipset when full Mobo was found)
                 if (['cpu', 'mobo', 'gpu', 'cooler', 'case', 'psu', 'os'].includes(role.roleKey)) {
                     if (seenRoles.has(role.roleKey)) return;
                 }
+
+                if (seenNames.has(cleanVal.toLowerCase())) return;
 
                 seenNames.add(cleanVal.toLowerCase());
                 seenRoles.add(role.roleKey);
@@ -2885,7 +2965,7 @@
 
             // Task 2: Search Hinta.fi for market lowest price across all Finnish stores
             if (!comp.marketLowest) {
-                const hintaCacheKey = `hinta_comp_v9812_${comp.cleanQuery || comp.name}`;
+                const hintaCacheKey = `hinta_comp_v9813_${comp.cleanQuery || comp.name}`;
                 let hintaData = getCached(hintaCacheKey);
                 if (!hintaData || !hintaData.lowestPrice || Number(hintaData.lowestPrice) <= 0) {
                     hintaData = null;
@@ -2955,6 +3035,10 @@
                             if (!queriesToTry.includes(qBrandAmdChipset)) queriesToTry.push(qBrandAmdChipset);
                             const qBrandChipset = `${brand[0]} ${chipset[0]}`;
                             if (!queriesToTry.includes(qBrandChipset)) queriesToTry.push(qBrandChipset);
+                        } else if (chipset) {
+                            if (!queriesToTry.includes(chipset[0])) queriesToTry.push(chipset[0]);
+                            const qChipsetEmo = `${chipset[0]} emolevy`;
+                            if (!queriesToTry.includes(qChipsetEmo)) queriesToTry.push(qChipsetEmo);
                         }
                     }
                     if (comp.roleKey === 'cooler') {
