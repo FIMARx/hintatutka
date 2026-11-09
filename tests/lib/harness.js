@@ -55,6 +55,9 @@ globalThis.__HT_TEST_EXPORTS__ = {
     evaluatePriceVerdict,
     fetchProductHistory,
     buildDualChartSectionHtml,
+    detectCurrentStore,
+    detectProductCategory,
+    extractUnitPriceInfo,
     I18N
 };
 `;
@@ -178,8 +181,11 @@ export function loadHintaTutka(opts = {}) {
             visibilityState: 'hidden',
             readyState: 'complete',
             title: opts.pageTitle || 'HintaTutka Test',
-            body: { appendChild: () => {}, children: [], innerText: '', textContent: '', innerHTML: '' },
+            body: { appendChild: () => {}, children: [], innerText: '', textContent: '', innerHTML: '', querySelectorAll: () => [] },
             documentElement: {},
+            getElementById: () => null,
+            getElementsByTagName: () => [],
+            createElement: () => ({ setAttribute: () => {}, appendChild: () => {}, style: {} }),
             addEventListener: () => {},
             removeEventListener: () => {},
             querySelector: (sel) => (opts.document && typeof opts.document.querySelector === 'function' ? opts.document.querySelector(sel) : null),

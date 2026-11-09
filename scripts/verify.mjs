@@ -59,25 +59,31 @@ step('Guards, Byte-Parity & Version Sync', npm, ['run', 'test:guards']);
 // Step 2: Component Quality & Hardware Invariants
 step('Hardware Invariants & Quality Contracts', npm, ['run', 'test:invariants']);
 
-// Step 3: Real-World Prebuilt PC Fixtures
+// Step 3: 81-Store Structural & Selector Integrity Matrix
+step('81-Store Structural & CSS Selector Integrity Matrix', npm, ['run', 'test:stores']);
+
+// Step 4: Multi-Category Domain Contracts (Mobiles, Groceries, Sports, Furniture)
+step('Multi-Category Domain Archetype Contracts', npm, ['run', 'test:categories']);
+
+// Step 5: Real-World Prebuilt PC Fixtures
 step('Retail Prebuilt PC Fixture Snapshots', npm, ['run', 'test:fixtures']);
 
-// Step 4: End-to-End Component Priceability Contracts
+// Step 6: End-to-End Component Priceability Contracts
 step('End-to-End Component Priceability Contracts', npm, ['run', 'test:priceability']);
 
-// Step 5: Precision Matrix & Cross-Model Shields
+// Step 7: Precision Matrix & Cross-Model Shields
 step('Precision Matrix (iPhone, B850M, GPU, Storage)', npm, ['run', 'test:precision']);
 
-// Step 6: DOM Price Parsers & Finnish VAT Landed Cost
+// Step 8: DOM Price Parsers & Finnish VAT Landed Cost
 step('DOM Price Parsers, Thousands & ALV Landed Cost', npm, ['run', 'test:parsers']);
 
-// Step 7: Flip Arbitrage, Used Stats & Seasonal Forecast
+// Step 9: Flip Arbitrage, Used Stats & Seasonal Forecast
 step('Algorithms, Flip ROI & Seasonal Forecasting', npm, ['run', 'test:algorithms']);
 
-// Step 8: Cache Isolation & Stale Eviction
+// Step 10: Cache Isolation & Stale Eviction
 step('Cache Namespace Isolation & Stale Purge', npm, ['run', 'test:cache']);
 
-// Step 9: Real-time Live Store Canaries (skipped on --quick)
+// Step 11: Real-time Live Store Canaries (skipped on --quick)
 if (!quick) {
     step('Real-Time Live Store Query Verification', npm, ['run', 'test:realtime']);
 } else {
