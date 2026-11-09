@@ -14,6 +14,7 @@
 
 <p>
   <a href="#-quick-install--download-telemetry"><b>📦 Install &amp; Downloads</b></a> •
+  <a href="https://fimarx.github.io/hintatutka/"><b>🌾 Web Harvester Studio</b></a> •
   <a href="#-core-intelligence-engines-v90"><b>✨ v9.0 Engines</b></a> •
   <a href="#-architecture--shield-pipeline"><b>🏗️ Architecture</b></a> •
   <a href="#-supported-stores-81"><b>🏪 81 Stores</b></a> •
