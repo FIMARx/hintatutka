@@ -255,6 +255,9 @@ function harvestPriceElements(html) {
     const candidateSelectors = [];
     const discoveredPrices = [];
 
+    // Strip SVG tags to prevent SVG path decimals from being parsed as prices
+    const safeHtml = html.replace(/<svg[\s\S]*?<\/svg>/gi, ' ');
+
     // Currency pattern
     const priceNumberPattern = /([0-9\s\u00a0]+(?:[.,][0-9]{2})?|-)\s*(?:€|EUR|,-)/gi;
 
@@ -262,23 +265,34 @@ function harvestPriceElements(html) {
     const installmentRx = /(?:\/|\b)kk\b|erissä|luotto|osamaksu|palvelumaksu|toimitus\s+alkaen|\/month/i;
     const strikeRx = /<del|<s\b|line-through|text-decoration:\s*line-through|price--original|old-price|was-price|strikethrough/i;
 
-    // Pattern 1: data-qa / data-test / data-price attributes
-    const dataTestRx = /<([a-z0-9_-]+)[^>]*\b(data-(?:testid|test-id|qa|price|item-price|product-price|test))=["']([^"']+)["'][^>]*>([\s\S]*?)<\/\1>/gi;
+    // Pattern 1: Explicit data-price / data-product-price attributes
+    const dataTestRx = /<([a-z0-9_-]+)[^>]*\b(data-(?:price|product-price|item-price|amount))=["']([^"']+)["'][^>]*>([\s\S]*?)<\/\1>/gi;
     let m;
-    while ((m = dataTestRx.exec(html)) !== null) {
+    while ((m = dataTestRx.exec(safeHtml)) !== null) {
         const [_, tag, attr, val, inner] = m;
         if (installmentRx.test(inner) || strikeRx.test(inner)) continue;
-        const p = HT.parsePriceNumber(inner);
+        const p = HT.parsePriceNumber(val) || HT.parsePriceNumber(inner);
         if (p && p > 0.50) {
             const sel = `[${attr}="${val}"]`;
-            candidateSelectors.push({ selector: sel, price: p, specificity: 1, raw: inner.trim().slice(0, 40) });
+            candidateSelectors.push({ selector: sel, price: p, specificity: 1, raw: (val || inner).trim().slice(0, 40) });
+            discoveredPrices.push(p);
+        }
+    }
+
+    // Pattern 1b: Bare data-price attribute anywhere on element (Nettiauto, Power, etc.)
+    const dataPriceBareRx = /<[a-z0-9_-]+[^>]*\bdata-price=["']([^"']+)["'][^>]*>/gi;
+    while ((m = dataPriceBareRx.exec(safeHtml)) !== null) {
+        const val = m[1];
+        const p = HT.parsePriceNumber(val);
+        if (p && p > 0.50) {
+            candidateSelectors.push({ selector: '[data-price]', price: p, specificity: 1, raw: val });
             discoveredPrices.push(p);
         }
     }
 
     // Pattern 2: Custom semantic elements (e.g. <pwr-price>)
     const customElemRx = /<(pwr-price|product-price|price-tag)[^>]*>([\s\S]*?)<\/\1>/gi;
-    while ((m = customElemRx.exec(html)) !== null) {
+    while ((m = customElemRx.exec(safeHtml)) !== null) {
         const [_, tag, inner] = m;
         if (installmentRx.test(inner) || strikeRx.test(inner)) continue;
         const p = HT.parsePriceNumber(inner);
@@ -288,14 +302,15 @@ function harvestPriceElements(html) {
         }
     }
 
-    // Pattern 3: Semantic class names (e.g. class="product-price", class="price--pdp")
-    const classRx = /<([a-z0-9_-]+)[^>]*class=["']([^"']*(?:product-price|price--pdp|price__amount|final-price|pip-price|ssr-product-price)[^"']*)["'][^>]*>([\s\S]*?)<\/\1>/gi;
-    while ((m = classRx.exec(html)) !== null) {
+    // Pattern 3: Semantic class names (e.g. class="product-price", class="details-page-header__item-price-main")
+    const classRx = /<([a-z0-9_-]+)[^>]*class=["']([^"']*(?:details-page-header__item-price-main|car-price__current|product-price|price--pdp|price__amount|final-price|pip-price|ssr-product-price|vehicle-price__value|vehicle-price|car-price)[^"']*)["'][^>]*>([\s\S]*?)<\/\1>/gi;
+    while ((m = classRx.exec(safeHtml)) !== null) {
         const [_, tag, clsAttr, inner] = m;
         if (installmentRx.test(inner) || strikeRx.test(inner)) continue;
+        if (/(?:slider|related|recommend|promo|footer)/i.test(clsAttr)) continue;
         const p = HT.parsePriceNumber(inner);
         if (p && p > 0.50) {
-            const firstGoodClass = clsAttr.split(/\s+/).find(c => /(?:product-price|price--pdp|price__amount|final-price|pip-price)/i.test(c));
+            const firstGoodClass = clsAttr.split(/\s+/).find(c => /(?:details-page-header__item-price-main|car-price__current|product-price|price--pdp|price__amount|final-price|pip-price|vehicle-price)/i.test(c));
             const sel = firstGoodClass ? `.${firstGoodClass}` : `[class*="price" i]`;
             candidateSelectors.push({ selector: sel, price: p, specificity: 3, raw: inner.trim().slice(0, 40) });
             discoveredPrices.push(p);
@@ -304,9 +319,10 @@ function harvestPriceElements(html) {
 
     // Pattern 4: Generic class="price"
     const genericPriceRx = /<([a-z0-9_-]+)[^>]*class=["']([^"']*\bprice\b[^"']*)["'][^>]*>([\s\S]*?)<\/\1>/gi;
-    while ((m = genericPriceRx.exec(html)) !== null) {
+    while ((m = genericPriceRx.exec(safeHtml)) !== null) {
         const [_, tag, clsAttr, inner] = m;
         if (installmentRx.test(inner) || strikeRx.test(inner)) continue;
+        if (/(?:slider|related|recommend|promo|footer)/i.test(clsAttr)) continue;
         const p = HT.parsePriceNumber(inner);
         if (p && p > 0.50) {
             candidateSelectors.push({ selector: '.price', price: p, specificity: 4, raw: inner.trim().slice(0, 40) });
@@ -470,6 +486,31 @@ function harvestSpecificationsArchitecture(html) {
                 samplePairs: specs.length > 0 ? specs.slice(0, 5) : [{ key: 'JSON State', value: 'Hydrated React props with specifications' }]
             });
         } catch (_) {}
+    }
+
+    // Archetype 6: Div key-value paired boxes (Nettiauto vehicle-info-box, spec-box, etc.)
+    const boxMatches = [...html.matchAll(/<div[^>]*class=["'][^"']*(?:vehicle-info-box|spec-box|attribute-row|detail-row|car-spec)[^"']*["'][^>]*>([\s\S]*?)<\/div>\s*<\/div>/gi)];
+    if (boxMatches.length >= 2) {
+        const samplePairs = [];
+        for (const bm of boxMatches) {
+            const inner = bm[1].replace(/<svg[\s\S]*?<\/svg>/gi, ' ');
+            const subDivs = [...inner.matchAll(/<div[^>]*class=["'][^"']*["'][^>]*>([\s\S]*?)<\/div>/gi)];
+            if (subDivs.length >= 2) {
+                const k = subDivs[0][1].replace(/<[^>]+>/g, '').trim();
+                const v = subDivs[1][1].replace(/<[^>]+>/g, '').trim();
+                if (k && v && k.length < 50 && v.length < 80) {
+                    samplePairs.push({ key: k, value: v });
+                }
+            }
+        }
+        if (samplePairs.length >= 2) {
+            archetypes.push({
+                type: 'div-key-value-box',
+                containerSelector: '.vehicle-info-box, .spec-box',
+                count: samplePairs.length,
+                samplePairs: samplePairs.slice(0, 5)
+            });
+        }
     }
 
     return archetypes;

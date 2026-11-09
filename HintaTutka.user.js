@@ -2,7 +2,7 @@
 // @name         HintaTutka
 // @namespace    https://github.com/FIMARx/hintatutka
 // @version      9.8.13
-// @description  Suomen älykkäin hintatutka (v9.8.13): Reaaliaikainen PC-komponenttihaku, Gigantti- & Power.fi-pelikoneiden tuki, välitön DIY-optimointi & 81 kauppaa
+// @description  Suomen älykkäin hintatutka (v9.8.13): Reaaliaikainen PC-komponenttihaku, Gigantti- & Power.fi-pelikoneiden tuki, välitön DIY-optimointi & 86 kauppaa
 // @author       FIMARx
 // @icon         https://raw.githubusercontent.com/FIMARx/hintatutka/main/extension-mv3/icons/icon128.png
 // @homepageURL  https://github.com/FIMARx/hintatutka
@@ -303,7 +303,12 @@
         { match: 'clasohlson.com', name: 'Clas Ohlson', selectors: ['.product-price', '.price-value', '[class*="product-price" i]', '[class*="ProductPrice" i]', '[class*="price-box" i]', '[data-testid*="price" i]', '[itemprop="price"]', '.price'] },
         { match: 'jula.fi', name: 'Jula', selectors: ['[data-testid*="price"]', '.product-price', '[itemprop="price"]'] },
         { match: 'rusta.com', name: 'Rusta', selectors: ['.product-price', '[itemprop="price"]', '.price'] },
-        { match: 'stockmann.com', name: 'Stockmann', selectors: ['.price .value', '.product-price', '[itemprop="price"]'] }
+        { match: 'stockmann.com', name: 'Stockmann', selectors: ['.price .value', '.product-price', '[itemprop="price"]'] },
+        { match: 'nettiauto.com', name: 'Nettiauto', categoryHint: 'vehicles', selectors: ['.details-page-header__item-price-main', '[data-price]', '.details-page-header__item-price'] },
+        { match: 'kamux.fi', name: 'Kamux', categoryHint: 'vehicles', selectors: ['.car-price__current', '.car-price', '[data-price]'] },
+        { match: 'saka.fi', name: 'Saka', categoryHint: 'vehicles', selectors: ['.car-price', '.price-tag', '[data-price]'] },
+        { match: 'rinta-jouppi.com', name: 'Rinta-Jouppi', categoryHint: 'vehicles', selectors: ['.vehicle-price__value', '.vehicle-price', '[data-price]'] },
+        { match: 'autotie.fi', name: 'Autotie', categoryHint: 'vehicles', selectors: ['.vehicle-price', '.price', '[data-price]'] }
     ];
 
     // =========================================================================
@@ -1071,6 +1076,12 @@
         if (store?.categoryHint === 'grocery') return 'grocery';
         if (store?.categoryHint === 'furniture') return 'furniture';
         if (store?.categoryHint === 'sports') return 'sports';
+        if (store?.categoryHint === 'vehicles') return 'vehicles';
+
+        // Check for automotive / vehicles
+        if (/\b(vaihtoauto|henkilöauto|pakettiauto|ajoneuvo|moottoripyörä|mopoauto|mönkijä|traktori|vene|matkailuauto|asuntoauto|farmari|sedan|viistoperä|katumaasturi|suv|tila-auto|coupe|cabriolet|automaatti|manuaali|etuveto|takaveto|neliveto|diesel|bensiini|hybridi|plug-in|sähköauto|skoda|volkswagen|toyota|volvo|mercedes-benz|bmw|audi|ford|kia|hyundai|nissan|opel|peugeot|renault|seat|tesla|porsche|cupra|polestar|mazda|mitsubishi|subaru|honda|suzuki|citroen|dacia|fiat|alfa\s*romeo|lexus|land\s*rover|jaguar)\b/i.test(norm)) {
+            return 'vehicles';
+        }
 
         if (/\b(pipo|lippis|hattu|päähine|takki|kuoritakki|untuvatakki|toppatakki|hiihtotakki|juoksutakki|housut|kuorihousut|toppahousut|trikoot|kengät|juoksukengät|vaelluskengät|maastokengät|lenkkarit|sukset|sauvat|monot|rinkka|reppu|makuupussi|teltta|retkikeitin|sukellusmaski|pyörä|polkupyörä|kypärä|hanskat|rukkaset|lapaset|sormikkaat|beanie|cap|shell\s+jacket|down\s+jacket|jacket|pants|trousers|running\s+shoes|hiking\s+boots|shoes|boots|backpack|sleeping\s+bag|tent|helmet|gloves)\b/i.test(norm)) {
             return 'sports';
@@ -2785,16 +2796,19 @@
                     }
                 }
 
-                // Colon list regex (Jimm's GtG PCs, Verkkokauppa Blackstorm bullet lists, etc.)
+                // Colon list (Jimm's GtG PCs, Verkkokauppa Blackstorm bullet lists, etc.)
                 if (components.length === 0) {
-                    const specRegex = /(?:^|\n|<br\s*\/?>|<li[^>]*>|<p[^>]*>)\s*(?:<[^>]+>)*\s*([A-Za-zÄÖÅäöå&;()/\s-]+?)\s*(?:<[^>]+>)*\s*:\s*([^<\n\r]+)/gi;
-                    let sm;
-                    while ((sm = specRegex.exec(normalizedHtml)) !== null) {
-                        if (!sm[1] || !sm[2]) continue;
-                        const k = sm[1].replace(/<[^>]+>/g, '').trim();
-                        const v = sm[2].replace(/<[^>]+>/g, '').trim();
-                        if (isSpecKey(k)) {
-                            addCandidate(k, v);
+                    const rawChunks = normalizedHtml.split(/<br\s*\/?>|<\/?p[^>]*>|<\/?li[^>]*>|\n/i);
+                    for (const chunk of rawChunks) {
+                        const cleanLine = chunk.replace(/<[^>]+>/g, '').trim();
+                        if (cleanLine.length < 5 || cleanLine.length > 250) continue;
+                        const colonIdx = cleanLine.indexOf(':');
+                        if (colonIdx !== -1) {
+                            const k = cleanLine.substring(0, colonIdx).trim();
+                            const v = cleanLine.substring(colonIdx + 1).trim();
+                            if (isSpecKey(k)) {
+                                addCandidate(k, v);
+                            }
                         }
                     }
                 }

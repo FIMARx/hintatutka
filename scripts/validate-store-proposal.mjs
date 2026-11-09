@@ -138,7 +138,7 @@ export function validateStoreProposal(proposal) {
 
     // 3. Category Validation
     if (proposal.categoryHint) {
-        const allowed = new Set(['electronics', 'grocery', 'sports', 'furniture', 'used', 'refurbished']);
+        const allowed = new Set(['electronics', 'grocery', 'sports', 'furniture', 'used', 'refurbished', 'vehicles']);
         if (!allowed.has(proposal.categoryHint)) {
             warnings.push(`Unknown categoryHint "${proposal.categoryHint}", defaulting to "electronics".`);
         }

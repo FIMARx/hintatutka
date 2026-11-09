@@ -7,7 +7,7 @@
 [![Release](https://img.shields.io/github/v/release/FIMARx/hintatutka?style=for-the-badge&label=RELEASE&labelColor=0f172a&color=10b981)](https://github.com/FIMARx/hintatutka/releases/latest)
 [![Tests](https://img.shields.io/github/actions/workflow/status/FIMARx/hintatutka/test.yml?style=for-the-badge&label=TESTS&labelColor=0f172a&color=10b981)](https://github.com/FIMARx/hintatutka/actions/workflows/test.yml)
 [![Total Downloads](https://img.shields.io/github/downloads/FIMARx/hintatutka/total?style=for-the-badge&logo=github&label=TOTAL%20DOWNLOADS&labelColor=0f172a&color=38bdf8)](https://github.com/FIMARx/hintatutka/releases)
-[![Supported Stores](https://img.shields.io/badge/STORES-81%20SUPPORTED-f59e0b?style=for-the-badge&labelColor=0f172a)](#-supported-stores-81)
+[![Supported Stores](https://img.shields.io/badge/STORES-86%20SUPPORTED-f59e0b?style=for-the-badge&labelColor=0f172a)](#-supported-stores-86)
 [![Core Size](https://img.shields.io/github/size/FIMARx/hintatutka/HintaTutka.user.js?style=for-the-badge&label=CORE%20ENGINE&labelColor=0f172a&color=8b5cf6)](https://github.com/FIMARx/hintatutka/blob/main/HintaTutka.user.js)
 [![Stars](https://img.shields.io/github/stars/FIMARx/hintatutka?style=for-the-badge&logo=github&label=STARS&labelColor=0f172a&color=eab308)](https://github.com/FIMARx/hintatutka/stargazers)
 [![License](https://img.shields.io/badge/LICENSE-MIT-64748b?style=for-the-badge&labelColor=0f172a)](#-license)
@@ -17,7 +17,7 @@
   <a href="https://fimarx.github.io/hintatutka/"><b>🌾 Web Harvester Studio</b></a> •
   <a href="#-core-intelligence-engines-v90"><b>✨ v9.0 Engines</b></a> •
   <a href="#-architecture--shield-pipeline"><b>🏗️ Architecture</b></a> •
-  <a href="#-supported-stores-81"><b>🏪 81 Stores</b></a> •
+  <a href="#-supported-stores-86"><b>🏪 86 Stores</b></a> •
   <a href="#-suomenkielinen-pikaopas"><b>🇫🇮 Suomeksi</b></a> •
   <a href="#-changelog"><b>🗺️ Changelog</b></a>
 </p>
@@ -67,7 +67,7 @@
 | **🔥 Second-Hand Arbitrage & Flip Engine** | Aggregates **Tori.fi**, **Vinted.fi**, and **Huuto.net** in real time, filters `1 €` / accessory noise via **Tukey IQR**, and flags deeply underpriced listings with **`🔥 FLIP +XX €`** net-profit badges after deducting `~5%` (min `8 €`) shipping & buyer-protection fees. |
 | **🎭 Club Price Truth Benchmarking** | Audits loyalty deals (`MyPOWER`, `Klubihinta`, `HH PLUS`, `Asiakasomistaja`) against open non-club competitors and historical **ATL** — exposing **`🎭 ILLUSORY CLUB DEALS`** (where a rival matches/beats the club price without membership) and **`⚠️ INFLATED NORMAL PRICES`** (`> 8.5%` anchor markup) vs. **`🏆 TRUE CLUB MARKET LOWS`**. |
 | **🔮 Predictive Analytics & Seasonal AI** | Combines ATL/ATH range percentile, 6-interval linear regression price momentum (`📉 Falling`, `📈 Rising`, `➡️ Stable`), and the **Finnish Retail Seasonal Calendar** (*Tammiale, Spring/Autumn Hullut Päivät, Juhannus/Kesäale, Back to School, Singles' Day 11.11, Black Week / Black Friday, Välipäiväale*) to advise **`🟢 BUY NOW`** vs. **`⏳ WAIT X DAYS`**. |
-| **🛡️ Zero-CLS & Anti-Rate-Limit Shield** | Pre-reserves a fixed `27px` (`contain: layout style`) inline verdict slot before network calls for **0 layout shift**, defers execution in unopened background tabs (`visibilityState`), shares a 2-tier L1/L2 cache across all 81 domains, paces per-host requests with jitter + Cloudflare/`429` circuit breakers, and hot-patches store selectors from [`selectors.json`](selectors.json). |
+| **🛡️ Zero-CLS & Anti-Rate-Limit Shield** | Pre-reserves a fixed `27px` (`contain: layout style`) inline verdict slot before network calls for **0 layout shift**, defers execution in unopened background tabs (`visibilityState`), shares a 2-tier L1/L2 cache across all 86 domains, paces per-host requests with jitter + Cloudflare/`429` circuit breakers, and hot-patches store selectors from [`selectors.json`](selectors.json). |
 | **🛒 Smart Everyday Shopping Suite** | Includes **⭐ Price Watchlist** (no login), **🤝 Bargaining Advisor** (1-click polite counter-offer copy for Tori/Vinted/Huuto), **⚔️ 2-Column Side-by-Side Model Compare**, **💳 5% S-Bonus & K-Plussa Cashback**, **⚖️ Unit-Price Analyzer (`€/kg`, `€/l`)**, **🧠 Self-Learning Search Memory**, and **FI / EN** UI toggle. |
 
 ---
@@ -76,7 +76,7 @@
 
 ```mermaid
 flowchart LR
-    A["81 Storefronts<br/>(GS1 EAN + Split-Cent DOM)"] --> B["Zero-CLS 27px Badge<br/>+ Geometry Guard"]
+    A["86 Storefronts<br/>(GS1 EAN + Split-Cent DOM)"] --> B["Zero-CLS 27px Badge<br/>+ Geometry Guard"]
     A --> C{"L1 / L2 Shared<br/>Cross-Store Cache"}
     C -- "Cache Hit (0 ms)" --> G["Obsidian Glass UI<br/>& Inline Verdict"]
     C -- "Cache Miss" --> D["Polite Pacer +<br/>Circuit Breaker / Edge Proxy"]
@@ -120,7 +120,7 @@ npm run test:realtime
 
 ---
 
-## 🏪 Supported Stores (81)
+## 🏪 Supported Stores (86)
 
 HintaTutka works across all localized store paths (`/fi/`, `/en/`, `/sv/`) and Single-Page Applications (History API hooks):
 
@@ -129,6 +129,7 @@ HintaTutka works across all localized store paths (`/fi/`, `/en/`, `/sv/`) and S
 | **Electronics & Appliances** | Verkkokauppa.com, Gigantti, Power, Veikon Kone, Euronics, HobbyHall, Bigbox |
 | **PC Hardware & Gaming** | Jimm's, Proshop, Datatronic, Multitronic, Tietokonekauppa.fi, Data-Systems, Komponenttikauppa.fi, Cruzbroker, MaxGaming, VPD, Puolenkuun Pelit, Kasuplan, Mikromafia, TeraStore, DigiDreamer, CS Megastore |
 | **Refurbished Tech** | Swappie, Taitonetti, Fonum |
+| **Vehicles & Automotive** | Nettiauto, Kamux, Saka, Rinta-Jouppi, Autotie |
 | **Sports & Outdoor** | XXL, Intersport, Budget Sport, Varuste.net, Scandinavian Outdoor, Stadium, Partioaitta, Haglöfs |
 | **Price Aggregators & EU** | Hinta.fi, Hintaseuranta.fi, Amazon.de *(+ 1-click Geizhals.eu & Idealo.de)* |
 | **Pharmacy, Beauty & Pets** | Yliopiston Apteekki (`ya.fi`), Lyko, Kicks, Musti ja Mirri, Zooplus, Peten Koiratarvike |
@@ -142,7 +143,7 @@ HintaTutka works across all localized store paths (`/fi/`, `/en/`, `/sv/`) and S
 
 ## 🇫🇮 Suomenkielinen pikaopas
 
-**HintaTutka v9.0** tuo reaaliaikaisen hintavertailun, käytettyjen markkinat ja EU-hintalaskurin suoraan **81 verkkokaupan** tuotesivuille:
+**HintaTutka v9.0** tuo reaaliaikaisen hintavertailun, käytettyjen markkinat ja EU-hintalaskurin suoraan **86 verkkokaupan** tuotesivuille:
 
 - **Välitön hintatuomio sivulla (0-CLS)**: Näet suoraan kaupan hinnan vieressä, onko tuote **🟢 Edullinen**, **🟡 OK** vai **🔴 Kallis** (euro- ja prosenttierolla halvimpaan kauppaan).
 - **🇪🇺 EU / Saksa "Suomi-lisä" -laskuri**: Tarkistaa **Amazon.de**-hinnan, muuntaa Saksan `19 %` ALV:n Suomen `25,5 %` ALV-kantaan ja lisää Suomi-toimituksen (`0 €` yli `99 €` tilauksille, muuten `10,49 €`).

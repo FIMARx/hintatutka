@@ -153,3 +153,19 @@ test('categories: used & classifieds stores parsing and median ROI evaluation', 
     assert.strictEqual(arb.isFlipOpportunity, true, 'Buying at 60 € with 160 € market price is a flip opportunity');
     assert.ok(arb.netProfitEur >= 22, `Expected profit >= 22 €, got ${arb.netProfitEur}`);
 });
+
+test('categories: automotive & vehicles (Nettiauto, Kamux, Saka) cash price and specification contracts', () => {
+    const vehicleStores = ['nettiauto.com', 'kamux.fi', 'saka.fi', 'rinta-jouppi.com', 'autotie.fi'];
+    for (const domain of vehicleStores) {
+        const { exports: localHT } = loadHintaTutka({ host: `www.${domain}` });
+        const store = localHT.detectCurrentStore();
+        assert.ok(store, `Store ${domain} must be recognized`);
+        assert.strictEqual(store.categoryHint, 'vehicles', `Store ${domain} must have categoryHint: 'vehicles'`);
+        const cat = localHT.detectProductCategory('Skoda Karoq 2.0 TDI 115 Ambition DSG Farmari 2022', store);
+        assert.strictEqual(cat, 'vehicles', `Car title on ${domain} must resolve to 'vehicles' category`);
+    }
+
+    // Vehicle financing installment text rejection (e.g. "Rahoitus alk. 299 €/kk")
+    assert.strictEqual(HT.parsePriceNumber('25 900 €'), 25900.00);
+    assert.strictEqual(HT.parsePriceNumber('34 890 €'), 34890.00);
+});

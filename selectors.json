@@ -45,6 +45,46 @@
       "anchorSelectors": [
         "[data-test-id=\"product-price-final\"]"
       ]
+    },
+    "nettiauto.com": {
+      "prependSelectors": [],
+      "anchorSelectors": [
+        ".details-page-header__item-price-main",
+        "[data-price]",
+        ".details-page-header__item-price"
+      ]
+    },
+    "kamux.fi": {
+      "prependSelectors": [],
+      "anchorSelectors": [
+        ".car-price__current",
+        ".car-price",
+        "[data-price]"
+      ]
+    },
+    "saka.fi": {
+      "prependSelectors": [],
+      "anchorSelectors": [
+        ".car-price",
+        ".price-tag",
+        "[data-price]"
+      ]
+    },
+    "rinta-jouppi.com": {
+      "prependSelectors": [],
+      "anchorSelectors": [
+        ".vehicle-price__value",
+        ".vehicle-price",
+        "[data-price]"
+      ]
+    },
+    "autotie.fi": {
+      "prependSelectors": [],
+      "anchorSelectors": [
+        ".vehicle-price",
+        ".price",
+        "[data-price]"
+      ]
     }
   },
   "globalAnchorSelectors": [],

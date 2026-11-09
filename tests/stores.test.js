@@ -11,11 +11,11 @@ const ROOT_DIR = resolve(__dirname, '..');
 
 const { exports: HT } = loadHintaTutka();
 
-test('stores matrix: STORES contains all 81 supported stores with unique configs', () => {
+test('stores matrix: STORES contains all 86 supported stores with unique configs', () => {
     assert.strictEqual(
         HT.STORES.length,
-        81,
-        `Expected exactly 81 stores in STORES registry, found ${HT.STORES.length}`
+        86,
+        `Expected exactly 86 stores in STORES registry, found ${HT.STORES.length}`
     );
 
     const matchesSeen = new Set();
@@ -38,7 +38,7 @@ test('stores matrix: STORES contains all 81 supported stores with unique configs
 
         // Category hint validity if present
         if (store.categoryHint) {
-            const validHints = new Set(['sports', 'grocery', 'furniture']);
+            const validHints = new Set(['sports', 'grocery', 'furniture', 'vehicles']);
             assert.ok(
                 validHints.has(store.categoryHint),
                 `Store ${store.name} has invalid categoryHint "${store.categoryHint}". Valid hints: ${[...validHints].join(', ')}`
@@ -127,13 +127,14 @@ test('stores matrix: detectCurrentStore accurately matches every one of the 81 s
     }
 });
 
-test('stores matrix: all major category archetypes are represented in the 81-store registry', () => {
+test('stores matrix: all major category archetypes are represented in the 86-store registry', () => {
     const counts = {
         used: 0,
         refurbished: 0,
         grocery: 0,
         sports: 0,
         furniture: 0,
+        vehicles: 0,
         retailTech: 0
     };
 
@@ -143,6 +144,7 @@ test('stores matrix: all major category archetypes are represented in the 81-sto
         else if (store.categoryHint === 'grocery') counts.grocery++;
         else if (store.categoryHint === 'sports') counts.sports++;
         else if (store.categoryHint === 'furniture') counts.furniture++;
+        else if (store.categoryHint === 'vehicles') counts.vehicles++;
         else counts.retailTech++;
     }
 
@@ -151,5 +153,6 @@ test('stores matrix: all major category archetypes are represented in the 81-sto
     assert.strictEqual(counts.grocery, 8, 'Grocery / Consumables (S-kaupat, K-Ruoka, Fiksuruoka, etc.)');
     assert.strictEqual(counts.sports, 8, 'Sports / Apparel (XXL, Intersport, Stadium, Budget Sport, etc.)');
     assert.strictEqual(counts.furniture, 8, 'Furniture (IKEA, JYSK, Masku, Asko, Sotka, etc.)');
+    assert.strictEqual(counts.vehicles, 5, 'Vehicles / Automotive (Nettiauto, Kamux, Saka, Rinta-Jouppi, Autotie)');
     assert.strictEqual(counts.retailTech, 51, 'Electronics / Tech / Department retail');
 });
