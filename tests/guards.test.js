@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import vm from 'node:vm';
 
 const repoRoot = fileURLToPath(new URL('..', import.meta.url));
 
@@ -97,4 +98,17 @@ test('guard 5: no personal developer paths, usernames, or secrets leaked into re
         }
     }
     assert.deepEqual(violations, [], `Forbidden local paths leaked in: ${violations.join(', ')}`);
+});
+
+test('guard 6: docs/index.html exists and all embedded scripts compile cleanly with zero syntax errors', () => {
+    const docsPath = join(repoRoot, 'docs', 'index.html');
+    assert.ok(existsSync(docsPath), 'docs/index.html must exist');
+    const html = read(docsPath);
+    const scripts = [...html.matchAll(/<script(?:\s+[^>]*)?>([\s\S]*?)<\/script>/gi)];
+    assert.ok(scripts.length > 0, 'docs/index.html must contain at least one <script> tag');
+    for (const [_, code] of scripts) {
+        assert.doesNotThrow(() => {
+            new vm.Script(code);
+        }, 'Script in docs/index.html failed syntax compilation');
+    }
 });
