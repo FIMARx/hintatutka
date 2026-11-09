@@ -23,7 +23,8 @@
     "arbitrage": "node scripts/arbitrage-bot.mjs",
     "arbitrage:once": "node scripts/arbitrage-bot.mjs --once --mock",
     "suomi-lisa": "node scripts/suomi-lisa-tracker.mjs",
-    "heal:selectors": "node scripts/heal-selectors.mjs --fix"
+    "heal:selectors": "node scripts/heal-selectors.mjs --fix",
+    "harvest": "node scripts/harvest-store.mjs"
   },
   "repository": {
     "type": "git",
