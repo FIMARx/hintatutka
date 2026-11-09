@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         HintaTutka
 // @namespace    https://github.com/FIMARx/hintatutka
-// @version      9.8.13
-// @description  Suomen älykkäin hintatutka (v9.8.13): Reaaliaikainen PC-komponenttihaku, Gigantti- & Power.fi-pelikoneiden tuki, välitön DIY-optimointi & 86 kauppaa
+// @version      9.8.14
+// @description  Suomen älykkäin hintatutka (v9.8.14): Reaaliaikainen PC-komponenttihaku, Gigantti- & Power.fi-pelikoneiden tuki, välitön DIY-optimointi & 86 kauppaa
 // @author       FIMARx
 // @icon         https://raw.githubusercontent.com/FIMARx/hintatutka/main/extension-mv3/icons/icon128.png
 // @homepageURL  https://github.com/FIMARx/hintatutka
@@ -150,7 +150,7 @@
     // =========================================================================
     // CONFIGURATION & THRESHOLDS
     // =========================================================================
-    const SCRIPT_VERSION = '9.8.13';
+    const SCRIPT_VERSION = '9.8.14';
     const BRAND_LOGO_SVG_MINI = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 58 58" width="15" height="15" style="flex-shrink:0;display:block;"><defs><linearGradient id="htMiniBg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#065f46"/><stop offset="100%" stop-color="#0f172a"/></linearGradient><linearGradient id="htMiniBolt" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#a7f3d0"/><stop offset="100%" stop-color="#10b981"/></linearGradient></defs><rect x="1.5" y="1.5" width="55" height="55" rx="14.5" fill="url(#htMiniBg)" stroke="#10b981" stroke-opacity="0.78" stroke-width="2.4"/><circle cx="29" cy="29" r="19.5" fill="none" stroke="#34d399" stroke-opacity="0.36" stroke-width="1.8" stroke-dasharray="4 3"/><path d="M32.5 11L18.5 31H29.5L25.5 47L40.5 26.5H29.5L32.5 11Z" fill="url(#htMiniBolt)"/></svg>`;
     const IS_MV3_EXTENSION = Boolean(
         globalThis.__HT_MV3_EXTENSION__ ||
@@ -2979,7 +2979,7 @@
 
             // Task 2: Search Hinta.fi for market lowest price across all Finnish stores
             if (!comp.marketLowest) {
-                const hintaCacheKey = `hinta_comp_v9813_${comp.cleanQuery || comp.name}`;
+                const hintaCacheKey = `hinta_comp_v9814_${comp.cleanQuery || comp.name}`;
                 let hintaData = getCached(hintaCacheKey);
                 if (!hintaData || !hintaData.lowestPrice || Number(hintaData.lowestPrice) <= 0) {
                     hintaData = null;
