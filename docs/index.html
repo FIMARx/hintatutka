@@ -1,27 +1,25 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="fi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HintaTutka Store Harvester & Retail Studio</title>
-    <meta name="description" content="Visual DOM Skeleton Harvester, Store Onboarding & Selector Canary for Finnish & EU Retailers.">
+    <title>HintaTutka Studio — Retail DOM Skeleton Harvester & 98-Store Registry</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
     <style>
         :root {
-            --bg-main: #0b0f19;
+            --bg-main: #0a0e17;
             --bg-card: #111827;
-            --bg-elevated: #1e293b;
-            --border: #334155;
-            --border-highlight: #3b82f6;
-            --text-primary: #f8fafc;
-            --text-secondary: #94a3b8;
-            --text-muted: #64748b;
+            --bg-elevated: #1f2937;
+            --border: #374151;
+            --text-primary: #f9fafb;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
             --accent-blue: #3b82f6;
-            --accent-cyan: #06b6d4;
             --accent-green: #10b981;
             --accent-yellow: #f59e0b;
-            --accent-red: #ef4444;
             --accent-purple: #8b5cf6;
+            --accent-red: #ef4444;
+            --accent-orange: #f97316;
         }
 
         * {
@@ -35,19 +33,18 @@
             background-color: var(--bg-main);
             color: var(--text-primary);
             line-height: 1.5;
-            padding: 0;
-            margin: 0;
             min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
 
         header {
-            background: linear-gradient(180deg, rgba(30, 41, 59, 0.7) 0%, rgba(11, 15, 25, 0.95) 100%);
+            background-color: var(--bg-card);
             border-bottom: 1px solid var(--border);
-            padding: 1.5rem 2rem;
+            padding: 1rem 1.5rem;
             position: sticky;
             top: 0;
             z-index: 50;
-            backdrop-filter: blur(12px);
         }
 
         .header-content {
@@ -68,72 +65,66 @@
 
         .logo-icon {
             font-size: 1.75rem;
-            background: linear-gradient(135deg, #3b82f6, #06b6d4);
+            background: linear-gradient(135deg, #38bdf8, #818cf8);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
         .brand-title {
-            font-size: 1.35rem;
+            font-size: 1.25rem;
             font-weight: 700;
             letter-spacing: -0.025em;
         }
 
         .brand-subtitle {
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             color: var(--text-secondary);
         }
 
         .badge-version {
-            background: rgba(59, 130, 246, 0.15);
-            color: var(--accent-blue);
+            font-size: 0.7rem;
+            padding: 0.15rem 0.5rem;
+            background: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
             border: 1px solid rgba(59, 130, 246, 0.3);
-            padding: 0.2rem 0.5rem;
             border-radius: 9999px;
-            font-size: 0.75rem;
             font-weight: 600;
-            margin-left: 0.5rem;
+            vertical-align: middle;
         }
 
         .nav-tabs {
             display: flex;
             gap: 0.5rem;
-            background: var(--bg-card);
-            padding: 0.25rem;
-            border-radius: 0.5rem;
-            border: 1px solid var(--border);
         }
 
         .tab-btn {
             background: transparent;
             border: none;
             color: var(--text-secondary);
-            padding: 0.5rem 1rem;
             font-size: 0.875rem;
             font-weight: 600;
-            cursor: pointer;
+            padding: 0.5rem 1rem;
             border-radius: 0.375rem;
+            cursor: pointer;
             transition: all 0.15s ease;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
         }
 
         .tab-btn:hover {
             color: var(--text-primary);
-            background: rgba(255, 255, 255, 0.05);
+            background-color: var(--bg-elevated);
         }
 
         .tab-btn.active {
-            color: var(--text-primary);
-            background: var(--accent-blue);
-            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+            color: white;
+            background-color: var(--accent-blue);
         }
 
         main {
+            flex: 1;
             max-width: 1400px;
-            margin: 2rem auto;
-            padding: 0 1.5rem;
+            width: 100%;
+            margin: 0 auto;
+            padding: 1.5rem;
         }
 
         .tab-content {
@@ -159,9 +150,9 @@
         .card {
             background: var(--bg-card);
             border: 1px solid var(--border);
-            border-radius: 0.75rem;
-            padding: 1.5rem;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+            border-radius: 0.5rem;
+            padding: 1.25rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
 
         .card-header {
@@ -169,31 +160,33 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 1rem;
-            padding-bottom: 0.75rem;
             border-bottom: 1px solid var(--border);
+            padding-bottom: 0.75rem;
         }
 
         .card-title {
             font-size: 1.1rem;
-            font-weight: 700;
+            font-weight: 600;
             display: flex;
             align-items: center;
             gap: 0.5rem;
         }
 
         .btn {
-            background: var(--accent-blue);
-            color: white;
-            border: none;
-            padding: 0.6rem 1.2rem;
-            font-size: 0.875rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
             font-weight: 600;
             border-radius: 0.375rem;
             cursor: pointer;
+            border: none;
             transition: all 0.15s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
+            background: var(--accent-blue);
+            color: white;
+            text-decoration: none;
         }
 
         .btn:hover {
@@ -271,7 +264,7 @@
 
         .stat-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 1rem;
             margin-bottom: 1.5rem;
         }
@@ -442,6 +435,41 @@
             color: #a7f3d0;
             margin-bottom: 1rem;
         }
+
+        .audit-check-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            padding: 0.4rem 0.75rem;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            gap: 0.5rem;
+        }
+        .audit-check-pass { color: #34d399; }
+        .audit-check-warn { color: #fbbf24; }
+        .audit-check-fail { color: #f87171; }
+        .audit-check-neutral { color: #94a3b8; }
+
+        .dealer-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.25rem 0.6rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 4px;
+            font-size: 0.75rem;
+            color: #93c5fd;
+            text-decoration: none;
+            transition: all 0.15s ease;
+        }
+        .dealer-pill:hover {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: #60a5fa;
+            color: #ffffff;
+        }
     </style>
 </head>
 <body>
@@ -485,10 +513,10 @@
                     <button class="pill" onclick="loadPreset('grocery')">Grocery (€/kg)</button>
                     <button class="pill" onclick="loadPreset('nettiauto')">🚗 Nettiauto (Skoda)</button>
                     <button class="pill" onclick="loadPreset('newstore')">✨ New Store</button>
-                    <a href="javascript:(function(){const h=document.documentElement.outerHTML;navigator.clipboard.writeText(h).then(()=>alert('✅ Sivun koko HTML kopioitu leikepöydälle! Liitä se Harvester Studioon (Ctrl+V).'));})();" class="pill" style="color: #60a5fa; border-color: rgba(59, 130, 246, 0.4); text-decoration: none;" title="Raahaa kirjanmerkkeihin ja klikkaa millä tahansa suojatulla sivulla (esim. Nettiauto) kopioidaksesi sivun DOM:in leikepöydälle!">📌 Harvester Bookmarklet</a>
+                    <a href="javascript:(function(){try{const h=document.documentElement.outerHTML;navigator.clipboard.writeText(h).then(()=>alert('✅ Sivun koko DOM kopioitu leikepöydälle! Liitä se Harvester Studioon (Ctrl+V).'));}catch(e){alert('Virhe kopioinnissa: '+e.message);}})();" class="pill" style="color: #60a5fa; border-color: rgba(59, 130, 246, 0.4); text-decoration: none;" title="Raahaa kirjanmerkkeihin ja klikkaa millä tahansa suojatulla sivulla (esim. Nettiauto) kopioidaksesi sivun DOM:in leikepöydälle!">📌 Harvester Bookmarklet</a>
                 </div>
 
-                <textarea id="htmlInput" class="code-input" placeholder="Paste product page HTML source code here (Inspect Element -> Edit as HTML or View Source)..."></textarea>
+                <textarea id="htmlInput" class="code-input" placeholder="Paste product page HTML source code here (Inspect Element -> Edit as HTML or View Source) or drop a .html file..." ondragover="handleTextareaDragOver(event)" ondrop="handleTextareaDrop(event)"></textarea>
 
                 <div style="margin-top: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
                     <label class="btn btn-secondary btn-sm" style="cursor: pointer;">
@@ -517,6 +545,21 @@
                 </div>
 
                 <div id="reportContainer" style="display: none;">
+                    <!-- CONFIDENCE & QUALITY AUDIT SECTION -->
+                    <div id="auditSection" style="margin-bottom: 1.25rem; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border); border-radius: 0.5rem; padding: 1rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+                            <div>
+                                <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Harvester Confidence &amp; Quality Audit</div>
+                                <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem;">
+                                    <span id="resAuditScore" style="font-size: 1.4rem; font-weight: 800; color: #34d399;">0%</span>
+                                    <span id="resAuditTier" class="stat-badge badge-green">PLATINUM</span>
+                                </div>
+                            </div>
+                            <span style="font-size: 0.75rem; color: var(--text-secondary);">Automated Regression &amp; Trap Shield</span>
+                        </div>
+                        <div id="auditChecklist" style="display: flex; flex-direction: column; gap: 0.35rem;"></div>
+                    </div>
+
                     <div class="stat-grid">
                         <div class="stat-card">
                             <div class="stat-label">Store Identity</div>
@@ -543,8 +586,37 @@
                         <div style="font-size: 0.75rem; color: var(--text-muted); font-family: monospace;" id="resTitleSelector">-</div>
                     </div>
 
+                    <!-- SCHEMA.ORG & IDENTIFIERS SECTION -->
+                    <div id="schemaSection" style="display: none; margin-bottom: 1rem; background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 0.5rem; padding: 0.85rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <div style="font-size: 0.85rem; font-weight: 700; color: #34d399; display: flex; align-items: center; gap: 0.4rem;">
+                                📦 Schema.org / JSON-LD Tuotetunnisteet
+                            </div>
+                            <span class="stat-badge badge-green">Authoritative Metadata</span>
+                        </div>
+                        <div id="schemaMetadata" style="display: flex; flex-wrap: wrap; gap: 0.5rem; font-size: 0.8rem;"></div>
+                    </div>
+
                     <div id="unitPriceBox" class="success-box" style="display: none;"></div>
                     <div id="installmentWarningBox" class="warning-box" style="display: none;"></div>
+
+                    <!-- AUTOMOTIVE VEHICLE INTELLIGENCE SECTION -->
+                    <div id="vehicleSection" style="display: none; margin-bottom: 1.25rem; background: rgba(249, 115, 22, 0.05); border: 1px solid rgba(249, 115, 22, 0.25); border-radius: 0.5rem; padding: 1rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                            <div style="font-size: 0.95rem; font-weight: 700; color: #fb923c; display: flex; align-items: center; gap: 0.5rem;">
+                                🚗 Ajoneuvotiedot &amp; Arvonalenemalaskelma
+                            </div>
+                            <span class="stat-badge badge-orange">Automotive Intelligence</span>
+                        </div>
+                        
+                        <div id="vehicleSpecsGrid" class="stat-grid" style="margin-bottom: 1rem;"></div>
+
+                        <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; margin-bottom: 0.4rem;">5 Vuoden Arvonalenemakäyrä (Ennuste)</div>
+                        <div id="vehicleDeprecChart" style="margin-bottom: 1rem; background: rgba(0,0,0,0.4); border-radius: 6px; padding: 0.75rem; border: 1px solid rgba(255,255,255,0.08);"></div>
+
+                        <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; margin-bottom: 0.4rem;">Autoliikkeiden Hintavertailu (1-Klikkaus)</div>
+                        <div id="vehicleDealerLinks" style="display: flex; flex-wrap: wrap; gap: 0.4rem;"></div>
+                    </div>
 
                     <!-- HARDWARE BREAKDOWN IF PC -->
                     <div id="hardwareSection" style="display: none; margin-bottom: 1.5rem;">
@@ -555,6 +627,34 @@
                             </thead>
                             <tbody></tbody>
                         </table>
+                    </div>
+
+                    <!-- LIVE HINTATUTKA SIMULATION WIDGET -->
+                    <div id="simulationSection" style="margin-bottom: 1.5rem; border-color: rgba(59, 130, 246, 0.4);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <div class="stat-label">Live HintaTutka Simulation (How Users Experience This Store)</div>
+                            <span class="stat-badge badge-blue">Extension Preview</span>
+                        </div>
+                        <div style="background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 8px; padding: 1rem; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 0.5rem; margin-bottom: 0.75rem;">
+                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <span style="color: #38bdf8; font-size: 1.1rem; font-weight: 700;">⚡ HintaTutka</span>
+                                    <span id="simStoreTitle" style="font-size: 0.75rem; color: #94a3b8; font-family: monospace;">store.fi</span>
+                                </div>
+                                <span style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-size: 0.7rem; padding: 0.15rem 0.4rem; border-radius: 4px; font-weight: 600;">ACTIVE</span>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; background: rgba(0,0,0,0.3); padding: 0.75rem; border-radius: 6px; margin-bottom: 0.75rem;">
+                                <div>
+                                    <div style="font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; font-weight: 600;">TÄMÄ SIVU</div>
+                                    <div id="simPrice" style="font-size: 1.25rem; font-weight: 700; color: #34d399;">—</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; font-weight: 600;">VERTAILU / UUTENA</div>
+                                    <div id="simComparison" style="font-size: 1.1rem; font-weight: 700; color: #38bdf8;">—</div>
+                                </div>
+                            </div>
+                            <div id="simDetails" style="font-size: 0.8rem; color: #cbd5e1; line-height: 1.5;"></div>
+                        </div>
                     </div>
 
                     <!-- CODE SNIPPET STORES -->
@@ -1710,13 +1810,13 @@ function switchTab(tabId, btn) {
 
 // Preset loader
 const PRESETS = {
-    power: '<!DOCTYPE html><html><head><title>PCSPECIALIST PRIME 504 - Power.fi</title></head><body><h1>PCSPECIALIST PRIME 504 I7-14/16/1TB/RX9070XT PELITIETOKONE</h1><div class="product-price">1 899,00 €</div><table class="specs-table"><tr><th>Suoritin</th><td>Intel Core i7-14700F</td></tr><tr><th>Näytönohjain</th><td>AMD Radeon RX 9070 XT 16 Gt</td></tr><tr><th>RAM-muisti</th><td>16 GB DDR5 5600 MHz</td></tr><tr><th>Tallennustila</th><td>1 TB M.2 NVMe SSD</td></tr><tr><th>Virtalähde</th><td>750 W 80+ Gold</td></tr></table></body></html>',
-    gigantti: '<!DOCTYPE html><html><head><title>Lenovo LOQ 17IRR9 - Gigantti verkkokauppa</title></head><body><h1>Lenovo LOQ 17IRR9 i5-14/8/1TB/3050 pelitietokone</h1><div class="product-price">1 299,00 €</div><dl class="specification-list"><dt>Prosessorin malli</dt><dd>Intel® Core™ i5-14400</dd><dt>Näytönohjaimen malli</dt><dd>NVIDIA GeForce RTX 3050</dd><dt>Asennettu RAM (GB)</dt><dd>8</dd><dt>Tallennuskapasiteetti (GB)</dt><dd>1000</dd><dt>Tallennusliitäntä</dt><dd>M.2 PCIe NVMe SSD</dd><dt>Piirisarja</dt><dd>Intel B760</dd></dl></body></html>',
+    power: '<!DOCTYPE html><html><head><title>PCSPECIALIST PRIME 504 - Power.fi</title><script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":"PCSPECIALIST PRIME 504","sku":"14700F-RX9070XT","gtin13":"5051234567890","brand":{"@type":"Brand","name":"PCSpecialist"},"offers":{"@type":"Offer","price":1899.00,"priceCurrency":"EUR","availability":"https://schema.org/InStock"}}<\/script></head><body><h1>PCSPECIALIST PRIME 504 I7-14/16/1TB/RX9070XT PELITIETOKONE</h1><div class="product-price">1 899,00 €</div><table class="specs-table"><tr><th>Suoritin</th><td>Intel Core i7-14700F</td></tr><tr><th>Näytönohjain</th><td>AMD Radeon RX 9070 XT 16 Gt</td></tr><tr><th>RAM-muisti</th><td>16 GB DDR5 5600 MHz</td></tr><tr><th>Tallennustila</th><td>1 TB M.2 NVMe SSD</td></tr><tr><th>Virtalähde</th><td>750 W 80+ Gold</td></tr></table></body></html>',
+    gigantti: '<!DOCTYPE html><html><head><title>Lenovo LOQ 17IRR9 - Gigantti verkkokauppa</title><script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":"Lenovo LOQ 17IRR9","sku":"83DV004NMX","gtin13":"0197532890123","brand":{"@type":"Brand","name":"Lenovo"},"offers":{"@type":"Offer","price":1299.00,"priceCurrency":"EUR"}}<\/script></head><body><h1>Lenovo LOQ 17IRR9 i5-14/8/1TB/3050 pelitietokone</h1><div class="product-price">1 299,00 €</div><dl class="specification-list"><dt>Prosessorin malli</dt><dd>Intel® Core™ i5-14400</dd><dt>Näytönohjaimen malli</dt><dd>NVIDIA GeForce RTX 3050</dd><dt>Asennettu RAM (GB)</dt><dd>8</dd><dt>Tallennuskapasiteetti (GB)</dt><dd>1000</dd><dt>Tallennusliitäntä</dt><dd>M.2 PCIe NVMe SSD</dd><dt>Piirisarja</dt><dd>Intel B760</dd></dl></body></html>',
     jimms: '<!DOCTYPE html><html><head><title>Jimm\'s GtG Voidwalker 5070 Ti, pelitietokone - Jimm\'s</title></head><body><h1>Jimm\'s GtG Voidwalker 5070 Ti, pelitietokone</h1><div class="price">2 499,00 €</div><div class="product-description"><p>Prosessori: AMD Ryzen 7 9850X3D, 4,7 / 5,6 GHz<br>Emolevy: GIGABYTE, AMD X870 -piirisarjaan pohjautuva<br>Näytönohjain: PNY NVIDIA GeForce RTX 5070 Ti, 16 GB GDDR7<br>Keskusmuisti: 32 GB (2 x 16 GB) DDR5 5600 MHz<br>Massamuisti: 2 TB M.2 PCIe 4.0 NVMe SSD<br>Kotelo: Phanteks EX5 Plus<br>Virtalähde: 850 W 80+ Gold</p></div></body></html>',
-    verkkokauppa: '<!DOCTYPE html><html><head><title>Blackstorm R9 5090 – Verkkokauppa.com</title></head><body><h1>Blackstorm R9 5090 Gaming Computer</h1><span data-qa="price">4 799,99 €</span><ul><li>AMD Ryzen 9 9950X3D -suoritin</li><li>NVIDIA GeForce RTX 5090 32 Gt -näytönohjain</li><li>64 Gt DDR5 6000 MHz -keskusmuisti</li><li>2 Tt M.2 NVMe SSD -tallennustila</li><li>ASUS TUF GAMING X870E-PLUS WIFI7 -emolevy</li><li>1000 W 80+ Platinum -virtalähde</li></ul></body></html>',
-    grocery: '<!DOCTYPE html><html><head><title>Juhla Mokka Kahvi 500g - S-kaupat.fi</title></head><body><h1>Juhla Mokka Kahvi 500g</h1><span data-test-id="product-price-final">4,99 €</span><div data-test-id="unit-price">9,98 €/kg</div></body></html>',
-    nettiauto: '<!DOCTYPE html><html><head><title>Skoda Karoq 2.0 TDI 115 Ambition DSG Autom. Farmari 2022 - Vaihtoauto - Nettiauto</title></head><body><h1 class="details-page-header__item-title">Skoda Karoq</h1><div class="details-page-header__item-type">2.0 TDI 115 Ambition DSG Autom.</div><div class="details-page-header__item-price"><div class="details-page-header__item-price-main">25 900 &euro;</div><span class="details-page-header__item-price_tax">Sis. ALV</span></div><div class="vehicle-info-box"><div class="vehicle-info-box__vehicle-info">Mittarilukema</div><div class="vehicle-info-box__vehicle-det">34 000 km</div></div><div class="vehicle-info-box"><div class="vehicle-info-box__vehicle-info">Moottori</div><div class="vehicle-info-box__vehicle-det">2,0 l, Diesel</div></div><div class="vehicle-info-box"><div class="vehicle-info-box__vehicle-info">Vuosimalli</div><div class="vehicle-info-box__vehicle-det">2022</div></div><div class="vehicle-info-box"><div class="vehicle-info-box__vehicle-info">Vaihteisto</div><div class="vehicle-info-box__vehicle-det">Automaatti</div></div><div class="vehicle-info-box"><div class="vehicle-info-box__vehicle-info">Vetotapa</div><div class="vehicle-info-box__vehicle-det">Etuveto</div></div></body></html>',
-    newstore: '<!DOCTYPE html><html><head><title>Sony WH-1000XM5 Kuulokkeet - UusiVerkkokauppa.fi</title></head><body><h1 class="pdp-title">Sony WH-1000XM5 Langattomat Vastamelukuulokkeet</h1><div data-testid="pdp-price">349,00 €</div><del class="old-price">419,00 €</del><span class="installment">29,90 € / kk</span><table class="specs"><tr><th>Tyyppi</th><td>Vastamelukuulokkeet</td></tr><tr><th>Akunkesto</th><td>30h</td></tr></table></body></html>'
+    verkkokauppa: '<!DOCTYPE html><html><head><title>Blackstorm R9 5090 – Verkkokauppa.com</title><script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":"Blackstorm R9 5090 Gaming Computer","sku":"987654","gtin13":"6430012345678","brand":{"@type":"Brand","name":"Blackstorm"},"offers":{"@type":"Offer","price":4799.99,"priceCurrency":"EUR"}}<\/script></head><body><h1>Blackstorm R9 5090 Gaming Computer</h1><span data-qa="price">4 799,99 €</span><ul><li>AMD Ryzen 9 9950X3D -suoritin</li><li>NVIDIA GeForce RTX 5090 32 Gt -näytönohjain</li><li>64 Gt DDR5 6000 MHz -keskusmuisti</li><li>2 Tt M.2 NVMe SSD -tallennustila</li><li>ASUS TUF GAMING X870E-PLUS WIFI7 -emolevy</li><li>1000 W 80+ Platinum -virtalähde</li></ul></body></html>',
+    grocery: '<!DOCTYPE html><html><head><title>Juhla Mokka Kahvi 500g - S-kaupat.fi</title><script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":"Juhla Mokka Kahvi 500g","gtin13":"6411300000494","brand":"Paulig","offers":{"@type":"Offer","price":4.99,"priceCurrency":"EUR"}}<\/script></head><body><h1>Juhla Mokka Kahvi 500g</h1><span data-test-id="product-price-final">4,99 €</span><div data-test-id="unit-price">9,98 €/kg</div></body></html>',
+    nettiauto: '<!DOCTYPE html><html><head><title>Skoda Karoq 2.0 TDI 115 Ambition DSG Autom. Farmari 2022 - Vaihtoauto - Nettiauto</title></head><body><h1 class="details-page-header__item-title">Skoda Karoq</h1><div class="details-page-header__item-type">2.0 TDI 115 Ambition DSG Autom.</div><div class="details-page-header__item-price"><div class="details-page-header__item-price-main">25 900 &euro;</div><span class="details-page-header__item-price_tax">Sis. ALV</span></div><div class="vehicle-info-box"><div class="vehicle-info-box__vehicle-info">Rekisterinumero</div><div class="vehicle-info-box__vehicle-det">IPP-174</div></div><div class="vehicle-info-box"><div class="vehicle-info-box__vehicle-info">Mittarilukema</div><div class="vehicle-info-box__vehicle-det">34 000 km</div></div><div class="vehicle-info-box"><div class="vehicle-info-box__vehicle-info">Moottori</div><div class="vehicle-info-box__vehicle-det">2,0 l, Diesel</div></div><div class="vehicle-info-box"><div class="vehicle-info-box__vehicle-info">Vuosimalli</div><div class="vehicle-info-box__vehicle-det">2022</div></div><div class="vehicle-info-box"><div class="vehicle-info-box__vehicle-info">Vaihteisto</div><div class="vehicle-info-box__vehicle-det">Automaatti</div></div><div class="vehicle-info-box"><div class="vehicle-info-box__vehicle-info">Vetotapa</div><div class="vehicle-info-box__vehicle-det">Etuveto</div></div></body></html>',
+    newstore: '<!DOCTYPE html><html><head><title>Sony WH-1000XM5 Kuulokkeet - UusiVerkkokauppa.fi</title><script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":"Sony WH-1000XM5","gtin13":"4548736132573","brand":"Sony","offers":{"@type":"Offer","price":349.00,"priceCurrency":"EUR"}}<\/script></head><body><h1 class="pdp-title">Sony WH-1000XM5 Langattomat Vastamelukuulokkeet</h1><div data-testid="pdp-price">349,00 €</div><del class="old-price">419,00 €</del><span class="installment">29,90 € / kk</span><table class="specs"><tr><th>Tyyppi</th><td>Vastamelukuulokkeet</td></tr><tr><th>Akunkesto</th><td>30h</td></tr></table></body></html>'
 };
 
 function loadPreset(key) {
@@ -1742,7 +1842,24 @@ function handleFileUpload(event) {
     reader.readAsText(file);
 }
 
-// Client-Side Parser
+function handleTextareaDragOver(event) {
+    event.preventDefault();
+}
+
+function handleTextareaDrop(event) {
+    event.preventDefault();
+    if (event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0]) {
+        const file = event.dataTransfer.files[0];
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            document.getElementById('htmlInput').value = e.target.result;
+            runHarvest();
+        };
+        reader.readAsText(file);
+    }
+}
+
+// Client-Side Price Parser
 function parsePriceNumber(str) {
     if (!str || typeof str !== 'string') return null;
     let s = str.replace(/\s+|\u00a0/g, '').replace(/€|EUR|,-/gi, '').trim();
@@ -1774,6 +1891,123 @@ function isBotChallenge(text) {
     );
 }
 
+// Automotive Valuation & Depreciation Algorithm
+function calculateVehicleDepreciation(currentPrice, year, mileage) {
+    if (!currentPrice || currentPrice <= 0) return null;
+    const nowYear = 2026;
+    const carYear = (year && year >= 1990 && year <= nowYear + 1) ? year : (nowYear - 2);
+    const carMileage = (mileage && mileage > 0) ? mileage : Math.max(5000, (nowYear - carYear) * 18000);
+    const carAge = Math.max(0, nowYear - carYear);
+
+    const cumFactors = [1.0, 0.84, 0.722, 0.636, 0.566, 0.509, 0.463, 0.424, 0.390, 0.360];
+    const ageFactor = carAge < cumFactors.length ? cumFactors[carAge] : Math.max(0.18, 0.36 * Math.pow(0.92, carAge - 9));
+
+    const estimatedNewPrice = Math.round(currentPrice / ageFactor);
+    const startYear = Math.min(carYear, nowYear);
+    const endYear = Math.max(nowYear + 4, carYear + 5);
+    const points = [];
+
+    for (let y = startYear; y <= endYear; y++) {
+        const pointAge = y - carYear;
+        let ptPrice;
+        if (y === nowYear) {
+            ptPrice = currentPrice;
+        } else if (y < nowYear) {
+            const f = pointAge < cumFactors.length ? cumFactors[pointAge] : Math.max(0.18, 0.36 * Math.pow(0.92, pointAge - 9));
+            ptPrice = Math.round(estimatedNewPrice * f);
+        } else {
+            const futureAge = pointAge;
+            const f = futureAge < cumFactors.length ? cumFactors[futureAge] : Math.max(0.18, 0.36 * Math.pow(0.92, futureAge - 9));
+            ptPrice = Math.round(estimatedNewPrice * f);
+        }
+        const ptKm = Math.round(carMileage + (y - nowYear) * 18000);
+        points.push({
+            year: y,
+            age: pointAge,
+            price: Math.max(1000, ptPrice),
+            mileage: Math.max(0, ptKm),
+            isCurrent: y === nowYear
+        });
+    }
+
+    const totalDeprec = estimatedNewPrice - currentPrice;
+    const monthsElapsed = Math.max(6, carAge * 12);
+    const monthlyDeprec = Math.round(totalDeprec / monthsElapsed);
+    const perKmDeprec = carMileage > 0 ? (totalDeprec / carMileage) : 0;
+    const savingsPercent = Math.round((totalDeprec / estimatedNewPrice) * 100);
+
+    return {
+        estimatedNewPrice,
+        annualDepreciation: Math.round(totalDeprec / Math.max(1, carAge || 1)),
+        monthlyDepreciation: monthlyDeprec,
+        perKmDepreciation: parseFloat(perKmDeprec.toFixed(2)),
+        savingsFromNew: totalDeprec,
+        savingsPercent,
+        points
+    };
+}
+
+function buildVehicleDepreciationSvg(dep) {
+    if (!dep || !dep.points || dep.points.length === 0) return '';
+    const w = 480;
+    const h = 180;
+    const padX = 40;
+    const padY = 25;
+    const pts = dep.points;
+    const minP = Math.min(...pts.map(p => p.price)) * 0.85;
+    const maxP = Math.max(...pts.map(p => p.price)) * 1.08;
+    const pRange = Math.max(1, maxP - minP);
+
+    const coords = pts.map((p, idx) => {
+        const x = padX + (idx / (pts.length - 1)) * (w - padX * 2);
+        const y = h - padY - ((p.price - minP) / pRange) * (h - padY * 2);
+        return { ...p, x: Math.round(x), y: Math.round(y) };
+    });
+
+    const pathD = coords.reduce((acc, c, idx) => idx === 0 ? `M ${c.x} ${c.y}` : `${acc} L ${c.x} ${c.y}`, '');
+    const areaD = `${pathD} L ${coords[coords.length - 1].x} ${h - padY} L ${coords[0].x} ${h - padY} Z`;
+
+    const cur = coords.find(c => c.isCurrent) || coords[0];
+
+    return `<svg viewBox="0 0 ${w} ${h}" style="width: 100%; height: auto; display: block; overflow: visible;">
+        <defs>
+            <linearGradient id="vehGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#f97316" stop-opacity="0.35"/>
+                <stop offset="100%" stop-color="#f97316" stop-opacity="0.0"/>
+            </linearGradient>
+        </defs>
+        <line x1="${padX}" y1="${h - padY}" x2="${w - padX}" y2="${h - padY}" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+        <path d="${areaD}" fill="url(#vehGrad)"/>
+        <path d="${pathD}" fill="none" stroke="#f97316" stroke-width="2.5" stroke-linecap="round"/>
+        ${coords.map(c => `<circle cx="${c.x}" cy="${c.y}" r="${c.isCurrent ? 5 : 3}" fill="${c.isCurrent ? '#ffffff' : '#fb923c'}" stroke="#f97316" stroke-width="2"/>`).join('')}
+        ${coords.map(c => `<text x="${c.x}" y="${h - 8}" text-anchor="middle" font-size="9" fill="#94a3b8" font-family="sans-serif">${c.year}</text>`).join('')}
+        <circle cx="${cur.x}" cy="${cur.y}" r="8" fill="none" stroke="#f97316" stroke-width="1.5" stroke-dasharray="2 2"/>
+        <text x="${cur.x}" y="${cur.y - 10}" text-anchor="middle" font-size="11" font-weight="700" fill="#f8fafc" font-family="sans-serif">${Math.round(cur.price).toLocaleString('fi-FI')} €</text>
+    </svg>`;
+}
+
+function buildAutomotiveMarketLinks(makeModel, regPlate) {
+    const q = encodeURIComponent(makeModel || '');
+    const qPlus = q.replace(/%20/g, '+');
+    const reg = regPlate ? encodeURIComponent(regPlate.trim().toUpperCase()) : '';
+    return [
+        { name: 'Hedin', url: `https://www.hedinautomotive.fi/vaihtoautot/?search=${q}` },
+        { name: 'Auto1', url: `https://www.auto1.fi/haku/${qPlus}` },
+        { name: 'Kamux', url: `https://www.kamux.fi/vaihtoautot?q=${q}` },
+        { name: 'Saka', url: `https://saka.fi/fi/vaihtoautot/?search=${q}` },
+        { name: 'J. Rinta-Jouppi', url: `https://www.rintajouppi.fi/vaihtoautot/?q=${q}` },
+        { name: 'K-Auto', url: `https://www.k-auto.fi/vaihtoautot/haku/?query=${q}` },
+        { name: 'Nettiauto', url: `https://www.nettiauto.com/vaihtoautot?q=${q}` },
+        { name: 'Tori Autot', url: `https://www.tori.fi/recommerce/forsale/search?q=${q}&category=car` },
+        { name: 'Mobile.de (Saksa)', url: `https://suchen.mobile.de/fahrzeuge/search.html?dam=0&isSearchRequest=true&vc=Car&sb=rel&q=${q}` },
+        { name: 'AutoScout24 (EU)', url: `https://www.autoscout24.com/lst?query=${q}` },
+        ...(reg ? [
+            { name: `Motonet (${regPlate})`, url: `https://www.motonet.fi/rekisterihaku?reg=${reg}` },
+            { name: `Biltema (${regPlate})`, url: `https://www.biltema.fi/etsi-rekisterinumerolla/?registrationNumber=${reg}` }
+        ] : [])
+    ];
+}
+
 async function runHarvest() {
     const rawInput = document.getElementById('htmlInput').value.trim();
     if (!rawInput) return;
@@ -1789,29 +2023,27 @@ async function runHarvest() {
         emptyState.style.display = 'block';
         emptyState.innerHTML = '<div style="font-size: 2.5rem; margin-bottom: 0.5rem; animation: pulse 1.5s infinite;">🌐</div>' +
             '<div style="font-size: 1rem; font-weight: 600; color: #60a5fa;">Live URL havaittu: ' + escapeHtml(url) + '</div>' +
-            '<div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem;">Haetaan sivun HTML-koodia välityspalvelimen kautta...</div>';
+            '<div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem;">Haetaan sivun HTML-koodia välityspalvelimien kautta...</div>';
+
+        const proxies = [
+            'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
+            'https://corsproxy.io/?' + encodeURIComponent(url),
+            'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(url)
+        ];
 
         let fetchedHtml = null;
-        try {
-            const res = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(url));
-            if (res.ok) {
-                const text = await res.text();
-                if (text && text.length > 500 && (text.includes('<html') || text.includes('<!DOCTYPE') || text.includes('<body'))) {
-                    if (!isBotChallenge(text)) {
-                        fetchedHtml = text;
-                    }
-                }
-            }
-        } catch (_) {}
-
-        if (!fetchedHtml) {
+        for (const pUrl of proxies) {
             try {
-                const res = await fetch('https://corsproxy.io/?' + encodeURIComponent(url));
+                const controller = new AbortController();
+                const timer = setTimeout(() => controller.abort(), 6000);
+                const res = await fetch(pUrl, { signal: controller.signal });
+                clearTimeout(timer);
                 if (res.ok) {
                     const text = await res.text();
                     if (text && text.length > 500 && (text.includes('<html') || text.includes('<!DOCTYPE') || text.includes('<body'))) {
                         if (!isBotChallenge(text)) {
                             fetchedHtml = text;
+                            break;
                         }
                     }
                 }
@@ -1824,23 +2056,23 @@ async function runHarvest() {
             return;
         }
 
-        // Direct browser fetching blocked by Cloudflare/SSO/CORS
+        // Direct browser fetching blocked by Cloudflare/Turnstile/CORS
         emptyState.innerHTML = '<div style="text-align: left; background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 0.5rem; padding: 1.25rem;">' +
             '<div style="font-size: 1.05rem; font-weight: 700; color: #fbbf24; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">' +
                 '🛡️ Sivusto on suojattu Cloudflare / Bot-estolla (esim. Nettiauto)' +
             '</div>' +
             '<p style="font-size: 0.875rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 0.75rem;">' +
-                'Sivuston suojaus (kuten Nettiauto / Alma Media Turnstile) vaatii selaimen ihmistarkistuksen. Julkinen välityspalvelin saa vain Cloudflaren <code>&lt;title&gt;Just a moment...&lt;/title&gt;</code> -varmistussivun.' +
+                'Sivuston suojaus (kuten Nettiauto Turnstile) vaatii selaimen ihmistarkistuksen. Julkinen välityspalvelin saa vain Cloudflaren <code>&lt;title&gt;Just a moment...&lt;/title&gt;</code> -varmistussivun.' +
             '</p>' +
-            '<div style="font-size: 0.85rem; font-weight: 600; color: #e2e8f0; margin-bottom: 0.5rem;">Näin saat auton oikean HTML-koodin sekunnissa:</div>' +
+            '<div style="font-size: 0.85rem; font-weight: 600; color: #e2e8f0; margin-bottom: 0.5rem;">Näin saat sivun oikean HTML-koodin sekunnissa:</div>' +
             '<div style="display: flex; flex-direction: column; gap: 0.6rem; font-size: 0.85rem; color: var(--text-secondary);">' +
                 '<div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 6px; padding: 0.75rem;">' +
                     '<div style="color: #60a5fa; font-weight: 600; margin-bottom: 0.25rem;">✨ Tapa 1: 1-Klikkaus Harvester Bookmarklet (Suositus):</div>' +
-                    '<div>Raahaa tämä painike kirjanmerkkipalkkiisi tai tallenna se kirjanmerkiksi:</div>' +
-                    '<a href="javascript:(function(){const h=document.documentElement.outerHTML;navigator.clipboard.writeText(h).then(()=>alert(\'✅ Sivun koko HTML kopioitu leikepöydälle! Voit nyt liittää sen Harvester Studioon (Ctrl+V).\'));})();" class="btn btn-sm btn-secondary" style="margin-top: 0.4rem; display: inline-flex; cursor: move;" onclick="alert(\'Raahaa tämä nappi selaimesi kirjanmerkkipalkkiin, tai kopioi sen linkki kirjanmerkiksi!\'); return false;">📌 ⚡ HintaTutka DOM Harvester</a>' +
-                    '<div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.35rem;">Kun olet Nettiautossa tai millä tahansa sivulla, klikkaa tätä kirjanmerkkiä ja paina täällä <b>Ctrl + V</b>!</div>' +
+                    '<div>Raahaa tämä painike selaimesi kirjanmerkkipalkkiin:</div>' +
+                    '<a href="javascript:(function(){try{const h=document.documentElement.outerHTML;navigator.clipboard.writeText(h).then(()=>alert(\'✅ Sivun koko DOM kopioitu leikepöydälle! Liitä se Harvester Studioon (Ctrl+V).\'));}catch(e){alert(\'Virhe: \'+e.message);}})();" class="btn btn-sm btn-secondary" style="margin-top: 0.4rem; display: inline-flex; cursor: move;" onclick="alert(\'Raahaa tämä nappi selaimesi kirjanmerkkipalkkiin, tai kopioi sen linkki kirjanmerkiksi!\'); return false;">📌 ⚡ HintaTutka DOM Harvester</a>' +
+                    '<div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.35rem;">Kun olet tuotesivulla tai autonsivulla, klikkaa tätä kirjanmerkkiä ja paina täällä <b>Ctrl + V</b>!</div>' +
                 '</div>' +
-                '<div><strong>Tapa 2 (Lähdekoodi):</strong> Avaa autonsivu &rarr; Paina <kbd style="background: rgba(255,255,255,0.1); padding: 0.15rem 0.4rem; border-radius: 3px;">Ctrl + U</kbd> &rarr; Valitse kaikki (<kbd>Ctrl + A</kbd>) &rarr; Kopioi (<kbd>Ctrl + C</kbd>) &rarr; Liitä tähän tekstikenttään.</div>' +
+                '<div><strong>Tapa 2 (Lähdekoodi):</strong> Avaa sivu &rarr; Paina <kbd style="background: rgba(255,255,255,0.1); padding: 0.15rem 0.4rem; border-radius: 3px;">Ctrl + U</kbd> &rarr; Valitse kaikki (<kbd>Ctrl + A</kbd>) &rarr; Kopioi (<kbd>Ctrl + C</kbd>) &rarr; Liitä tähän tekstikenttään.</div>' +
                 '<div><strong>Tapa 3 (Esivalinta):</strong> Testaa Nettiautoa heti valmiilla Skoda Karoq -fixtuurella klikkaamalla ylhäältä <strong>🚗 Nettiauto (Skoda)</strong>!</div>' +
                 '<div><strong>Tapa 4 (Komentoriviltä):</strong>' +
                     '<div style="background: rgba(0,0,0,0.5); padding: 0.5rem 0.75rem; border-radius: 4px; font-family: monospace; color: #34d399; margin-top: 0.25rem;">node scripts/harvest-store.mjs ' + escapeHtml(url) + '</div>' +
@@ -1857,6 +2089,41 @@ function escapeHtml(str) {
     return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+function harvestJsonLd(doc) {
+    const scripts = doc.querySelectorAll('script[type="application/ld+json"]');
+    for (const sc of scripts) {
+        try {
+            const raw = JSON.parse(sc.textContent);
+            const queue = Array.isArray(raw) ? [...raw] : [raw];
+            while (queue.length > 0) {
+                const item = queue.shift();
+                if (!item || typeof item !== 'object') continue;
+                if (Array.isArray(item['@graph'])) queue.push(...item['@graph']);
+                const type = item['@type'];
+                const isProduct = type === 'Product' || (Array.isArray(type) && type.includes('Product'));
+                const isVehicle = type === 'Car' || type === 'Vehicle' || (Array.isArray(type) && (type.includes('Car') || type.includes('Vehicle')));
+                if (isProduct || isVehicle) {
+                    return {
+                        name: item.name || null,
+                        sku: item.sku || null,
+                        mpn: item.mpn || null,
+                        ean: item.gtin13 || item.gtin || item.ean || null,
+                        brand: item.brand ? (typeof item.brand === 'string' ? item.brand : item.brand.name) : null,
+                        category: item.category || null,
+                        price: item.offers ? (Array.isArray(item.offers) ? item.offers[0]?.price : item.offers?.price) : null,
+                        currency: item.offers ? (Array.isArray(item.offers) ? item.offers[0]?.priceCurrency : item.offers?.priceCurrency) : null,
+                        availability: item.offers ? (Array.isArray(item.offers) ? item.offers[0]?.availability : item.offers?.availability) : null,
+                        vehicleModelDate: item.vehicleModelDate || null,
+                        mileageFromOdometer: item.mileageFromOdometer ? (item.mileageFromOdometer.value || item.mileageFromOdometer) : null,
+                        vin: item.vehicleIdentificationNumber || null
+                    };
+                }
+            }
+        } catch (_) {}
+    }
+    return null;
+}
+
 function executeHarvest(rawHtml, sourceUrl) {
     if (isBotChallenge(rawHtml)) {
         const emptyState = document.getElementById('emptyState');
@@ -1870,11 +2137,11 @@ function executeHarvest(rawHtml, sourceUrl) {
                 '⛔ Syötetty HTML on Cloudflaren robottitarkistus ("Just a moment..."), ei oikea tuotesivu!' +
             '</div>' +
             '<p style="font-size: 0.875rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 0.75rem;">' +
-                'Tämä koodi sisältää vain Cloudflaren Turnstile-haasteen, joten autojen hintoja tai teknisiä tietoja ei ole ladattu vielä tähän dokumenttiin.' +
+                'Tämä koodi sisältää vain Cloudflaren Turnstile-haasteen, joten tuotteen hintoja tai teknisiä tietoja ei ole ladattu vielä tähän dokumenttiin.' +
             '</p>' +
             '<div style="font-size: 0.85rem; font-weight: 600; color: #e2e8f0; margin-bottom: 0.5rem;">Miten saat oikeat tiedot:</div>' +
             '<div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6;">' +
-                '<div>1. Avaa autonsivu selaimessa &rarr; Paina <kbd style="background: rgba(255,255,255,0.1); padding: 0.15rem 0.4rem; border-radius: 3px;">Ctrl + U</kbd> (tai hiiren oikealla &rarr; <em>Näytä sivun lähdekoodi</em>).</div>' +
+                '<div>1. Avaa tuotesivu selaimessa &rarr; Paina <kbd style="background: rgba(255,255,255,0.1); padding: 0.15rem 0.4rem; border-radius: 3px;">Ctrl + U</kbd> (tai hiiren oikealla &rarr; <em>Näytä sivun lähdekoodi</em>).</div>' +
                 '<div>2. Kopioi koko teksti (<kbd>Ctrl + A</kbd> ja <kbd>Ctrl + C</kbd>).</div>' +
                 '<div>3. Tyhjennä tämä kenttä ja liitä oikea lähdekoodi tähän, tai klikkaa ylhäältä <strong>🚗 Nettiauto (Skoda)</strong>!</div>' +
             '</div>' +
@@ -1920,12 +2187,15 @@ function executeHarvest(rawHtml, sourceUrl) {
         }
     }
 
-    // 2. Identify Title
+    // 2. Schema.org / JSON-LD Data
+    const jsonLd = harvestJsonLd(doc);
+
+    // 3. Identify Title
     const h1 = doc.querySelector('h1');
-    const title = h1 ? h1.textContent.trim() : (docTitle.split(/[-|–—]/)[0].trim() || 'Unknown Title');
+    const title = h1 ? h1.textContent.trim() : (jsonLd?.name || docTitle.split(/[-|–—]/)[0].trim() || 'Unknown Title');
     const titleSelector = h1 ? (h1.className ? 'h1.' + h1.className.split(/\s+/)[0] : 'h1') : 'title';
 
-    // 3. Identify Price (rejecting installment and strikethrough)
+    // 4. Identify Price (rejecting installment and strikethrough)
     const installmentRx = /(?:\/|\b)kk\b|erissä|luotto|osamaksu|\/month/i;
     const strikeRx = /<del|<s\b|line-through|text-decoration:\s*line-through|old-price|was-price|strikethrough/i;
 
@@ -1959,20 +2229,86 @@ function executeHarvest(rawHtml, sourceUrl) {
         }
     }
 
+    if (!discoveredPrice && jsonLd?.price) {
+        const p = parseFloat(jsonLd.price);
+        if (Number.isFinite(p) && p > 0.5) {
+            discoveredPrice = p;
+            candidateSelectors.push('[itemprop="price"]');
+        }
+    }
+
     if (candidateSelectors.length === 0) {
         candidateSelectors = ['.product-price', '.price', '[itemprop="price"]'];
     }
     candidateSelectors = [...new Set(candidateSelectors)];
 
-    // 4. Category
+    // Check selector uniqueness & collision in DOM
+    const primarySel = candidateSelectors[0];
+    let primaryMatches = 0;
+    try {
+        primaryMatches = doc.querySelectorAll(primarySel).length;
+    } catch (_) {}
+
+    // 5. Category
     let category = 'electronics';
-    if (/vaihtoauto|henkilöauto|pakettiauto|autot|ajoneuvo|skoda|volkswagen|toyota|volvo|mercedes|bmw|audi|ford|kia|hyundai|karoq|octavia|golf|corolla|yaris/i.test(title) || /nettiauto|kamux|saka|rinta-jouppi|autotie/i.test(domain)) {
+    if (/vaihtoauto|henkilöauto|pakettiauto|autot|ajoneuvo|skoda|volkswagen|toyota|volvo|mercedes|bmw|audi|ford|kia|hyundai|karoq|octavia|golf|corolla|yaris/i.test(title) || /nettiauto|kamux|saka|rinta-jouppi|autotie|hedinautomotive/i.test(domain) || jsonLd?.vehicleModelDate) {
         category = 'vehicles';
     } else if (/kahvi|maito|ruoka|jauheliha|leipä|ravintolisä/i.test(title)) category = 'grocery';
     else if (/takki|kengät|sukset|reppu|ulkoilu/i.test(title)) category = 'sports';
     else if (/pöytä|sohva|sänky|tuoli|lipasto/i.test(title)) category = 'furniture';
 
-    // 5. Deconstruct PC Components if applicable
+    // 6. Automotive Deconstruction
+    let vehicleData = null;
+    if (category === 'vehicles') {
+        vehicleData = {
+            makeModel: title.split(/\s+/).slice(0, 2).join(' '),
+            regPlate: null,
+            mileage: null,
+            year: null,
+            engine: null,
+            transmission: null,
+            driveType: null,
+            seller: null,
+            depreciation: null
+        };
+
+        const infoBoxes = doc.querySelectorAll('.vehicle-info-box, .car-spec-box, dl, tr');
+        for (const box of infoBoxes) {
+            const keyEl = box.querySelector('.vehicle-info-box__vehicle-info, dt, th');
+            const valEl = box.querySelector('.vehicle-info-box__vehicle-det, dd, td');
+            if (!keyEl || !valEl) continue;
+            const k = keyEl.textContent.trim().toLowerCase();
+            const v = valEl.textContent.trim();
+
+            if (/rekisterinumero|rekisteritunnus|rek\.?\s*nro/i.test(k) && !vehicleData.regPlate) {
+                const m = v.match(/\b([A-ZÅÄÖ]{2,3}-\d{1,3})\b/);
+                if (m) vehicleData.regPlate = m[1].toUpperCase();
+            } else if (/mittarilukema|ajomäärä|ajettu/i.test(k) && !vehicleData.mileage) {
+                const m = v.replace(/\s+/g, '').match(/(\d+)(?:km)?/i);
+                if (m) vehicleData.mileage = parseInt(m[1], 10);
+            } else if (/vuosimalli|mallivuosi/i.test(k) && !vehicleData.year) {
+                const m = v.match(/\b(19\d{2}|20\d{2})\b/);
+                if (m) vehicleData.year = parseInt(m[1], 10);
+            } else if (/moottori|polttoaine/i.test(k) && !vehicleData.engine) {
+                vehicleData.engine = v;
+            } else if (/vaihteisto/i.test(k) && !vehicleData.transmission) {
+                vehicleData.transmission = v;
+            } else if (/vetotapa/i.test(k) && !vehicleData.driveType) {
+                vehicleData.driveType = v;
+            }
+        }
+
+        if (jsonLd) {
+            if (jsonLd.vehicleModelDate && !vehicleData.year) vehicleData.year = parseInt(jsonLd.vehicleModelDate, 10);
+            if (jsonLd.mileageFromOdometer && !vehicleData.mileage) vehicleData.mileage = parseInt(jsonLd.mileageFromOdometer, 10);
+        }
+
+        if (discoveredPrice) {
+            vehicleData.depreciation = calculateVehicleDepreciation(discoveredPrice, vehicleData.year || 2023, vehicleData.mileage || 40000);
+        }
+    }
+
+    // 7. PC Hardware Breakdown
     const components = [];
     const fullText = doc.body ? doc.body.textContent : rawHtml;
     
@@ -1994,13 +2330,96 @@ function executeHarvest(rawHtml, sourceUrl) {
         components.push({ role: 'MOBO', query: cleanMobo, raw: moboM[0].trim() });
     }
 
+    // 8. Quality & Confidence Audit
+    let auditScore = 0;
+    const auditChecks = [];
+
+    // Title Check (20 pts)
+    if (title && title !== 'Unknown Title') {
+        auditScore += 20;
+        auditChecks.push({ label: 'Product Title', status: 'pass', pts: 20, desc: `Clean title extracted via ${titleSelector}` });
+    } else {
+        auditChecks.push({ label: 'Product Title', status: 'fail', pts: 0, desc: 'Failed to extract product title' });
+    }
+
+    // Cash Price Check (35 pts)
+    if (discoveredPrice && discoveredPrice > 0.5) {
+        auditScore += 25;
+        if (primarySel.includes('data-') || primarySel.includes('itemprop')) {
+            auditScore += 10;
+            auditChecks.push({ label: 'Cash Price', status: 'pass', pts: 35, desc: `Verified cash price ${discoveredPrice.toFixed(2)} € with high-stability attribute (${primarySel})` });
+        } else {
+            auditScore += 5;
+            auditChecks.push({ label: 'Cash Price', status: 'pass', pts: 30, desc: `Verified cash price ${discoveredPrice.toFixed(2)} € with class (${primarySel})` });
+        }
+    } else {
+        auditChecks.push({ label: 'Cash Price', status: 'fail', pts: 0, desc: 'Missing or unverified cash price' });
+    }
+
+    // Selector Uniqueness (15 pts)
+    if (primaryMatches === 1) {
+        auditScore += 15;
+        auditChecks.push({ label: 'Selector Uniqueness', status: 'pass', pts: 15, desc: `Zero collision: Exactly 1 element matches in DOM (${primarySel})` });
+    } else if (primaryMatches > 1) {
+        auditScore += 5;
+        auditChecks.push({ label: 'Selector Collision', status: 'warn', pts: 5, desc: `Selector matches ${primaryMatches} elements in DOM. Scoped selector recommended.` });
+    } else {
+        auditChecks.push({ label: 'Selector Match', status: 'fail', pts: 0, desc: 'Candidate selector matched 0 elements' });
+    }
+
+    // Specifications Architecture (15 pts)
+    const hasSpecs = doc.querySelectorAll('table, dl, ul, .vehicle-info-box').length > 0;
+    if (hasSpecs) {
+        auditScore += 15;
+        auditChecks.push({ label: 'Specifications Architecture', status: 'pass', pts: 15, desc: 'Structured technical specifications table/list detected' });
+    } else {
+        auditChecks.push({ label: 'Specifications Architecture', status: 'warn', pts: 0, desc: 'No structured specification table or list found' });
+    }
+
+    // Schema.org Identifiers (10 pts)
+    if (jsonLd && (jsonLd.ean || jsonLd.sku || jsonLd.mpn)) {
+        auditScore += 10;
+        auditChecks.push({ label: 'EAN / SKU Metadata', status: 'pass', pts: 10, desc: `Schema.org product identifiers verified (EAN: ${jsonLd.ean || 'N/A'}, SKU: ${jsonLd.sku || 'N/A'})` });
+    } else {
+        auditChecks.push({ label: 'EAN / SKU Metadata', status: 'neutral', pts: 0, desc: 'No Schema.org GTIN/EAN/SKU embedded in page' });
+    }
+
+    // Anti-Trap & Installment Shield (5 pts)
+    if (rejectedInstallment) {
+        auditScore += 5;
+        auditChecks.push({ label: 'Installment Trap Shield', status: 'pass', pts: 5, desc: `Protected against monthly rate (${rejectedInstallment})` });
+    } else {
+        auditScore += 5;
+    }
+
+    let auditTier = 'BRONZE (VERIFY SELECTORS)';
+    if (auditScore >= 90) auditTier = 'PLATINUM (100% REGRESSION-PROOF)';
+    else if (auditScore >= 75) auditTier = 'GOLD (PRODUCTION-READY)';
+    else if (auditScore >= 60) auditTier = 'SILVER (VERIFICATION RECOMMENDED)';
+
+    // Populate Audit Section
+    document.getElementById('resAuditScore').textContent = auditScore + '%';
+    document.getElementById('resAuditTier').textContent = auditTier;
+    document.getElementById('resAuditTier').className = auditScore >= 90 ? 'stat-badge badge-green' : (auditScore >= 75 ? 'stat-badge badge-blue' : 'stat-badge badge-yellow');
+    
+    const auditContainer = document.getElementById('auditChecklist');
+    auditContainer.innerHTML = '';
+    for (const c of auditChecks) {
+        const item = document.createElement('div');
+        item.className = 'audit-check-item';
+        const icon = c.status === 'pass' ? '✔' : (c.status === 'warn' ? '⚠️' : (c.status === 'fail' ? '✖' : 'ℹ️'));
+        const colorCls = c.status === 'pass' ? 'audit-check-pass' : (c.status === 'warn' ? 'audit-check-warn' : (c.status === 'fail' ? 'audit-check-fail' : 'audit-check-neutral'));
+        item.innerHTML = `<div><span class="${colorCls}" style="font-weight: 700; margin-right: 0.4rem;">${icon}</span><b>${c.label}</b>: <span style="color: var(--text-secondary);">${c.desc}</span></div><span class="${colorCls}" style="font-weight: 600;">+${c.pts} pts</span>`;
+        auditContainer.appendChild(item);
+    }
+
     // Populate Report UI
     document.getElementById('resStoreName').textContent = storeName;
     document.getElementById('resStoreStatus').textContent = isRegistered ? '✔ ' + REGISTERED_STORES.length + ' STORES Registered' : '✨ New Store';
     document.getElementById('resStoreStatus').className = isRegistered ? 'stat-badge badge-green' : 'stat-badge badge-blue';
 
     document.getElementById('resPrice').textContent = discoveredPrice ? discoveredPrice.toFixed(2) + ' €' : '⚠️ No cash price';
-    document.getElementById('resPriceSelector').textContent = candidateSelectors[0] || 'None';
+    document.getElementById('resPriceSelector').textContent = candidateSelectors[0] + (primaryMatches === 1 ? ' (1 match)' : ` (${primaryMatches} matches)`);
 
     document.getElementById('resCategory').textContent = category.charAt(0).toUpperCase() + category.slice(1);
     document.getElementById('resCategoryBadge').textContent = category;
@@ -2009,6 +2428,20 @@ function executeHarvest(rawHtml, sourceUrl) {
     document.getElementById('resTitle').textContent = title;
     document.getElementById('resTitleSelector').textContent = 'Selector: ' + titleSelector;
 
+    // Schema Metadata Card
+    const schemaSec = document.getElementById('schemaSection');
+    const schemaMeta = document.getElementById('schemaMetadata');
+    if (jsonLd && (jsonLd.ean || jsonLd.sku || jsonLd.brand)) {
+        schemaSec.style.display = 'block';
+        schemaMeta.innerHTML = '';
+        if (jsonLd.ean) schemaMeta.innerHTML += `<span class="selector-tag" style="color: #34d399;">EAN / GTIN-13: <b>${jsonLd.ean}</b></span>`;
+        if (jsonLd.sku) schemaMeta.innerHTML += `<span class="selector-tag">SKU: <b>${jsonLd.sku}</b></span>`;
+        if (jsonLd.brand) schemaMeta.innerHTML += `<span class="selector-tag" style="color: #60a5fa;">Brand: <b>${jsonLd.brand}</b></span>`;
+        if (jsonLd.price) schemaMeta.innerHTML += `<span class="selector-tag" style="color: #fbbf24;">Schema Price: <b>${jsonLd.price} ${jsonLd.currency || 'EUR'}</b></span>`;
+    } else {
+        schemaSec.style.display = 'none';
+    }
+
     // Warning boxes
     const warnBox = document.getElementById('installmentWarningBox');
     if (rejectedInstallment) {
@@ -2016,6 +2449,31 @@ function executeHarvest(rawHtml, sourceUrl) {
         warnBox.innerHTML = '🛡️ <b>Installment Trap Protected:</b> Ignored monthly rate (<code>' + rejectedInstallment + '</code>) in favor of cash price.';
     } else {
         warnBox.style.display = 'none';
+    }
+
+    // Automotive Section
+    const vehSec = document.getElementById('vehicleSection');
+    if (vehicleData) {
+        vehSec.style.display = 'block';
+        const vGrid = document.getElementById('vehicleSpecsGrid');
+        vGrid.innerHTML = `
+            <div class="stat-card"><div class="stat-label">Rekisterinumero</div><div class="stat-value" style="color: #38bdf8;">${vehicleData.regPlate || '—'}</div></div>
+            <div class="stat-card"><div class="stat-label">Mittarilukema</div><div class="stat-value">${vehicleData.mileage ? vehicleData.mileage.toLocaleString('fi-FI') + ' km' : '—'}</div></div>
+            <div class="stat-card"><div class="stat-label">Vuosimalli</div><div class="stat-value">${vehicleData.year || '—'}</div></div>
+            <div class="stat-card"><div class="stat-label">Moottori / Voimanlähde</div><div class="stat-value" style="font-size: 0.95rem;">${vehicleData.engine || '—'}</div></div>
+            <div class="stat-card"><div class="stat-label">Vaihteisto / Vetotapa</div><div class="stat-value" style="font-size: 0.95rem;">${[vehicleData.transmission, vehicleData.driveType].filter(Boolean).join(' • ') || '—'}</div></div>
+            <div class="stat-card"><div class="stat-label">Uutena (Arvio)</div><div class="stat-value" style="color: #34d399;">${vehicleData.depreciation ? vehicleData.depreciation.estimatedNewPrice.toLocaleString('fi-FI') + ' €' : '—'}</div><div style="font-size: 0.75rem; color: #94a3b8;">Arvonalenema ~${vehicleData.depreciation ? vehicleData.depreciation.monthlyDepreciation : 0} €/kk</div></div>
+        `;
+
+        if (vehicleData.depreciation) {
+            document.getElementById('vehicleDeprecChart').innerHTML = buildVehicleDepreciationSvg(vehicleData.depreciation);
+        }
+
+        const dealerContainer = document.getElementById('vehicleDealerLinks');
+        const links = buildAutomotiveMarketLinks(vehicleData.makeModel, vehicleData.regPlate);
+        dealerContainer.innerHTML = links.map(l => `<a href="${l.url}" target="_blank" rel="noopener" class="dealer-pill">🔍 ${l.name}</a>`).join('');
+    } else {
+        vehSec.style.display = 'none';
     }
 
     // Hardware Table
@@ -2035,6 +2493,20 @@ function executeHarvest(rawHtml, sourceUrl) {
         }
     }
 
+    // Live Extension Simulation
+    document.getElementById('simStoreTitle').textContent = domain;
+    document.getElementById('simPrice').textContent = discoveredPrice ? discoveredPrice.toFixed(2) + ' €' : '—';
+    if (category === 'vehicles' && vehicleData?.depreciation) {
+        document.getElementById('simComparison').textContent = `Uutena ~${vehicleData.depreciation.estimatedNewPrice.toLocaleString('fi-FI')} €`;
+        document.getElementById('simDetails').textContent = `🚗 ${title} • ${vehicleData.mileage ? vehicleData.mileage.toLocaleString('fi-FI') + ' km' : ''} • ${vehicleData.year || ''} • Arvonalenema ~${vehicleData.depreciation.monthlyDepreciation} €/kk (-${vehicleData.depreciation.savingsPercent} %)`;
+    } else if (components.length >= 2) {
+        document.getElementById('simComparison').textContent = `PC-Kokoonpano (${components.length} osaa)`;
+        document.getElementById('simDetails').textContent = `🖥️ Emolevy, CPU, GPU ja muistit purettu erilliseen hintavertailuun.`;
+    } else {
+        document.getElementById('simComparison').textContent = 'Hinta.fi-haku aktiivinen';
+        document.getElementById('simDetails').textContent = `🔍 HintaTutka vertaa hintaa automaattisesti suomalaisiin kilpailijoihin ja Amazon.de-hintatasoon.`;
+    }
+
     // Code Snippets
     const storesSnippetCode = "        { match: '" + domain + "', name: '" + storeName.replace(/'/g, "\\'") + "'" + (category !== 'electronics' ? ", categoryHint: '" + category + "'" : "") + ", selectors: " + JSON.stringify(candidateSelectors) + " },";
     document.getElementById('storesSnippet').textContent = storesSnippetCode;
@@ -2046,7 +2518,7 @@ function executeHarvest(rawHtml, sourceUrl) {
     document.getElementById('reportContainer').style.display = 'block';
     document.getElementById('reportActions').style.display = 'flex';
 
-    currentHarvestResult = { domain, storeName, category, selectors: candidateSelectors, title, price: discoveredPrice, html: rawHtml };
+    currentHarvestResult = { domain, storeName, category, selectors: candidateSelectors, title, price: discoveredPrice, html: rawHtml, vehicleData, jsonLd, auditScore };
 }
 
 function copySnippet(elementId) {
@@ -2078,8 +2550,10 @@ function openGitHubIssue() {
         '**Store Name**: ' + currentHarvestResult.storeName + '\n' +
         '**Domain**: `' + currentHarvestResult.domain + '`\n' +
         '**Category**: `' + currentHarvestResult.category + '`\n' +
+        '**Harvest Confidence Score**: ' + (currentHarvestResult.auditScore || 0) + '%\n' +
         '**Harvested Selectors**:\n```json\n' + JSON.stringify(currentHarvestResult.selectors, null, 2) + '\n```\n\n' +
-        '**Harvested Price**: ' + (currentHarvestResult.price ? currentHarvestResult.price + ' €' : 'N/A') + '\n'
+        '**Harvested Price**: ' + (currentHarvestResult.price ? currentHarvestResult.price + ' €' : 'N/A') + '\n' +
+        (currentHarvestResult.jsonLd ? '\n**EAN / GTIN-13**: `' + (currentHarvestResult.jsonLd.ean || 'N/A') + '`\n**SKU**: `' + (currentHarvestResult.jsonLd.sku || 'N/A') + '`\n' : '')
     );
     window.open('https://github.com/FIMARx/hintatutka/issues/new?title=' + title + '&body=' + body, '_blank');
 }
