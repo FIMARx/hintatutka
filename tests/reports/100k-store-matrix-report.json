@@ -1,10 +1,10 @@
 {
   "meta": {
-    "timestamp": "2026-11-10T17:29:12.678Z",
+    "timestamp": "2026-11-10T17:55:45.971Z",
     "totalProductsTested": 100000,
     "storesCount": 98,
-    "durationMs": 3477,
-    "itemsPerSec": 28760,
+    "durationMs": 3799,
+    "itemsPerSec": 26323,
     "failuresCount": 0
   },
   "categoryStats": {

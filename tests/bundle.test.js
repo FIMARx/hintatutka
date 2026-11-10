@@ -949,6 +949,40 @@ test('bundle: Verkkokauppa.com PC Cases (Blackstorm Artemis) reject false-positi
     assert.strictEqual(bundleData, null, 'Standalone PC case must return null and not trigger bundle or PC build detection');
 });
 
+test("bundle: Jimm's standalone RAM kit (v-color 32GB DDR5) rejects false-positive bundle or PC build detection", () => {
+    const { exports: HT } = loadHintaTutka({ host: 'www.jimms.fi', pathname: '/fi/Product/Show/218450/tmxsal1660830kwk/v-color-32gb' });
+
+    const mockRamHtml = `
+        <title>v-color 32GB (2 x 16GB) Manta XSky RGB, DDR5 6000MHz, CL30, 1.35V, musta - Jimms.fi</title>
+        <ul class="jim-menu">
+            <li class="menu-item"><a href="/fi/Product/List/000-09X/komponentit--prosessorit--amd--threadripper">Threadripper</a></li>
+            <li class="menu-item"><a href="/fi/Product/List/000-00E/komponentit--emolevyt--amd-am5--a620">A620 (AM5)</a></li>
+            <li class="menu-item"><a href="/fi/Product/List/000-1UH/komponentit--naytonohjaimet--amd-radeon--amd-radeon-pro-sarja">AMD Radeon Pro -sarja</a></li>
+        </ul>
+        <div class="product-description">
+            <ul>
+                <li>Jokainen DDR5-muistikampa on varustettu SK Hynixin DRAM-muistipiireillä, jotka on valittu tiukkojen testien perusteella.</li>
+                <li>Hienosäädetyt EXPO-profiilit erityisesti Ryzen 9000-sarjalle</li>
+            </ul>
+        </div>
+    `;
+
+    const info = { name: 'v-color 32GB (2 x 16GB) Manta XSky RGB, DDR5 6000MHz, CL30, 1.35V, musta', currentPrice: 519.90 };
+    const bundleData = HT.detectAndExtractBundleData(info, null, 519.90, mockRamHtml);
+
+    assert.strictEqual(bundleData, null, 'Standalone RAM kit must return null and never trigger prebuilt PC or bundle');
+});
+
+test("bundle: Jimm's category listing page (/Product/List/) rejects product info extraction", () => {
+    const { exports: HT } = loadHintaTutka({
+        host: 'www.jimms.fi',
+        pathname: '/fi/Product/List/000-1UL/komponentit--muistit--ddr5'
+    });
+
+    const info = HT.extractProductInfo();
+    assert.strictEqual(info, null, 'Category listing page must be identified as non-product path');
+});
+
 test("bundle: Jimm's hardware product metadata extraction (EAN, MPN, SKU, Brand, Price)", () => {
     const metaMap = {
         'meta[property="product:ean"], meta[name="ean"], meta[property="og:ean"]': { content: '0730143315289', getAttribute: () => '0730143315289' },

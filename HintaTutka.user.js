@@ -1888,6 +1888,27 @@
         const host = location.hostname.toLowerCase();
         const p = location.pathname.toLowerCase();
 
+        if (host.includes('jimms.fi')) {
+            return !/\/product\/show\//i.test(p);
+        }
+        if (host.includes('verkkokauppa.com')) {
+            return !/\/(?:fi|sv|en)?\/?tuote\/\d+/i.test(p);
+        }
+        if (host.includes('gigantti.fi')) {
+            return !/\/product\//i.test(p);
+        }
+        if (host.includes('power.fi')) {
+            return !/\/p-\d+/i.test(p);
+        }
+        if (host.includes('proshop.fi')) {
+            return !/\/\d{7,}\b/i.test(p) && !/\/product/i.test(p);
+        }
+        if (host.includes('nettiauto.com')) {
+            return !/\/\d{7,}\b/i.test(p) && !/\/auto\//i.test(p);
+        }
+        if (host.includes('kamux.fi') || host.includes('saka.fi')) {
+            return !/\/vaihtoautot\/.*?\d{4,}/i.test(p);
+        }
         if (host.includes('tori.fi')) {
             return !/\/recommerce\/forsale\/item\/\d+/i.test(p);
         }
@@ -1905,7 +1926,7 @@
         }
 
         if (p === '/' || /^\/(fi|en|sv)\/?$/.test(p)) return true;
-        if (/\/(cart|ostoskori|varukorg|checkout|kassa|search|haku|sok|login|account|asiakastili|customer|wishlist|vertailu|compare)\b/.test(p)) {
+        if (/\/(cart|ostoskori|varukorg|checkout|kassa|search|haku|sok|login|account|asiakastili|customer|wishlist|vertailu|compare|category|kategoriat?|list|tuotelista|collection|collections)\b/i.test(p)) {
             return true;
         }
         return false;
@@ -2967,6 +2988,23 @@
             officialStandaloneTotal = parsePriceNumber(standaloneMatch[1]);
         }
 
+        const isSlashPrebuilt = /\/[0-9]+\s*(?:GB|TB)?\s*\//i.test(title) && /(?:ryzen|core|i[3579]|r[3579])/i.test(title);
+
+        // Standalone Component Guard: If the product is NOT a bundle, NOT a PC title, NOT a slash prebuilt,
+        // and has no bundle/PC heading or standalone price, it CANNOT be a bundle or PC build!
+        if (!isBundleTitle && !isPcTitle && !hasBundleHeading && !hasPcSpecHeading && !officialStandaloneTotal && !isSlashPrebuilt) {
+            return null;
+        }
+
+        // Single-Component Shield: If the title itself classifies as a specific standalone hardware role (e.g. RAM, GPU, Mobo, Cooler, Case, PSU, Storage)
+        // and the title does NOT claim to be a bundle or PC build, reject bundle/PC extraction immediately!
+        if (!isBundleTitle && !isPcTitle && !isSlashPrebuilt) {
+            const selfRole = classifyComponentRole(rawTitle, '');
+            if (selfRole.roleKey !== 'part') {
+                return null;
+            }
+        }
+
         const components = [];
         const seenNames = new Set();
         const seenRoles = new Set();
@@ -3083,6 +3121,16 @@
                 if (/\b(?:support|tuki|yhteensopivuus|compatibility|height|korkeus|length|pituus|width|leveys|max|maximum|maksimi|clearance|bays|paikat|slots|liitännät|connections|ports|portit|interface|liittymä|väylä|nopeus|speed|kellotaajuus|clock|näytönohjainmuisti|graphics\s*memory)\b/i.test(norm)) {
                     return false;
                 }
+                // Reject compound multi-component headings (e.g. "Muistia ja tallennustilaa")
+                let keyRoleCount = 0;
+                if (/(?:prosessori|suoritin|cpu)/i.test(norm)) keyRoleCount++;
+                if (/(?:näytönohjai|gpu|grafiikka)/i.test(norm)) keyRoleCount++;
+                if (/(?:keskusmuisti|\bmuisti\b|ram)/i.test(norm)) keyRoleCount++;
+                if (/(?:tallennustila|tallennus|massamuisti|ssd|kiintolevy)/i.test(norm)) keyRoleCount++;
+                if (/(?:emolevy|motherboard)/i.test(norm)) keyRoleCount++;
+                if (/(?:virtaläh|psu)/i.test(norm)) keyRoleCount++;
+                if (keyRoleCount >= 2) return false;
+
                 return /(?:prosessori[a-z]*|prosessorin\b|suoritti[a-z]*|suoritin[a-z]*|cpu\b|processor\b|emolevy[a-z]*|motherboard\b|mainboard\b|piirisarja\b|chipset\b|näytönohjai[a-z]*|n&auml;yt&ouml;nohjai[a-z]*|gpu\b|grafiikka[a-z]*|video\s*card\b|graphics\s*cards?\b|graphics\b|keskusmuisti[a-z]*|\bmuisti\b|ram\b|memory\b|tallennustila[a-z]*|tallennus[a-z]*|massamuisti[a-z]*|kiintolevy[a-z]*|kovalevy[a-z]*|ssd\b|hard\s*drives?\b|storage\b|jäähdytys[a-z]*|j&auml;&auml;hdytys[a-z]*|prosessorijäähdyt[a-z]*|cooler\b|cooling\b|aio\b|kotelo[a-z]*|tietokonekotelo[a-z]*|chassis\b|case\b|virtaläh[a-z]*|virtal&auml;h[a-z]*|psu\b|power\s*supply\b|käyttöjärjestelmä[a-z]*|k&auml;ytt&ouml;j&auml;rjestelm&auml;[a-z]*|operating\s+system\b|\bos\b)/i.test(norm);
             };
 
@@ -3111,14 +3159,14 @@
                 }
 
                 // Reject multi-component summary prose (e.g. "Muistia, tallennustilaa ja yhteydet. 64GB DDR5, 4TB SSD...")
-                if (!cleanKey) {
+                if (!cleanKey || !isSpecKey(cleanKey) || /\.\s+[A-Z0-9]/.test(cleanVal)) {
                     if (/\.\s+[A-Z0-9]/.test(cleanVal)) return; // Multiple sentences
                     let roleMentions = 0;
                     if (/\b(?:prosessori|suoritin|cpu|ryzen|core\s*i\d)\b/i.test(cleanVal)) roleMentions++;
                     if (/\b(?:näytönohjain|gpu|rtx|geforce|radeon)\b/i.test(cleanVal)) roleMentions++;
                     if (/\b(?:keskusmuisti|muisti|ram|ddr\d)\b/i.test(cleanVal)) roleMentions++;
                     if (/\b(?:massamuisti|tallennustila|ssd|nvme)\b/i.test(cleanVal)) roleMentions++;
-                    if (/\b(?:emolevy|motherboard|x870|b650|z790|b760)\b/i.test(cleanVal)) roleMentions++;
+                    if (/\b(?:emolevy|motherboard|x870|b650|z790|b760|am5|lga\d+)\b/i.test(cleanVal)) roleMentions++;
                     if (/\b(?:virtalähde|psu|wattia|80\+\s*(?:gold|platinum|bronze))\b/i.test(cleanVal)) roleMentions++;
                     if (roleMentions >= 2) return; // Multiple components in one prose string!
                 }
@@ -3268,7 +3316,9 @@
                 if (components.length < 4) {
                     const listItems = doc.querySelectorAll('li');
                     for (const li of listItems) {
-                        if (li.closest && li.closest('nav, header, footer, [class*="nav" i], [class*="menu" i]')) continue;
+                        if (li.closest && li.closest('nav, header, footer, aside, [class*="nav" i], [class*="menu" i], [class*="sidebar" i], [class*="filter" i], [class*="facet" i], [class*="breadcrumb" i]')) continue;
+                        if (li.classList && (li.classList.contains('menu-item') || li.classList.contains('nav-item'))) continue;
+                        if (li.querySelector && li.querySelector('a[href*="/Product/List/"], a[href*="/kategoria/"], a[href*="/category/"]')) continue;
                         const txt = (li.textContent || '').trim();
                         if (!txt || txt.length < 5 || txt.length > 250) continue;
                         const colonIdx = txt.indexOf(':');
@@ -3279,9 +3329,11 @@
                                 addCandidate(k, v);
                             }
                         } else {
-                            const role = classifyComponentRole(txt, '');
-                            if (role.roleKey !== 'part') {
-                                addCandidate('', txt);
+                            if (txt.length < 120 && !/\.\s+[A-Z0-9]/.test(txt)) {
+                                const role = classifyComponentRole(txt, '');
+                                if (role.roleKey !== 'part') {
+                                    addCandidate('', txt);
+                                }
                             }
                         }
                     }
@@ -3420,10 +3472,15 @@
 
                 // Check list items (any <ul> or <ol> list items in rawHtml, excluding navigation links)
                 if (components.length < 4) {
-                    const lis = [...normalizedHtml.matchAll(/<li[^>]*>([\s\S]*?)<\/li>/gi)];
+                    const lis = [...normalizedHtml.matchAll(/<li([^>]*)>([\s\S]*?)<\/li>/gi)];
                     for (const lm of lis) {
-                        if (lm[1].includes('/fi/Pages/') || lm[1].includes('/fi/Product/Show') || lm[1].includes('nav') || lm[1].includes('menu')) continue;
-                        const line = lm[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+                        const liAttrs = lm[1] || '';
+                        const liBody = lm[2] || '';
+                        if (/menu|nav|sidebar|header|footer|facet|filter|category/i.test(liAttrs)) continue;
+                        if (/\b(?:Product\/List|Product\/Search|kategoria|category|facet|filter|breadcrumb)\b/i.test(liBody)) continue;
+                        if (/<a\s+href="[^"]*\/Product\/List\//i.test(liBody)) continue;
+                        if (liBody.includes('/fi/Pages/') || liBody.includes('/fi/Product/Show') || liBody.includes('nav') || liBody.includes('menu')) continue;
+                        const line = liBody.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
                         if (!line || line.length < 5 || line.length > 250) continue;
                         const colonIdx = line.indexOf(':');
                         if (colonIdx !== -1) {
@@ -3436,9 +3493,11 @@
                                 if (role.roleKey !== 'part') addCandidate(k, v);
                             }
                         } else {
-                            const role = classifyComponentRole(line, '');
-                            if (role.roleKey !== 'part') {
-                                addCandidate('', line);
+                            if (line.length < 120 && !/\.\s+[A-Z0-9]/.test(line)) {
+                                const role = classifyComponentRole(line, '');
+                                if (role.roleKey !== 'part') {
+                                    addCandidate('', line);
+                                }
                             }
                         }
                     }
@@ -3592,7 +3651,7 @@
         }
 
         const isBundle = (isBundleTitle || hasBundleHeading || Boolean(officialStandaloneTotal)) && components.length >= 2;
-        const isPcBuild = isPcTitle || hasPcSpecHeading || components.filter(c => ['cpu', 'mobo', 'gpu', 'ram', 'storage'].includes(c.roleKey)).length >= 3;
+        const isPcBuild = Boolean(isPcTitle || hasPcSpecHeading || isSlashPrebuilt) && components.length >= 1;
 
         if (!isBundle && !isPcBuild) {
             return null;
