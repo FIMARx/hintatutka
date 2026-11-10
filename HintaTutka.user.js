@@ -3092,6 +3092,19 @@
                     return;
                 }
 
+                // Reject multi-component summary prose (e.g. "Muistia, tallennustilaa ja yhteydet. 64GB DDR5, 4TB SSD...")
+                if (!cleanKey) {
+                    if (/\.\s+[A-Z0-9]/.test(cleanVal)) return; // Multiple sentences
+                    let roleMentions = 0;
+                    if (/\b(?:prosessori|suoritin|cpu|ryzen|core\s*i\d)\b/i.test(cleanVal)) roleMentions++;
+                    if (/\b(?:näytönohjain|gpu|rtx|geforce|radeon)\b/i.test(cleanVal)) roleMentions++;
+                    if (/\b(?:keskusmuisti|muisti|ram|ddr\d)\b/i.test(cleanVal)) roleMentions++;
+                    if (/\b(?:massamuisti|tallennustila|ssd|nvme)\b/i.test(cleanVal)) roleMentions++;
+                    if (/\b(?:emolevy|motherboard|x870|b650|z790|b760)\b/i.test(cleanVal)) roleMentions++;
+                    if (/\b(?:virtalähde|psu|wattia|80\+\s*(?:gold|platinum|bronze))\b/i.test(cleanVal)) roleMentions++;
+                    if (roleMentions >= 2) return; // Multiple components in one prose string!
+                }
+
                 const role = classifyComponentRole(cleanVal, cleanKey);
                 if (role.roleKey === 'part' && !isSpecKey(cleanKey)) return;
 
@@ -3164,55 +3177,130 @@
 
             // 2a. Live DOM parsing if doc is available
             if (doc && typeof doc.querySelectorAll === 'function') {
-                // Check list items inside spec/feature containers or lists (Verkkokauppa, HP OMEN, etc.)
-                const listItems = doc.querySelectorAll('li');
-                for (const li of listItems) {
-                    if (li.closest && li.closest('nav, header, footer, [class*="nav" i], [class*="menu" i]')) continue;
-                    const txt = (li.textContent || '').trim();
-                    if (!txt || txt.length < 5 || txt.length > 250) continue;
-                    const colonIdx = txt.indexOf(':');
-                    if (colonIdx !== -1) {
-                        const k = txt.substring(0, colonIdx).trim();
-                        const v = txt.substring(colonIdx + 1).trim();
-                        if (isSpecKey(k)) {
-                            addCandidate(k, v);
-                        }
-                    } else {
-                        const role = classifyComponentRole(txt, '');
-                        if (role.roleKey !== 'part') {
-                            addCandidate('', txt);
+                // 1. Check dedicated technical specifications section (Jimm's GtG PCs, etc.)
+                const specHeadings = doc.querySelectorAll('h1, h2, h3, h4, h5, h6, strong, b');
+                for (const h of specHeadings) {
+                    const hTxt = (h.textContent || '').trim();
+                    if (/^(?:pelitietokoneen\s+tekniset\s+tiedot|tekniset\s+tiedot|kokoonpanon\s+tiedot)$/i.test(hTxt)) {
+                        let sibling = h.nextElementSibling;
+                        while (sibling && !/^(?:H[1-6])$/i.test(sibling.tagName)) {
+                            const innerHtml = sibling.innerHTML || '';
+                            if (/<br\s*\/?>/i.test(innerHtml)) {
+                                const rawLines = innerHtml.split(/<br\s*\/?>/i);
+                                for (const line of rawLines) {
+                                    const cleanLine = decodeHtmlEntities(line).replace(/<[^>]+>/g, '').trim();
+                                    if (!cleanLine || cleanLine.length < 5 || cleanLine.length > 250) continue;
+                                    const colonIdx = cleanLine.indexOf(':');
+                                    if (colonIdx !== -1) {
+                                        const k = cleanLine.substring(0, colonIdx).trim();
+                                        const v = cleanLine.substring(colonIdx + 1).trim();
+                                        if (isSpecKey(k)) {
+                                            addCandidate(k, v);
+                                        }
+                                    }
+                                }
+                            }
+                            sibling = sibling.nextElementSibling;
                         }
                     }
                 }
 
-                // Check table rows (Power.fi, Verkkokauppa specs, Proshop, etc.)
-                const rows = doc.querySelectorAll('tr');
-                for (const tr of rows) {
-                    const cells = tr.querySelectorAll('th, td');
-                    if (cells.length >= 2) {
-                        const key = (cells[0].textContent || '').trim();
-                        const val = (cells[1].textContent || '').trim();
+                // 2. Check paragraphs with <br> containing key-value specs if still missing specs
+                if (components.length < 4) {
+                    const paras = doc.querySelectorAll('p, [class*="description" i]');
+                    for (const p of paras) {
+                        if (p.closest && p.closest('nav, header, footer, [class*="nav" i], [class*="menu" i]')) continue;
+                        const innerHtml = p.innerHTML || '';
+                        if (/<br\s*\/?>/i.test(innerHtml) && /(?:prosessori|suoritin|näytönohjain|keskusmuisti|massamuisti|virtalähde)/i.test(innerHtml)) {
+                            const rawLines = innerHtml.split(/<br\s*\/?>/i);
+                            for (const line of rawLines) {
+                                const cleanLine = decodeHtmlEntities(line).replace(/<[^>]+>/g, '').trim();
+                                if (!cleanLine || cleanLine.length < 5 || cleanLine.length > 250) continue;
+                                const colonIdx = cleanLine.indexOf(':');
+                                if (colonIdx !== -1) {
+                                    const k = cleanLine.substring(0, colonIdx).trim();
+                                    const v = cleanLine.substring(colonIdx + 1).trim();
+                                    if (isSpecKey(k)) {
+                                        addCandidate(k, v);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 3. Check Jimm's explicit short description in buy-area (.jim-product-cta-box-shortdescription)
+                if (components.length < 4) {
+                    const shortDescEl = doc.querySelector('.jim-product-cta-box-shortdescription, [class*="shortdescription" i]');
+                    if (shortDescEl) {
+                        const shortTxt = (shortDescEl.textContent || '').trim();
+                        if (shortTxt && shortTxt.length > 10) {
+                            const chunks = shortTxt.split(/,\s*/);
+                            for (const chunk of chunks) {
+                                const role = classifyComponentRole(chunk, '');
+                                if (role.roleKey !== 'part') {
+                                    addCandidate('', chunk);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 4. Check list items inside spec/feature containers or lists (Verkkokauppa, HP OMEN, etc.)
+                if (components.length < 4) {
+                    const listItems = doc.querySelectorAll('li');
+                    for (const li of listItems) {
+                        if (li.closest && li.closest('nav, header, footer, [class*="nav" i], [class*="menu" i]')) continue;
+                        const txt = (li.textContent || '').trim();
+                        if (!txt || txt.length < 5 || txt.length > 250) continue;
+                        const colonIdx = txt.indexOf(':');
+                        if (colonIdx !== -1) {
+                            const k = txt.substring(0, colonIdx).trim();
+                            const v = txt.substring(colonIdx + 1).trim();
+                            if (isSpecKey(k)) {
+                                addCandidate(k, v);
+                            }
+                        } else {
+                            const role = classifyComponentRole(txt, '');
+                            if (role.roleKey !== 'part') {
+                                addCandidate('', txt);
+                            }
+                        }
+                    }
+                }
+
+                // 5. Check table rows (Power.fi, Verkkokauppa specs, Proshop, etc.)
+                if (components.length < 4) {
+                    const rows = doc.querySelectorAll('tr');
+                    for (const tr of rows) {
+                        const cells = tr.querySelectorAll('th, td');
+                        if (cells.length >= 2) {
+                            const key = (cells[0].textContent || '').trim();
+                            const val = (cells[1].textContent || '').trim();
+                            if (isSpecKey(key)) {
+                                addCandidate(key, val);
+                            }
+                        }
+                    }
+                }
+
+                // 6. Check definition lists (Gigantti.fi, Verkkokauppa specs, etc.)
+                if (components.length < 4) {
+                    const dts = doc.querySelectorAll('dt');
+                    for (const dt of dts) {
+                        const key = (dt.textContent || '').trim();
                         if (isSpecKey(key)) {
-                            addCandidate(key, val);
-                        }
-                    }
-                }
-
-                // Check definition lists (Gigantti.fi, Verkkokauppa specs, etc.)
-                const dts = doc.querySelectorAll('dt');
-                for (const dt of dts) {
-                    const key = (dt.textContent || '').trim();
-                    if (isSpecKey(key)) {
-                        const dd = dt.nextElementSibling;
-                        if (dd) {
-                            addCandidate(key, (dd.textContent || '').trim());
+                            const dd = dt.nextElementSibling;
+                            if (dd) {
+                                addCandidate(key, (dd.textContent || '').trim());
+                            }
                         }
                     }
                 }
             }
 
             // Check Next.js __NEXT_DATA__ state script (Gigantti, Elkjøp, etc.)
-            if (components.length === 0) {
+            if (components.length < 4) {
                 const nextDataEl = (doc && typeof doc.querySelector === 'function')
                     ? doc.querySelector('#__NEXT_DATA__')
                     : null;
@@ -3249,35 +3337,74 @@
             }
 
             // 2b. Raw HTML regex parsing fallback (headless test harness, SSR, or rawHtml provided)
-            if (components.length === 0 && bodyHtml) {
+            if (components.length < 4 && bodyHtml) {
                 const normalizedHtml = decodeHtmlEntities(bodyHtml);
 
-                // Check list items inside features / specs sections (Verkkokauppa Next.js state, etc.)
-                const featuresMatches = [...normalizedHtml.matchAll(/(?:Features|Ominaisuudet|Tekniset tiedot|Tiedot|Specifications)[\s\S]{0,100}?<ul>([\s\S]*?)<\/ul>/gi)];
-                for (const fm of featuresMatches) {
-                    const lis = [...fm[1].matchAll(/<li[^>]*>([\s\S]*?)<\/li>/gi)];
-                    for (const lm of lis) {
-                        const line = lm[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-                        const colonIdx = line.indexOf(':');
+                // Check dedicated technical specifications section (Jimm's GtG PCs, etc.)
+                const specBlockMatch = normalizedHtml.match(/(?:Pelitietokoneen tekniset tiedot|Tekniset tiedot|Kokoonpanon tiedot)[\s\S]{0,150}?<p>([\s\S]*?)<\/p>/i)
+                    || normalizedHtml.match(/<p>([\s\S]*?<strong>Prosessori<\/strong>[\s\S]*?)<\/p>/i);
+                if (specBlockMatch) {
+                    const rawLines = specBlockMatch[1].split(/<br\s*\/?>/i);
+                    for (const line of rawLines) {
+                        const cleanLine = line.replace(/<[^>]+>/g, '').trim();
+                        if (!cleanLine || cleanLine.length < 5 || cleanLine.length > 250) continue;
+                        const colonIdx = cleanLine.indexOf(':');
                         if (colonIdx !== -1) {
-                            const k = line.substring(0, colonIdx).trim();
-                            const v = line.substring(colonIdx + 1).trim();
+                            const k = cleanLine.substring(0, colonIdx).trim();
+                            const v = cleanLine.substring(colonIdx + 1).trim();
                             if (isSpecKey(k)) {
                                 addCandidate(k, v);
-                            }
-                        } else {
-                            const role = classifyComponentRole(line, '');
-                            if (role.roleKey !== 'part') {
-                                addCandidate('', line);
                             }
                         }
                     }
                 }
 
-                // Check list items (any <ul> or <ol> list items in rawHtml)
-                if (components.length === 0) {
+                // Check Jimm's short description box (.jim-product-cta-box-shortdescription)
+                if (components.length < 4) {
+                    const shortDescMatch = normalizedHtml.match(/class="[^"]*jim-product-cta-box-shortdescription[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+                    if (shortDescMatch) {
+                        const shortTxt = shortDescMatch[1].replace(/<[^>]+>/g, '').trim();
+                        if (shortTxt && shortTxt.length > 10) {
+                            const chunks = shortTxt.split(/,\s*/);
+                            for (const chunk of chunks) {
+                                const role = classifyComponentRole(chunk, '');
+                                if (role.roleKey !== 'part') {
+                                    addCandidate('', chunk);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Check list items inside features / specs sections (Verkkokauppa Next.js state, etc.)
+                if (components.length < 4) {
+                    const featuresMatches = [...normalizedHtml.matchAll(/(?:Features|Ominaisuudet|Tekniset tiedot|Tiedot|Specifications)[\s\S]{0,100}?<ul>([\s\S]*?)<\/ul>/gi)];
+                    for (const fm of featuresMatches) {
+                        const lis = [...fm[1].matchAll(/<li[^>]*>([\s\S]*?)<\/li>/gi)];
+                        for (const lm of lis) {
+                            const line = lm[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+                            const colonIdx = line.indexOf(':');
+                            if (colonIdx !== -1) {
+                                const k = line.substring(0, colonIdx).trim();
+                                const v = line.substring(colonIdx + 1).trim();
+                                if (isSpecKey(k)) {
+                                    addCandidate(k, v);
+                                }
+                            } else {
+                                const role = classifyComponentRole(line, '');
+                                if (role.roleKey !== 'part') {
+                                    addCandidate('', line);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Check list items (any <ul> or <ol> list items in rawHtml, excluding navigation links)
+                if (components.length < 4) {
                     const lis = [...normalizedHtml.matchAll(/<li[^>]*>([\s\S]*?)<\/li>/gi)];
                     for (const lm of lis) {
+                        if (lm[1].includes('/fi/Pages/') || lm[1].includes('/fi/Product/Show') || lm[1].includes('nav') || lm[1].includes('menu')) continue;
                         const line = lm[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
                         if (!line || line.length < 5 || line.length > 250) continue;
                         const colonIdx = line.indexOf(':');
@@ -3300,7 +3427,7 @@
                 }
 
                 // Table rows regex
-                if (components.length === 0) {
+                if (components.length < 4) {
                     const trRegex = /<tr[^>]*>\s*<(?:th|td)[^>]*>([\s\S]*?)<\/(?:th|td)>\s*<td[^>]*>([\s\S]*?)<\/td>/gi;
                     let tm;
                     while ((tm = trRegex.exec(normalizedHtml)) !== null) {
@@ -3314,7 +3441,7 @@
                 }
 
                 // Definition list dl/dt/dd regex
-                if (components.length === 0) {
+                if (components.length < 4) {
                     const dlRegex = /<dt[^>]*>([\s\S]*?)<\/dt>\s*<dd[^>]*>([\s\S]*?)<\/dd>/gi;
                     let dm;
                     while ((dm = dlRegex.exec(normalizedHtml)) !== null) {
@@ -3328,8 +3455,8 @@
                 }
 
                 // Line chunks (Jimm's GtG PCs, Verkkokauppa Blackstorm bullet lists, etc.)
-                if (components.length === 0) {
-                    const rawChunks = normalizedHtml.split(/<br\s*\/?>|<\/?p[^>]*>|<\/?li[^>]*>|\n/i);
+                if (components.length < 4) {
+                    const rawChunks = normalizedHtml.split(/<br\s*\/?>|<\/?p[^>]*>|\n/i);
                     for (const chunk of rawChunks) {
                         const cleanLine = chunk.replace(/<[^>]+>/g, '').trim();
                         if (cleanLine.length < 5 || cleanLine.length > 250) continue;
@@ -3339,11 +3466,6 @@
                             const v = cleanLine.substring(colonIdx + 1).trim();
                             if (isSpecKey(k)) {
                                 addCandidate(k, v);
-                            }
-                        } else {
-                            const role = classifyComponentRole(cleanLine, '');
-                            if (role.roleKey !== 'part') {
-                                addCandidate('', cleanLine);
                             }
                         }
                     }

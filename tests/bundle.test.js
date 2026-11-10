@@ -746,6 +746,100 @@ test('bundle: Jimm\'s GtG PCs with single <p> containing <br> and nav menu items
     assert.strictEqual(cooler.cleanQuery, 'Phanteks Glacier One 360S25-SE');
 });
 
+test('bundle: Jimm\'s GtG Owl 5090 flagship extracts all 9 hardware components and ignores prose bullets', () => {
+    const { exports: HT } = loadHintaTutka({ host: 'www.jimms.fi' });
+
+    const mockOwlHtml = `
+        <header><nav><ul><li><a href="/fi/Pages/Oppaat">Opas</a></li></ul></nav></header>
+        <main>
+            <div class="jim-product-cta-box-shortdescription">
+                AMD Ryzen 9 9950X3D2 4.3/5.6 GHz, 64GB DDR5, 4TB M.2 NVMe SSD, NVIDIA GeForce RTX 5090 32GB, Win 11 Home
+            </div>
+            <h1>Jimm's GtG Owl 5090, pelitietokone</h1>
+            <div class="product-description">
+                <ul>
+                    <li><strong>Muistia, tallennustilaa ja uusimmat yhteydet.</strong> 64 gigatavua DDR5 5600 MHz -muistia, 4 teratavun NVMe SSD, ASUS TUF GAMING X870E-PLUS WIFI7 -emolevyn Wi-Fi 7 ja kaksi USB4-liitäntää sekä 1200 watin 80+ Gold -virtalähde.</li>
+                </ul>
+                <h2>Pelitietokoneen tekniset tiedot</h2>
+                <p><strong>Prosessori</strong>: AMD Ryzen 9 9950X3D2, 4,3 / 5,6 GHz<br><strong>Emolevy</strong>: ASUS TUF GAMING X870E-PLUS WIFI7<br><strong>N&auml;yt&ouml;nohjain</strong>: ASUS NVIDIA GeForce RTX 5090 TUF GAMING, 32 GB GDDR7<br><strong>Keskusmuisti</strong>: 64 GB (2 x 32 GB) DDR5 5600 MHz<br><strong>Massamuisti</strong>: 4 TB M.2 PCIe 4.0 NVMe SSD<br><strong>Prosessorij&auml;&auml;hdytys</strong>: Noctua NL-LC1-42, 420 mm AIO-nestej&auml;&auml;hdytys<br><strong>Kotelo</strong>: Antec X Noctua FLUX PRO Noctua Edition<br><strong>Virtal&auml;hde</strong>: 1200 W 80+ Gold, PCIe 5.0 Ready<br><strong>K&auml;ytt&ouml;j&auml;rjestelm&auml;</strong>: Windows 11 Home<br><strong>Muuta</strong>: Wi-Fi &amp; Bluetooth<br><strong>Kokoonpanotakuu</strong>: 3 vuotta<br><strong>Tuotekoodi</strong>: JIMMS-A-N-GTG-NXA90</p>
+            </div>
+        </main>
+    `;
+
+    const mockDoc = {
+        title: "Jimm's GtG Owl 5090, pelitietokone",
+        body: { innerHTML: mockOwlHtml, textContent: mockOwlHtml.replace(/<[^>]+>/g, ' ') },
+        querySelector: (sel) => {
+            if (sel === 'main' || sel === 'body') return { innerHTML: mockOwlHtml, innerText: mockOwlHtml.replace(/<[^>]+>/g, ' ') };
+            if (sel.includes('shortdescription')) return { textContent: 'AMD Ryzen 9 9950X3D2 4.3/5.6 GHz, 64GB DDR5, 4TB M.2 NVMe SSD, NVIDIA GeForce RTX 5090 32GB, Win 11 Home' };
+            return null;
+        },
+        querySelectorAll: (sel) => {
+            if (sel.includes('h1') || sel.includes('h2')) {
+                return [
+                    {
+                        textContent: 'Pelitietokoneen tekniset tiedot',
+                        nextElementSibling: {
+                            tagName: 'P',
+                            innerHTML: '<strong>Prosessori</strong>: AMD Ryzen 9 9950X3D2, 4,3 / 5,6 GHz<br><strong>Emolevy</strong>: ASUS TUF GAMING X870E-PLUS WIFI7<br><strong>N&auml;yt&ouml;nohjain</strong>: ASUS NVIDIA GeForce RTX 5090 TUF GAMING, 32 GB GDDR7<br><strong>Keskusmuisti</strong>: 64 GB (2 x 32 GB) DDR5 5600 MHz<br><strong>Massamuisti</strong>: 4 TB M.2 PCIe 4.0 NVMe SSD<br><strong>Prosessorij&auml;&auml;hdytys</strong>: Noctua NL-LC1-42, 420 mm AIO-nestej&auml;&auml;hdytys<br><strong>Kotelo</strong>: Antec X Noctua FLUX PRO Noctua Edition<br><strong>Virtal&auml;hde</strong>: 1200 W 80+ Gold, PCIe 5.0 Ready<br><strong>K&auml;ytt&ouml;j&auml;rjestelm&auml;</strong>: Windows 11 Home<br><strong>Muuta</strong>: Wi-Fi &amp; Bluetooth'
+                        }
+                    }
+                ];
+            }
+            if (sel === 'li') {
+                return [
+                    {
+                        textContent: 'Muistia, tallennustilaa ja uusimmat yhteydet. 64 gigatavua DDR5 5600 MHz -muistia, 4 teratavun NVMe SSD, ASUS TUF GAMING X870E-PLUS WIFI7 -emolevyn Wi-Fi 7 ja kaksi USB4-liitäntää sekä 1200 watin 80+ Gold -virtalähde.',
+                        closest: () => null
+                    }
+                ];
+            }
+            return [];
+        }
+    };
+
+    const info = { name: "Jimm's GtG Owl 5090, pelitietokone", currentPrice: 10499.00 };
+    const owlData = HT.detectAndExtractBundleData(info, mockDoc, 10499.00, mockOwlHtml);
+
+    assert.ok(owlData, 'Owl 5090 PC build must be detected');
+    assert.strictEqual(owlData.isPcBuild, true);
+    assert.strictEqual(owlData.components.length, 9, 'Must extract exactly 9 components, not 1 prose bullet');
+
+    // CPU
+    const cpu = owlData.components.find(c => c.roleKey === 'cpu');
+    assert.ok(cpu, 'CPU component must be present');
+    assert.strictEqual(cpu.cleanQuery, 'AMD Ryzen 9 9950X3D2');
+
+    // GPU
+    const gpu = owlData.components.find(c => c.roleKey === 'gpu');
+    assert.ok(gpu, 'GPU component must be present');
+    assert.strictEqual(gpu.cleanQuery, 'ASUS NVIDIA GeForce RTX 5090 TUF GAMING');
+
+    // Mobo
+    const mobo = owlData.components.find(c => c.roleKey === 'mobo');
+    assert.ok(mobo, 'Motherboard component must be present');
+    assert.strictEqual(mobo.cleanQuery, 'ASUS TUF GAMING X870E-PLUS WIFI7');
+
+    // RAM
+    const ram = owlData.components.find(c => c.roleKey === 'ram');
+    assert.ok(ram, 'RAM component must be present');
+    assert.strictEqual(ram.cleanQuery, '64GB DDR5 5600 MHz');
+
+    // Storage
+    const storage = owlData.components.find(c => c.roleKey === 'storage');
+    assert.ok(storage, 'Storage component must be present');
+    assert.strictEqual(storage.cleanQuery, '4TB M.2 NVMe SSD');
+
+    // PSU
+    const psu = owlData.components.find(c => c.roleKey === 'psu');
+    assert.ok(psu, 'PSU component must be present');
+    assert.strictEqual(psu.cleanQuery, '1200W 80+ Gold');
+
+    // Reject false single-item summary
+    const falseRam = owlData.components.find(c => c.name.includes('uusimmat yhteydet'));
+    assert.strictEqual(falseRam, undefined, 'Marketing summary sentence must never be a component card');
+});
+
 test('bundle: Verkkokauppa.com Blackstorm R9 5090 prebuilt deconstructed with 9 components', () => {
     const { exports: HT } = loadHintaTutka({ host: 'www.verkkokauppa.com' });
 
