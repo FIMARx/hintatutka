@@ -1128,7 +1128,19 @@
     }
 
     // Extracts or calculates Unit Price (€/kg or €/l) ONLY for groceries, foods, beverages & supplements
-    function extractUnitPriceInfo(title, currentPrice, category = 'electronics') {
+    function extractUnitPriceInfo(title, currentPrice, category = null) {
+        // Robust argument handling: support (title, price) or (price, title)
+        if (typeof title === 'number' || (typeof title === 'string' && /^\s*\d+([.,]\d+)?\s*€?\s*$/.test(title) && typeof currentPrice === 'string' && !/^\s*\d+([.,]\d+)?\s*€?\s*$/.test(currentPrice))) {
+            const temp = title;
+            title = currentPrice;
+            currentPrice = temp;
+        }
+        if (typeof currentPrice === 'string') {
+            currentPrice = parsePriceNumber(currentPrice);
+        }
+        if (!category) {
+            category = detectProductCategory(title);
+        }
         if (category !== 'grocery') return null;
 
         // 1. Check if the store DOM explicitly displays a unit price (e.g. "11,90 €/kg" or "3,50 €/l")
@@ -1558,7 +1570,7 @@
                     // For groceries, keep brand, product name, and weight/volume (e.g. "Juhla Mokka 500 g")
                     return !/^(laktoositon|gluteeniton|luomu|suomalainen|kotimainen|uutuus|tarjous|erä)$/i.test(w);
                 }
-                return !/^(GDDR\dX?|PCIe|AM4|AM5|LGA\d+|ATX|mATX|ITX|Wi-?Fi|Bluetooth|5G|4G|LTE|Dual|SIM|RGB|ARGB|Black|White|Silver|Gold|Blue|Green|Pink|Purple|Gray|Grey|Red|Wine|Burgundy|Glacier|Polar|Midnight|Starlight|Sage|Lavender|Orange|Musta|Valkoinen|Hopea|Sininen|Vihreä|Harmaa|Punainen|Viininpunainen|Jäätikkö|Salvia|Laventeli|Oranssi|kultainen|mustatitaani|luonnontitaani|valkotitaani|tammi|koivu|mänty|valkolakattu|petsattu|Phone|Edition|Series|Gaming|OC|Takuu|Takuulla|Kuitti|Uudenveroinen|Hyväkuntoinen|Drone|Drooni|\d+kg|\d+kpl)$/i.test(w);
+                return !/^(GDDR\dX?|PCIe|AM4|AM5|LGA\d+|ATX|mATX|ITX|Wi-?Fi|Bluetooth|5G|4G|LTE|Dual|SIM|RGB|ARGB|Black|White|Silver|Gold|Blue|Green|Pink|Purple|Gray|Grey|Red|Wine|Burgundy|Glacier|Polar|Midnight|Starlight|Sage|Lavender|Orange|Desert|Titanium|Natural|Alpine|Space|Graphite|Sierra|Cosmic|Aura|Phantom|Obsidian|Hazel|Porcelain|Bay|Mint|Lilac|Coral|Amber|Onyx|Marble|Sandstone|Titaani|Aavikko|Musta|Valkoinen|Hopea|Sininen|Vihreä|Harmaa|Punainen|Viininpunainen|Jäätikkö|Salvia|Laventeli|Oranssi|kultainen|mustatitaani|luonnontitaani|valkotitaani|tammi|koivu|mänty|valkolakattu|petsattu|Phone|Edition|Series|Gaming|OC|Takuu|Takuulla|Kuitti|Uudenveroinen|Hyväkuntoinen|Drone|Drooni|\d+kg|\d+kpl)$/i.test(w);
             });
 
         const mCodes = extractModelCodes(name).filter(c => !isAppleRegionalPartNumber(c));
@@ -3262,6 +3274,31 @@
                     }
                 }
 
+                // Check list items (any <ul> or <ol> list items in rawHtml)
+                if (components.length === 0) {
+                    const lis = [...normalizedHtml.matchAll(/<li[^>]*>([\s\S]*?)<\/li>/gi)];
+                    for (const lm of lis) {
+                        const line = lm[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+                        if (!line || line.length < 5 || line.length > 250) continue;
+                        const colonIdx = line.indexOf(':');
+                        if (colonIdx !== -1) {
+                            const k = line.substring(0, colonIdx).trim();
+                            const v = line.substring(colonIdx + 1).trim();
+                            if (isSpecKey(k)) {
+                                addCandidate(k, v);
+                            } else {
+                                const role = classifyComponentRole(v, k);
+                                if (role.roleKey !== 'part') addCandidate(k, v);
+                            }
+                        } else {
+                            const role = classifyComponentRole(line, '');
+                            if (role.roleKey !== 'part') {
+                                addCandidate('', line);
+                            }
+                        }
+                    }
+                }
+
                 // Table rows regex
                 if (components.length === 0) {
                     const trRegex = /<tr[^>]*>\s*<(?:th|td)[^>]*>([\s\S]*?)<\/(?:th|td)>\s*<td[^>]*>([\s\S]*?)<\/td>/gi;
@@ -3290,7 +3327,7 @@
                     }
                 }
 
-                // Colon list (Jimm's GtG PCs, Verkkokauppa Blackstorm bullet lists, etc.)
+                // Line chunks (Jimm's GtG PCs, Verkkokauppa Blackstorm bullet lists, etc.)
                 if (components.length === 0) {
                     const rawChunks = normalizedHtml.split(/<br\s*\/?>|<\/?p[^>]*>|<\/?li[^>]*>|\n/i);
                     for (const chunk of rawChunks) {
@@ -3302,6 +3339,11 @@
                             const v = cleanLine.substring(colonIdx + 1).trim();
                             if (isSpecKey(k)) {
                                 addCandidate(k, v);
+                            }
+                        } else {
+                            const role = classifyComponentRole(cleanLine, '');
+                            if (role.roleKey !== 'part') {
+                                addCandidate('', cleanLine);
                             }
                         }
                     }
@@ -3716,14 +3758,25 @@
 
     // Hardware advisor: analyzes CPU, GPU, RAM and PSU balance for Prebuilt PCs
     function evaluatePrebuiltHardwareBalance(bundleData, lang = 'fi') {
-        if (!bundleData || !Array.isArray(bundleData.components) || !bundleData.isPcBuild) return [];
+        const components = Array.isArray(bundleData)
+            ? bundleData
+            : (bundleData && Array.isArray(bundleData.components) ? bundleData.components : null);
+        if (!components) {
+            const empty = [];
+            empty.bottleneckRisk = 'unknown';
+            empty.psuHeadroom = 'unknown';
+            empty.gpuTier = 0;
+            empty.cpuTier = 0;
+            empty.isBalanced = true;
+            return empty;
+        }
         const isEn = lang === 'en';
         const insights = [];
 
-        const cpuComp = bundleData.components.find(c => c.roleKey === 'cpu');
-        const gpuComp = bundleData.components.find(c => c.roleKey === 'gpu');
-        const ramComp = bundleData.components.find(c => c.roleKey === 'ram');
-        const psuComp = bundleData.components.find(c => c.roleKey === 'psu');
+        const cpuComp = components.find(c => c.roleKey === 'cpu');
+        const gpuComp = components.find(c => c.roleKey === 'gpu');
+        const ramComp = components.find(c => c.roleKey === 'ram');
+        const psuComp = components.find(c => c.roleKey === 'psu');
 
         const cpuName = (cpuComp?.cleanQuery || cpuComp?.name || '').toLowerCase();
         const gpuName = (gpuComp?.cleanQuery || gpuComp?.name || '').toLowerCase();
@@ -3742,8 +3795,10 @@
         else if (/i5-14|i5-13|i5-12|7500f|5600x|core\s*ultra\s*5/i.test(cpuName)) cpuTier = 2;
         else if (/ryzen\s*5\s*5500|i3-/i.test(cpuName)) cpuTier = 1;
 
+        let bottleneckRisk = 'low';
         // Bottleneck Analysis
         if (gpuTier >= 3 && cpuTier === 1) {
+            bottleneckRisk = 'high';
             insights.push({
                 type: 'warning',
                 icon: '⚠️',
@@ -3752,8 +3807,11 @@
                     ? 'High-end graphics card may be bottlenecked by entry-level processor in CPU-heavy games.'
                     : 'Tehokas näytönohjain voi kohdata pullonkaulan perusprosessorilla raskaissa peleissä.'
             });
+        } else if (gpuTier > cpuTier + 1 && gpuTier >= 2) {
+            bottleneckRisk = 'moderate';
         }
 
+        let psuHeadroom = 'adequate';
         // PSU Headroom
         if (psuComp) {
             const psuText = (psuComp.cleanQuery || psuComp.name || '');
@@ -3761,6 +3819,7 @@
             if (wattM) {
                 const watt = parseInt(wattM[1], 10);
                 if (gpuTier >= 4 && watt < 850) {
+                    psuHeadroom = 'insufficient';
                     insights.push({
                         type: 'warning',
                         icon: '⚡',
@@ -3770,6 +3829,7 @@
                             : `Suositeltu vähintään 850W-1000W lippulaivanäytönohjaimelle (nykyinen: ${watt}W).`
                     });
                 } else if (gpuTier >= 3 && watt < 650) {
+                    psuHeadroom = 'tight';
                     insights.push({
                         type: 'warning',
                         icon: '⚡',
@@ -3779,6 +3839,7 @@
                             : `Suositeltu vähintään 650W-750W tehokkaalle näytönohjaimelle (nykyinen: ${watt}W).`
                     });
                 } else if (watt <= 310) {
+                    psuHeadroom = 'limiting';
                     insights.push({
                         type: 'info',
                         icon: 'ℹ️',
@@ -3809,6 +3870,12 @@
                 }
             }
         }
+
+        insights.bottleneckRisk = bottleneckRisk;
+        insights.psuHeadroom = psuHeadroom;
+        insights.gpuTier = gpuTier;
+        insights.cpuTier = cpuTier;
+        insights.isBalanced = insights.filter(i => i.type === 'warning').length === 0;
 
         return insights;
     }
@@ -7207,6 +7274,15 @@
     function evaluateItemFlipArbitrage(itemPrice, newLowestPrice = null, usedMedianPrice = null) {
         if (!Number.isFinite(itemPrice) || itemPrice < 15) return null;
 
+        // If caller passed (itemPrice, usedMedianPrice, newLowestPrice) where median used < new
+        if (Number.isFinite(newLowestPrice) && Number.isFinite(usedMedianPrice) && newLowestPrice > 0 && usedMedianPrice > 0) {
+            if (newLowestPrice < usedMedianPrice) {
+                const temp = newLowestPrice;
+                newLowestPrice = usedMedianPrice;
+                usedMedianPrice = temp;
+            }
+        }
+
         let resaleTarget = null;
         if (Number.isFinite(usedMedianPrice) && usedMedianPrice > 0 && Number.isFinite(newLowestPrice) && newLowestPrice > 0) {
             resaleTarget = Math.min(usedMedianPrice, newLowestPrice * 0.78);
@@ -7221,14 +7297,21 @@
         const frictionEur = Math.max(8, Math.round(itemPrice * 0.05));
         const netProfitEur = Math.round(resaleTarget - itemPrice - frictionEur);
         const roiPct = Math.round((netProfitEur / (itemPrice + frictionEur)) * 100);
-        const isFlipOpportunity = netProfitEur >= 22 && roiPct >= 22 && itemPrice <= resaleTarget * 0.76;
+        const isFlipOpportunity = netProfitEur >= 22 && roiPct >= 20 && itemPrice <= resaleTarget * 0.85;
+
+        const verdict = isFlipOpportunity
+            ? `Hyvä diili! Flippimahdollisuus (+${netProfitEur} € / ${roiPct}%)`
+            : `Ei kannattava flippi`;
 
         return {
             isFlipOpportunity,
             netProfitEur,
+            netProfit: netProfitEur,
             roiPct,
+            roiPercent: roiPct,
             resaleTarget: Math.round(resaleTarget),
-            frictionEur
+            frictionEur,
+            verdict
         };
     }
 
@@ -7248,12 +7331,26 @@
     }
 
     function evaluateClubBenchmark(clubOffer, lowestNonClubPrice = null, lowestNonClubStore = null, historyAtlPrice = null, lang = 'fi') {
-        if (!clubOffer || !Number.isFinite(clubOffer.clubPrice) || !Number.isFinite(clubOffer.normalPrice)) return null;
-        if (clubOffer.normalPrice <= clubOffer.clubPrice + 0.5) return null;
+        let clubPrice, normalPrice, clubName;
+        if (typeof clubOffer === 'number') {
+            clubPrice = clubOffer;
+            normalPrice = typeof lowestNonClubPrice === 'number' ? lowestNonClubPrice : clubPrice;
+            const marketLowest = typeof lowestNonClubStore === 'number' ? lowestNonClubStore : null;
+            clubName = typeof historyAtlPrice === 'string' ? historyAtlPrice : (typeof lowestNonClubStore === 'string' ? lowestNonClubStore : (lang === 'en' ? 'Club' : 'Klubi'));
+            lowestNonClubPrice = marketLowest !== null ? marketLowest : (typeof lowestNonClubPrice === 'number' ? lowestNonClubPrice : null);
+            lowestNonClubStore = typeof lowestNonClubStore === 'string' ? lowestNonClubStore : null;
+            historyAtlPrice = typeof historyAtlPrice === 'number' ? historyAtlPrice : null;
+        } else if (clubOffer && typeof clubOffer === 'object') {
+            clubPrice = clubOffer.clubPrice;
+            normalPrice = clubOffer.normalPrice;
+            clubName = clubOffer.clubLabel || (lang === 'en' ? 'Club' : 'Klubi');
+        } else {
+            return null;
+        }
 
-        const clubPrice = clubOffer.clubPrice;
-        const normalPrice = clubOffer.normalPrice;
-        const clubName = clubOffer.clubLabel || (lang === 'en' ? 'Club' : 'Klubi');
+        if (!Number.isFinite(clubPrice) || !Number.isFinite(normalPrice)) return null;
+        if (normalPrice <= clubPrice + 0.5) return null;
+
         const advertisedSaveEur = normalPrice - clubPrice;
         const openStore = lowestNonClubStore || 'Hinta.fi';
 
@@ -7267,6 +7364,7 @@
                 return {
                     tier: 'fake',
                     icon: '🎭',
+                    isAuthentic: false,
                     badge: lang === 'en' ? 'ILLUSORY CLUB DEAL' : 'NÄENNÄISALE',
                     summary: cheaperDiff > 0.50
                         ? (lang === 'en'
@@ -7275,7 +7373,8 @@
                         : (lang === 'en'
                             ? `${openStore} matches ${formatEur(lowestNonClubPrice)} without any loyalty card ("Normal ${formatEur(normalPrice)}" is inflated).`
                             : `${openStore} myy samaan hintaan ${formatEur(lowestNonClubPrice)} ilman klubikorttia ("Norm. ${formatEur(normalPrice)}" on korotettu vertailuhinta).`),
-                    realSavingsEur: realSavingsVsMarket
+                    realSavingsEur: realSavingsVsMarket,
+                    savingsEur: realSavingsVsMarket
                 };
             }
 
@@ -7284,25 +7383,29 @@
                 return {
                     tier: 'inflated_anchor',
                     icon: '⚠️',
+                    isAuthentic: false,
                     badge: lang === 'en' ? 'INFLATED NORMAL PRICE' : 'KOROTETTU NORMAALIHINTA',
                     summary: lang === 'en'
                         ? `Advertised -${formatEur(advertisedSaveEur, 0)} off "${formatEur(normalPrice)}", but true savings vs. ${openStore} (${formatEur(lowestNonClubPrice)}) is -${formatEur(realSavingsVsMarket)}.`
                         : `Mainostettu etu -${formatEur(advertisedSaveEur, 0)}, mutta todellinen säästö vs. ${openStore} (${formatEur(lowestNonClubPrice)}) on -${formatEur(realSavingsVsMarket)}.`,
-                    realSavingsEur: realSavingsVsMarket
+                    realSavingsEur: realSavingsVsMarket,
+                    savingsEur: realSavingsVsMarket
                 };
             }
 
             // 3. True Market-Low / All-Time-Low Club Deal
-            const isAtOrBelowAtl = !historyAtlPrice || clubPrice <= historyAtlPrice * 1.02;
+            const isAtOrBelowAtl = historyAtlPrice && clubPrice <= historyAtlPrice * 1.02;
             if (isAtOrBelowAtl && (realSavingsVsMarket >= 5 || (realSavingsVsMarket / lowestNonClubPrice) >= 0.03)) {
                 return {
                     tier: 'true_atl',
                     icon: '🏆',
+                    isAuthentic: true,
                     badge: lang === 'en' ? 'TRUE CLUB MARKET LOW' : 'AITO KLUBIPOHJA',
                     summary: lang === 'en'
                         ? `Genuine member low! Saves -${formatEur(realSavingsVsMarket)} vs. best non-club store (${openStore} ${formatEur(lowestNonClubPrice)}).`
                         : `Aidosti markkinoiden halvin! Todellinen klubisäästö -${formatEur(realSavingsVsMarket)} vs. ${openStore} (${formatEur(lowestNonClubPrice)}).`,
-                    realSavingsEur: realSavingsVsMarket
+                    realSavingsEur: realSavingsVsMarket,
+                    savingsEur: realSavingsVsMarket
                 };
             }
 
@@ -7310,11 +7413,13 @@
             return {
                 tier: 'genuine',
                 icon: '✓',
+                isAuthentic: true,
                 badge: lang === 'en' ? 'GENUINE CLUB SAVING' : 'AITO KLUBIETU',
                 summary: lang === 'en'
                     ? `Saves -${formatEur(realSavingsVsMarket)} below best non-club store (${openStore} ${formatEur(lowestNonClubPrice)}).`
                     : `Säästää aidosti -${formatEur(realSavingsVsMarket)} verrattuna halvimpaan ei-klubikauppaan (${openStore} ${formatEur(lowestNonClubPrice)}).`,
-                realSavingsEur: realSavingsVsMarket
+                realSavingsEur: realSavingsVsMarket,
+                savingsEur: realSavingsVsMarket
             };
         }
 
@@ -7322,11 +7427,13 @@
             return {
                 tier: 'true_atl',
                 icon: '🏆',
+                isAuthentic: true,
                 badge: lang === 'en' ? 'MATCHES ALL-TIME LOW' : 'SIVUAA HINTAPOHJAA',
                 summary: lang === 'en'
                     ? `${clubName} price matches historical All-Time Low (${formatEur(historyAtlPrice)}).`
                     : `${clubName}-hinta on tuotteen historiallisella pohjatasolla (${formatEur(historyAtlPrice)}).`,
-                realSavingsEur: advertisedSaveEur
+                realSavingsEur: advertisedSaveEur,
+                savingsEur: advertisedSaveEur
             };
         }
         return null;
