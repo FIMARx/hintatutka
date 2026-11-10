@@ -2356,7 +2356,51 @@
             mobileDeUrl: `https://suchen.mobile.de/fahrzeuge/search.html?dam=0&isSearchRequest=true&vc=Car&sb=rel&q=${q}`,
             autoScoutUrl: `https://www.autoscout24.com/lst?query=${q}`,
             motonetUrl: reg ? `https://www.motonet.fi/rekisterihaku?reg=${reg}` : null,
-            biltemaUrl: reg ? `https://www.biltema.fi/etsi-rekisterinumerolla/?registrationNumber=${reg}` : null
+            biltemaUrl: reg ? `https://www.biltema.fi/etsi-rekisterinumerolla/?registrationNumber=${reg}` : null,
+            traficomUrl: reg ? `https://asiointi.traficom.fi/omaliikenne/fi/ajoneuvot/tarkastus` : null
+        };
+    }
+
+    function estimateFinnishVehicleRunningCosts(engineOrFuel) {
+        const text = (engineOrFuel || '').toLowerCase();
+        const isDiesel = text.includes('diesel');
+        const isElectric = text.includes('sähkö') || text.includes('electric') || text.includes('ev');
+        const isPhev = text.includes('hybrid') || text.includes('plug-in') || text.includes('phev');
+
+        let basicTax = 190;
+        let powerSourceTax = 0;
+        let fuelCostPer100km = 11.50;
+        let fuelTypeLabel = 'Bensiini';
+
+        if (isElectric) {
+            basicTax = 65;
+            powerSourceTax = 120;
+            fuelCostPer100km = 2.70;
+            fuelTypeLabel = 'Täyssähkö';
+        } else if (isDiesel) {
+            basicTax = 220;
+            powerSourceTax = 460;
+            fuelCostPer100km = 9.70;
+            fuelTypeLabel = 'Diesel';
+        } else if (isPhev) {
+            basicTax = 95;
+            powerSourceTax = 45;
+            fuelCostPer100km = 6.50;
+            fuelTypeLabel = 'Plug-in Hybridi';
+        }
+
+        const totalTaxAnnual = basicTax + powerSourceTax;
+        const annualKm = 18000;
+        const annualFuelCost = Math.round((fuelCostPer100km / 100) * annualKm);
+
+        return {
+            fuelTypeLabel,
+            basicTax,
+            powerSourceTax,
+            totalTaxAnnual,
+            fuelCostPer100km: +fuelCostPer100km.toFixed(2),
+            annualFuelCost,
+            annualTotalOperating: totalTaxAnnual + annualFuelCost
         };
     }
 
@@ -11528,6 +11572,10 @@
                             ${vData?.driveType ? `<div class="ufhpc-vspec-item"><span class="ufhpc-vspec-lbl">${this.lang === 'en' ? 'Drivetrain' : 'Vetotapa'}:</span><span class="ufhpc-vspec-val">${escapeHtml(vData.driveType)}</span></div>` : ''}
                             ${vData?.power ? `<div class="ufhpc-vspec-item"><span class="ufhpc-vspec-lbl">${this.lang === 'en' ? 'Power' : 'Teho'}:</span><span class="ufhpc-vspec-val">${escapeHtml(vData.power)}</span></div>` : ''}
                             ${vData?.seller ? `<div class="ufhpc-vspec-item" style="grid-column: span 2;"><span class="ufhpc-vspec-lbl">${this.lang === 'en' ? 'Seller' : 'Myyjä'}:</span><span class="ufhpc-vspec-val">${escapeHtml(vData.seller)}</span></div>` : ''}
+                            ${vData?.engine ? (() => {
+                                const costs = estimateFinnishVehicleRunningCosts(vData.engine);
+                                return `<div class="ufhpc-vspec-item" style="grid-column: span 2; background: rgba(245, 158, 11, 0.08); border-radius: 4px; padding: 4px 6px;"><span class="ufhpc-vspec-lbl">${this.lang === 'en' ? 'Annual Taxes & Fuel' : 'Vuotuiset verot & kulut'}:</span><span class="ufhpc-vspec-val" style="color: #fbbf24;">~${costs.totalTaxAnnual} €/v vero • ~${costs.fuelCostPer100km} €/100km</span></div>`;
+                            })() : ''}
                         </div>
                     </div>
 
@@ -11968,6 +12016,7 @@
                             ${vData?.regPlate ? `
                                 <a class="ufhpc-eu-hub-btn" href="${escapeHtml(vLinks.motonetUrl)}" target="_blank" rel="noopener noreferrer">🔧 Motonet (${escapeHtml(vData.regPlate)}) ↗</a>
                                 <a class="ufhpc-eu-hub-btn" href="${escapeHtml(vLinks.biltemaUrl)}" target="_blank" rel="noopener noreferrer">🚗 Biltema (${escapeHtml(vData.regPlate)}) ↗</a>
+                                ${vLinks.traficomUrl ? `<a class="ufhpc-eu-hub-btn" href="${escapeHtml(vLinks.traficomUrl)}" target="_blank" rel="noopener noreferrer">📋 Traficom (${escapeHtml(vData.regPlate)}) ↗</a>` : ''}
                             ` : ''}
                         </div>
                     </div>

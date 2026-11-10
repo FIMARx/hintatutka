@@ -232,6 +232,27 @@ test('categories: automotive competitor marketplace and registry lookup links (H
     assert.strictEqual(links.autoScoutUrl, 'https://www.autoscout24.com/lst?query=Kia%20Ceed');
     assert.strictEqual(links.motonetUrl, 'https://www.motonet.fi/rekisterihaku?reg=JNI-855');
     assert.strictEqual(links.biltemaUrl, 'https://www.biltema.fi/etsi-rekisterinumerolla/?registrationNumber=JNI-855');
+    assert.strictEqual(links.traficomUrl, 'https://asiointi.traficom.fi/omaliikenne/fi/ajoneuvot/tarkastus');
+});
+
+test('categories: automotive annual Finnish taxes and operating costs estimation', () => {
+    // Diesel vehicle
+    const dieselCosts = HT.estimateFinnishVehicleRunningCosts('2,0 l, Diesel');
+    assert.strictEqual(dieselCosts.fuelTypeLabel, 'Diesel');
+    assert.ok(dieselCosts.totalTaxAnnual >= 600, 'Diesel should have combined tax >= 600 €/v');
+    assert.ok(dieselCosts.powerSourceTax >= 400, 'Diesel power source tax should be >= 400 €/v');
+    assert.ok(dieselCosts.fuelCostPer100km >= 9.0, 'Diesel fuel cost ~9.70 € / 100km');
+
+    // Electric vehicle
+    const evCosts = HT.estimateFinnishVehicleRunningCosts('Sähkö (Electric)');
+    assert.strictEqual(evCosts.fuelTypeLabel, 'Täyssähkö');
+    assert.ok(evCosts.basicTax <= 80, 'EV basic tax should be ~65 €/v');
+    assert.ok(evCosts.fuelCostPer100km <= 3.5, 'EV energy cost ~2.70 € / 100km');
+
+    // Plug-in hybrid
+    const phevCosts = HT.estimateFinnishVehicleRunningCosts('1.4 TSI Plug-in Hybrid');
+    assert.strictEqual(phevCosts.fuelTypeLabel, 'Plug-in Hybridi');
+    assert.ok(phevCosts.totalTaxAnnual >= 100 && phevCosts.totalTaxAnnual <= 200);
 });
 
 test('categories: automotive valuation & 5-year depreciation trajectory algorithm', () => {

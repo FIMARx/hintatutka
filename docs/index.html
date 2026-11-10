@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HintaTutka Studio — Retail DOM Skeleton Harvester & 98-Store Registry</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+    <link rel="manifest" href="manifest.webmanifest">
+    <meta name="theme-color" content="#0a0e17">
     <style>
         :root {
             --bg-main: #0a0e17;
@@ -20,6 +22,7 @@
             --accent-purple: #8b5cf6;
             --accent-red: #ef4444;
             --accent-orange: #f97316;
+            --accent-cyan: #06b6d4;
         }
 
         * {
@@ -306,6 +309,7 @@
         .badge-blue { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
         .badge-purple { background: rgba(139, 92, 246, 0.15); color: #c084fc; border: 1px solid rgba(139, 92, 246, 0.3); }
         .badge-orange { background: rgba(249, 115, 22, 0.15); color: #fb923c; border: 1px solid rgba(249, 115, 22, 0.3); }
+        .badge-cyan { background: rgba(6, 182, 212, 0.15); color: #22d3ee; border: 1px solid rgba(6, 182, 212, 0.3); }
 
         .code-block {
             background: var(--bg-main);
@@ -470,6 +474,17 @@
             border-color: #60a5fa;
             color: #ffffff;
         }
+
+        .inspector-node {
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            transition: background 0.1s ease;
+        }
+        .inspector-node:hover {
+            background: rgba(59, 130, 246, 0.15);
+            outline: 1px dashed var(--accent-blue);
+        }
     </style>
 </head>
 <body>
@@ -501,7 +516,10 @@
             <div class="card">
                 <div class="card-header">
                     <div class="card-title">📥 HTML Source Input</div>
-                    <button class="btn btn-sm btn-secondary" onclick="clearInput()">Clear</button>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-sm btn-secondary" onclick="saveCurrentAsPreset()">💾 Save Preset</button>
+                        <button class="btn btn-sm btn-secondary" onclick="clearInput()">Clear</button>
+                    </div>
                 </div>
 
                 <div class="preset-bar">
@@ -513,8 +531,10 @@
                     <button class="pill" onclick="loadPreset('grocery')">Grocery (€/kg)</button>
                     <button class="pill" onclick="loadPreset('nettiauto')">🚗 Nettiauto (Skoda)</button>
                     <button class="pill" onclick="loadPreset('newstore')">✨ New Store</button>
-                    <a href="javascript:(function(){try{const h=document.documentElement.outerHTML;navigator.clipboard.writeText(h).then(()=>alert('✅ Sivun koko DOM kopioitu leikepöydälle! Liitä se Harvester Studioon (Ctrl+V).'));}catch(e){alert('Virhe kopioinnissa: '+e.message);}})();" class="pill" style="color: #60a5fa; border-color: rgba(59, 130, 246, 0.4); text-decoration: none;" title="Raahaa kirjanmerkkeihin ja klikkaa millä tahansa suojatulla sivulla (esim. Nettiauto) kopioidaksesi sivun DOM:in leikepöydälle!">📌 Harvester Bookmarklet</a>
+                    <a href="javascript:(function(){try{const h=document.documentElement.outerHTML;navigator.clipboard.writeText(h).then(()=>alert('✅ Sivun koko DOM kopioitu leikepöydälle! Liitä se Harvester Studioon (Ctrl+V).'));}catch(e){alert('Virhe: '+e.message);}})();" class="pill" style="color: #60a5fa; border-color: rgba(59, 130, 246, 0.4); text-decoration: none;" title="Raahaa kirjanmerkkeihin ja klikkaa millä tahansa suojatulla sivulla (esim. Nettiauto) kopioidaksesi sivun DOM:in leikepöydälle!">📌 Harvester Bookmarklet</a>
                 </div>
+
+                <div id="customPresetsContainer" class="preset-bar" style="margin-top: -0.5rem;"></div>
 
                 <textarea id="htmlInput" class="code-input" placeholder="Paste product page HTML source code here (Inspect Element -> Edit as HTML or View Source) or drop a .html file..." ondragover="handleTextareaDragOver(event)" ondrop="handleTextareaDrop(event)"></textarea>
 
@@ -565,6 +585,7 @@
                             <div class="stat-label">Store Identity</div>
                             <div class="stat-value" id="resStoreName">-</div>
                             <div id="resStoreStatus" class="stat-badge badge-blue">-</div>
+                            <div id="platformBadge" style="margin-top: 0.35rem; display: none;"></div>
                         </div>
 
                         <div class="stat-card">
@@ -614,13 +635,16 @@
                         <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; margin-bottom: 0.4rem;">5 Vuoden Arvonalenemakäyrä (Ennuste)</div>
                         <div id="vehicleDeprecChart" style="margin-bottom: 1rem; background: rgba(0,0,0,0.4); border-radius: 6px; padding: 0.75rem; border: 1px solid rgba(255,255,255,0.08);"></div>
 
-                        <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; margin-bottom: 0.4rem;">Autoliikkeiden Hintavertailu (1-Klikkaus)</div>
+                        <div id="vehicleRunningCosts" style="margin-bottom: 1rem; background: rgba(0,0,0,0.3); border-radius: 6px; padding: 0.75rem; border: 1px solid rgba(255,255,255,0.05); font-size: 0.8rem; line-height: 1.6;"></div>
+
+                        <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; margin-bottom: 0.4rem;">Autoliikkeiden Hintavertailu &amp; Traficom (1-Klikkaus)</div>
                         <div id="vehicleDealerLinks" style="display: flex; flex-wrap: wrap; gap: 0.4rem;"></div>
                     </div>
 
                     <!-- HARDWARE BREAKDOWN IF PC -->
                     <div id="hardwareSection" style="display: none; margin-bottom: 1.5rem;">
                         <div class="card-title" style="font-size: 0.95rem; margin-bottom: 0.5rem;">🖥️ Deconstructed PC Components</div>
+                        <div id="pcPerformanceBox" style="margin-bottom: 0.75rem; padding: 0.75rem; border-radius: 6px; background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); font-size: 0.8rem; line-height: 1.5;"></div>
                         <table class="styled-table" id="hardwareTable">
                             <thead>
                                 <tr><th>Role</th><th>Extracted Model Query</th><th>Raw Source Spec</th></tr>
@@ -704,6 +728,25 @@
 
                 <div class="stat-label" style="margin-top: 1rem;">Matched Elements Content</div>
                 <div class="code-block" id="testMatchedText" style="max-height: 250px;"></div>
+            </div>
+
+            <!-- VISUAL POINT-AND-CLICK INSPECTOR -->
+            <div style="margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1.25rem;">
+                <div class="card-header" style="border-bottom: none; padding-bottom: 0.25rem;">
+                    <div class="card-title" style="font-size: 1rem;">🔍 Visual Point-and-Click DOM Inspector</div>
+                    <span class="stat-badge badge-purple">Interactive Element Picker</span>
+                </div>
+                <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
+                    Hover and click any element in the rendered document below to automatically synthesize the shortest, collision-free selector:
+                </p>
+                <div id="pickedElementBox" style="display: none; margin-bottom: 0.75rem; padding: 0.75rem 1rem; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 6px;">
+                    <div style="font-size: 0.75rem; color: #93c5fd; font-weight: 600;">OPTIMAL GENERATED SELECTOR:</div>
+                    <div id="pickedSelectorDisplay" style="font-family: monospace; font-size: 0.95rem; font-weight: 700; color: #60a5fa; margin: 0.25rem 0;"></div>
+                    <div id="pickedSelectorStats" style="font-size: 0.8rem; color: var(--text-secondary);"></div>
+                </div>
+                <div id="inspectorContainer" style="border: 1px solid var(--border); border-radius: 6px; max-height: 380px; overflow: auto; background: #ffffff; color: #111827; padding: 1rem;">
+                    <div id="inspectorTree" style="font-size: 0.85rem;">Load HTML or a preset in Harvester Studio to inspect elements here.</div>
+                </div>
             </div>
         </div>
     </div>
@@ -1793,6 +1836,12 @@ const REGISTERED_STORES = [
   }
 ];
 let currentHarvestResult = null;
+let currentDetectedPlatform = null;
+
+// Service Worker Registration for Offline PWA Support
+if ('serviceWorker' in navigator && (location.protocol === 'http:' || location.protocol === 'https:')) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+}
 
 // Tab switcher
 function switchTab(tabId, btn) {
@@ -1806,6 +1855,9 @@ function switchTab(tabId, btn) {
     if (targetBtn) targetBtn.classList.add('active');
 
     if (tabId === 'stores') renderStoreList();
+    if (tabId === 'tester' && currentHarvestResult) {
+        renderVisualInspector(currentHarvestResult.html);
+    }
 }
 
 // Preset loader
@@ -1859,6 +1911,57 @@ function handleTextareaDrop(event) {
     }
 }
 
+// LocalStorage User Presets Management
+function saveCurrentAsPreset() {
+    const rawHtml = document.getElementById('htmlInput').value.trim();
+    if (!rawHtml) {
+        alert('Paste HTML or analyze a page first before saving as a preset.');
+        return;
+    }
+    const name = prompt('Enter a name for this custom preset:', (currentHarvestResult ? currentHarvestResult.storeName : 'My Store') + ' Preset');
+    if (!name) return;
+
+    try {
+        const existing = JSON.parse(localStorage.getItem('ht_user_presets') || '{}');
+        existing[name] = rawHtml;
+        localStorage.setItem('ht_user_presets', JSON.stringify(existing));
+        renderCustomPresetsBar();
+        alert(`Saved preset "${name}" to your browser storage!`);
+    } catch (_) {
+        alert('Could not save preset to local storage.');
+    }
+}
+
+function deleteCustomPreset(name) {
+    try {
+        const existing = JSON.parse(localStorage.getItem('ht_user_presets') || '{}');
+        delete existing[name];
+        localStorage.setItem('ht_user_presets', JSON.stringify(existing));
+        renderCustomPresetsBar();
+    } catch (_) {}
+}
+
+function renderCustomPresetsBar() {
+    const container = document.getElementById('customPresetsContainer');
+    if (!container) return;
+    try {
+        const existing = JSON.parse(localStorage.getItem('ht_user_presets') || '{}');
+        const keys = Object.keys(existing);
+        if (keys.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+        let html = '<span style="font-size: 0.75rem; color: #34d399; align-self: center; font-weight: 600;">My Presets:</span>';
+        for (const k of keys) {
+            html += `<span class="pill" style="display: inline-flex; align-items: center; gap: 0.3rem;">` +
+                `<span onclick="document.getElementById('htmlInput').value = JSON.parse(localStorage.getItem('ht_user_presets'))['${escapeHtml(k)}']; runHarvest();" style="cursor: pointer;">💾 ${escapeHtml(k)}</span>` +
+                `<span onclick="deleteCustomPreset('${escapeHtml(k)}')" style="color: #ef4444; font-weight: 700; cursor: pointer; margin-left: 0.2rem;" title="Delete preset">×</span>` +
+                `</span>`;
+        }
+        container.innerHTML = html;
+    } catch (_) {}
+}
+
 // Client-Side Price Parser
 function parsePriceNumber(str) {
     if (!str || typeof str !== 'string') return null;
@@ -1891,7 +1994,69 @@ function isBotChallenge(text) {
     );
 }
 
-// Automotive Valuation & Depreciation Algorithm
+// E-Commerce Platform Detector
+function detectEcommercePlatform(rawHtml) {
+    const html = rawHtml || '';
+    if (/cdn\.shopify\.com|window\.Shopify|ShopifyAnalytics|shopify-payment-button/i.test(html)) {
+        return {
+            name: 'Shopify',
+            badge: 'Shopify Store',
+            universalSelectors: ['[data-product-price]', '.product__price', '.price-item--sale', 'form[action*="/cart"] .price'],
+            description: 'Global standard Shopify platform. Universal price selectors supported.'
+        };
+    }
+    if (/wp-content\/plugins\/woocommerce|woocommerce-Price-amount|single_add_to_cart_button/i.test(html)) {
+        return {
+            name: 'WooCommerce',
+            badge: 'WooCommerce (WP)',
+            universalSelectors: ['.woocommerce-Price-amount', 'p.price ins .amount', '.price .amount'],
+            description: 'WordPress WooCommerce e-commerce. Standard currency class supported.'
+        };
+    }
+    if (/mage\/cookies|data-price-box|catalog-product-view|product-info-price/i.test(html)) {
+        return {
+            name: 'Magento',
+            badge: 'Magento / Adobe',
+            universalSelectors: ['[data-price-type="finalPrice"]', '.price-box .price', '.product-info-price .price'],
+            description: 'Magento enterprise architecture with data-price-type attributes.'
+        };
+    }
+    if (/mycashflow\.fi|MCF\.|class=["'][^"']*ProductPrice/i.test(html)) {
+        return {
+            name: 'MyCashFlow',
+            badge: 'MyCashFlow (FI)',
+            universalSelectors: ['.ProductPrice', 'span[itemprop="price"]', '.BuyFormPrice'],
+            description: 'Kotimainen MyCashFlow-verkkokauppa-alusta.'
+        };
+    }
+    if (/prestashop|modules\/ps_|id=["']our_price_display/i.test(html)) {
+        return {
+            name: 'PrestaShop',
+            badge: 'PrestaShop',
+            universalSelectors: ['.current-price span[itemprop="price"]', '#our_price_display', '.product-price'],
+            description: 'PrestaShop platform with microdata itemprop price.'
+        };
+    }
+    if (html.includes('id="__NEXT_DATA__"') || html.includes('id="__NUXT__"')) {
+        return {
+            name: 'Next.js / Nuxt',
+            badge: 'Modern SSR / Hydrated',
+            universalSelectors: ['[data-testid*="price"]', '[data-price]', '[itemprop="price"]'],
+            description: 'React/Vue Server-Side Rendered application with embedded hydration state.'
+        };
+    }
+    return null;
+}
+
+function applyPlatformSelectors() {
+    if (!currentDetectedPlatform) return;
+    const primary = currentDetectedPlatform.universalSelectors[0];
+    document.getElementById('customSelectorInput').value = primary;
+    switchTab('tester', null);
+    testCustomSelector();
+}
+
+// Automotive Valuation & Operating Cost Engine
 function calculateVehicleDepreciation(currentPrice, year, mileage) {
     if (!currentPrice || currentPrice <= 0) return null;
     const nowYear = 2026;
@@ -1944,6 +2109,49 @@ function calculateVehicleDepreciation(currentPrice, year, mileage) {
         savingsFromNew: totalDeprec,
         savingsPercent,
         points
+    };
+}
+
+function estimateFinnishVehicleRunningCosts(engineOrFuel) {
+    const text = (engineOrFuel || '').toLowerCase();
+    const isDiesel = text.includes('diesel');
+    const isElectric = text.includes('sähkö') || text.includes('electric') || text.includes('ev');
+    const isPhev = text.includes('hybrid') || text.includes('plug-in') || text.includes('phev');
+
+    let basicTax = 190;
+    let powerSourceTax = 0;
+    let fuelCostPer100km = 11.50;
+    let fuelTypeLabel = 'Bensiini';
+
+    if (isElectric) {
+        basicTax = 65;
+        powerSourceTax = 120;
+        fuelCostPer100km = 2.70;
+        fuelTypeLabel = 'Täyssähkö';
+    } else if (isDiesel) {
+        basicTax = 220;
+        powerSourceTax = 460;
+        fuelCostPer100km = 9.70;
+        fuelTypeLabel = 'Diesel';
+    } else if (isPhev) {
+        basicTax = 95;
+        powerSourceTax = 45;
+        fuelCostPer100km = 6.50;
+        fuelTypeLabel = 'Plug-in Hybridi';
+    }
+
+    const totalTaxAnnual = basicTax + powerSourceTax;
+    const annualKm = 18000;
+    const annualFuelCost = Math.round((fuelCostPer100km / 100) * annualKm);
+
+    return {
+        fuelTypeLabel,
+        basicTax,
+        powerSourceTax,
+        totalTaxAnnual,
+        fuelCostPer100km: +fuelCostPer100km.toFixed(2),
+        annualFuelCost,
+        annualTotalOperating: totalTaxAnnual + annualFuelCost
     };
 }
 
@@ -2002,10 +2210,66 @@ function buildAutomotiveMarketLinks(makeModel, regPlate) {
         { name: 'Mobile.de (Saksa)', url: `https://suchen.mobile.de/fahrzeuge/search.html?dam=0&isSearchRequest=true&vc=Car&sb=rel&q=${q}` },
         { name: 'AutoScout24 (EU)', url: `https://www.autoscout24.com/lst?query=${q}` },
         ...(reg ? [
+            { name: `Traficom Tarkastus (${regPlate})`, url: `https://asiointi.traficom.fi/omaliikenne/fi/ajoneuvot/tarkastus` },
             { name: `Motonet (${regPlate})`, url: `https://www.motonet.fi/rekisterihaku?reg=${reg}` },
             { name: `Biltema (${regPlate})`, url: `https://www.biltema.fi/etsi-rekisterinumerolla/?registrationNumber=${reg}` }
         ] : [])
     ];
+}
+
+// Prebuilt PC Performance & Headroom Index
+function calculatePrebuiltPerformanceIndex(components, price) {
+    if (!components || components.length === 0 || !price || price <= 0) return null;
+    const gpu = components.find(c => c.role === 'GPU');
+    const cpu = components.find(c => c.role === 'CPU');
+
+    const gpuTiers = [
+        { regex: /RTX\s*5090/i, score: 360, tdp: 600 },
+        { regex: /RTX\s*5080/i, score: 270, tdp: 400 },
+        { regex: /RTX\s*5070\s*Ti/i, score: 215, tdp: 300 },
+        { regex: /RTX\s*5070/i, score: 175, tdp: 250 },
+        { regex: /RTX\s*4090/i, score: 260, tdp: 450 },
+        { regex: /RTX\s*4080/i, score: 210, tdp: 320 },
+        { regex: /RTX\s*4070\s*Ti/i, score: 175, tdp: 285 },
+        { regex: /RTX\s*4070\s*Super/i, score: 155, tdp: 220 },
+        { regex: /RTX\s*4070/i, score: 140, tdp: 200 },
+        { regex: /RTX\s*4060\s*Ti/i, score: 105, tdp: 160 },
+        { regex: /RTX\s*4060/i, score: 85, tdp: 115 },
+        { regex: /RTX\s*3060/i, score: 60, tdp: 170 },
+        { regex: /RX\s*9070\s*XT/i, score: 200, tdp: 300 },
+        { regex: /RX\s*7900\s*XTX/i, score: 220, tdp: 355 },
+        { regex: /RX\s*7800\s*XT/i, score: 140, tdp: 260 },
+        { regex: /RX\s*7600/i, score: 75, tdp: 165 }
+    ];
+
+    let foundGpu = null;
+    if (gpu) {
+        foundGpu = gpuTiers.find(t => t.regex.test(gpu.query || ''));
+    }
+
+    if (!foundGpu) return null;
+
+    const fpsPer100Eur = +((foundGpu.score / price) * 100).toFixed(1);
+    let rating = 'Tasapainoinen hinta-tehosuhde';
+    let ratingColor = '#60a5fa';
+    if (fpsPer100Eur >= 9.5) {
+        rating = 'Huippuluokan Hinta-Tehosuhde 🚀';
+        ratingColor = '#34d399';
+    } else if (fpsPer100Eur < 7.0) {
+        rating = 'Korkea hinta suorituskykyyn nähden 💸';
+        ratingColor = '#fbbf24';
+    }
+
+    const cpuTdp = /i9|9950X|7950X/i.test(cpu?.query || '') ? 250 : (/i7|9800X3D|7800X3D|9700X/i.test(cpu?.query || '') ? 160 : 100);
+    const estimatedPeakWatts = foundGpu.tdp + cpuTdp + 60;
+
+    return {
+        gpuScore: foundGpu.score,
+        fpsPer100Eur,
+        rating,
+        ratingColor,
+        estimatedPeakWatts
+    };
 }
 
 async function runHarvest() {
@@ -2155,7 +2419,7 @@ function executeHarvest(rawHtml, sourceUrl) {
     // Strip SVG tags to prevent SVG coordinate decimals from being parsed as prices
     doc.querySelectorAll('svg').forEach(s => s.remove());
 
-    // 1. Identify Store
+    // 1. Identify Store & Platform
     const docTitle = doc.title || '';
     let domain = 'unknown-store.fi';
     let storeName = 'Unknown Store';
@@ -2185,6 +2449,16 @@ function executeHarvest(rawHtml, sourceUrl) {
             domain = raw.includes('.') ? raw.toLowerCase() : raw.toLowerCase().replace(/\s+/g, '') + '.fi';
             storeName = raw.charAt(0).toUpperCase() + raw.slice(1);
         }
+    }
+
+    // Platform Autodetection
+    currentDetectedPlatform = detectEcommercePlatform(rawHtml);
+    const platformEl = document.getElementById('platformBadge');
+    if (currentDetectedPlatform) {
+        platformEl.style.display = 'block';
+        platformEl.innerHTML = `<span class="stat-badge badge-cyan">${currentDetectedPlatform.badge}</span> <button class="pill" style="font-size: 0.65rem; padding: 0.1rem 0.4rem; margin-left: 0.25rem;" onclick="applyPlatformSelectors()">⚡ Käytä universaalia sääntöä</button>`;
+    } else {
+        platformEl.style.display = 'none';
     }
 
     // 2. Schema.org / JSON-LD Data
@@ -2257,7 +2531,7 @@ function executeHarvest(rawHtml, sourceUrl) {
     else if (/takki|kengät|sukset|reppu|ulkoilu/i.test(title)) category = 'sports';
     else if (/pöytä|sohva|sänky|tuoli|lipasto/i.test(title)) category = 'furniture';
 
-    // 6. Automotive Deconstruction
+    // 6. Automotive Deconstruction & Taxes
     let vehicleData = null;
     if (category === 'vehicles') {
         vehicleData = {
@@ -2269,7 +2543,8 @@ function executeHarvest(rawHtml, sourceUrl) {
             transmission: null,
             driveType: null,
             seller: null,
-            depreciation: null
+            depreciation: null,
+            runningCosts: null
         };
 
         const infoBoxes = doc.querySelectorAll('.vehicle-info-box, .car-spec-box, dl, tr');
@@ -2306,9 +2581,10 @@ function executeHarvest(rawHtml, sourceUrl) {
         if (discoveredPrice) {
             vehicleData.depreciation = calculateVehicleDepreciation(discoveredPrice, vehicleData.year || 2023, vehicleData.mileage || 40000);
         }
+        vehicleData.runningCosts = estimateFinnishVehicleRunningCosts(vehicleData.engine || title);
     }
 
-    // 7. PC Hardware Breakdown
+    // 7. PC Hardware Breakdown & FPS/€ Performance Index
     const components = [];
     const fullText = doc.body ? doc.body.textContent : rawHtml;
     
@@ -2329,6 +2605,11 @@ function executeHarvest(rawHtml, sourceUrl) {
         const cleanMobo = moboM[0].replace(/-piirisarjaan pohjautuva/i, '').trim();
         components.push({ role: 'MOBO', query: cleanMobo, raw: moboM[0].trim() });
     }
+
+    const psuM = fullText.match(/\b(\d{3,4})\s*W\b[^\n<,]*(?:80\s*\+\s*(?:Bronze|Gold|Platinum|Titanium))?/i);
+    if (psuM) components.push({ role: 'PSU', query: psuM[0].trim(), raw: psuM[0].trim() });
+
+    const pcPerf = (components.length >= 2 && discoveredPrice) ? calculatePrebuiltPerformanceIndex(components, discoveredPrice) : null;
 
     // 8. Quality & Confidence Audit
     let auditScore = 0;
@@ -2428,13 +2709,18 @@ function executeHarvest(rawHtml, sourceUrl) {
     document.getElementById('resTitle').textContent = title;
     document.getElementById('resTitleSelector').textContent = 'Selector: ' + titleSelector;
 
-    // Schema Metadata Card
+    // Schema Metadata Card with Open Food Facts / Barcode Lookup
     const schemaSec = document.getElementById('schemaSection');
     const schemaMeta = document.getElementById('schemaMetadata');
     if (jsonLd && (jsonLd.ean || jsonLd.sku || jsonLd.brand)) {
         schemaSec.style.display = 'block';
         schemaMeta.innerHTML = '';
-        if (jsonLd.ean) schemaMeta.innerHTML += `<span class="selector-tag" style="color: #34d399;">EAN / GTIN-13: <b>${jsonLd.ean}</b></span>`;
+        if (jsonLd.ean) {
+            schemaMeta.innerHTML += `<span class="selector-tag" style="color: #34d399;">EAN: <b>${jsonLd.ean}</b></span>` +
+                `<a href="https://world.openfoodfacts.org/product/${jsonLd.ean}" target="_blank" rel="noopener" class="dealer-pill" style="font-size: 0.7rem;">🌍 Open Food Facts</a>` +
+                `<a href="https://www.s-kaupat.fi/haku?q=${jsonLd.ean}" target="_blank" rel="noopener" class="dealer-pill" style="font-size: 0.7rem;">🔍 S-kaupat</a>` +
+                `<a href="https://www.k-ruoka.fi/haku?q=${jsonLd.ean}" target="_blank" rel="noopener" class="dealer-pill" style="font-size: 0.7rem;">🔍 K-Ruoka</a>`;
+        }
         if (jsonLd.sku) schemaMeta.innerHTML += `<span class="selector-tag">SKU: <b>${jsonLd.sku}</b></span>`;
         if (jsonLd.brand) schemaMeta.innerHTML += `<span class="selector-tag" style="color: #60a5fa;">Brand: <b>${jsonLd.brand}</b></span>`;
         if (jsonLd.price) schemaMeta.innerHTML += `<span class="selector-tag" style="color: #fbbf24;">Schema Price: <b>${jsonLd.price} ${jsonLd.currency || 'EUR'}</b></span>`;
@@ -2469,6 +2755,18 @@ function executeHarvest(rawHtml, sourceUrl) {
             document.getElementById('vehicleDeprecChart').innerHTML = buildVehicleDepreciationSvg(vehicleData.depreciation);
         }
 
+        // Finnish Taxes & Operating Costs Card
+        const costs = vehicleData.runningCosts;
+        document.getElementById('vehicleRunningCosts').innerHTML = `
+            <div style="font-weight: 700; color: #fbbf24; margin-bottom: 0.25rem;">💶 Vuotuiset Käyttökustannukset &amp; Verot (Suomi - Arvio):</div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.5rem; margin-top: 0.4rem;">
+                <div>• Ajoneuvovero (perusvero): <b>~${costs.basicTax} €/v</b></div>
+                ${costs.powerSourceTax > 0 ? `<div>• Käyttövoimavero (${costs.fuelTypeLabel}): <b>~${costs.powerSourceTax} €/v</b></div>` : ''}
+                <div>• Polttoainekulut: <b>~${costs.fuelCostPer100km} € / 100 km</b></div>
+                <div>• Kokonaiskustannus (18 000 km/v): <b>~${costs.annualTotalOperating.toLocaleString('fi-FI')} €/v</b></div>
+            </div>
+        `;
+
         const dealerContainer = document.getElementById('vehicleDealerLinks');
         const links = buildAutomotiveMarketLinks(vehicleData.makeModel, vehicleData.regPlate);
         dealerContainer.innerHTML = links.map(l => `<a href="${l.url}" target="_blank" rel="noopener" class="dealer-pill">🔍 ${l.name}</a>`).join('');
@@ -2476,7 +2774,7 @@ function executeHarvest(rawHtml, sourceUrl) {
         vehSec.style.display = 'none';
     }
 
-    // Hardware Table
+    // Hardware Table & FPS/€ Index
     const hwSec = document.getElementById('hardwareSection');
     const hwBody = document.querySelector('#hardwareTable tbody');
     if (hwBody) {
@@ -2487,6 +2785,21 @@ function executeHarvest(rawHtml, sourceUrl) {
                 const tr = document.createElement('tr');
                 tr.innerHTML = '<td><span class="stat-badge badge-blue">' + c.role + '</span></td><td><b>' + c.query + '</b></td><td style="color: var(--text-muted);">' + c.raw + '</td>';
                 hwBody.appendChild(tr);
+            }
+
+            const perfBox = document.getElementById('pcPerformanceBox');
+            if (pcPerf) {
+                perfBox.style.display = 'block';
+                perfBox.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                        <span style="font-weight: 700; color: #60a5fa;">🚀 FPS per Euro -Hinta-Tehoindeksi:</span>
+                        <span class="stat-badge" style="background: rgba(59, 130, 246, 0.2); color: ${pcPerf.ratingColor}; font-weight: 700;">${pcPerf.fpsPer100Eur} pts / 100 €</span>
+                    </div>
+                    <div>Tuomio: <b style="color: ${pcPerf.ratingColor};">${pcPerf.rating}</b></div>
+                    <div style="margin-top: 0.25rem; color: var(--text-secondary); font-size: 0.75rem;">Arvioitu huippuvirrankulutus kuormassa: <b>~${pcPerf.estimatedPeakWatts} W</b> (GPU + CPU + Emolevy).</div>
+                `;
+            } else {
+                perfBox.style.display = 'none';
             }
         } else if (hwSec) {
             hwSec.style.display = 'none';
@@ -2591,6 +2904,88 @@ function testCustomSelector() {
     }
 }
 
+// Visual Point-and-Click DOM Inspector
+function renderVisualInspector(rawHtml) {
+    const tree = document.getElementById('inspectorTree');
+    if (!tree || !rawHtml) return;
+
+    try {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(rawHtml, 'text/html');
+        const body = doc.body;
+        if (!body) return;
+
+        tree.innerHTML = '';
+        const previewContainer = document.createElement('div');
+        previewContainer.style.fontFamily = 'monospace';
+        previewContainer.style.lineHeight = '1.6';
+
+        const interestingElems = body.querySelectorAll('h1, h2, div[class*="price" i], span[class*="price" i], div[data-price], [data-testid], table, dl, .vehicle-info-box');
+        if (interestingElems.length === 0) {
+            tree.textContent = 'No semantic pricing or header elements found in body.';
+            return;
+        }
+
+        interestingElems.forEach((el, idx) => {
+            if (idx > 25) return; // Limit to top 25 semantic nodes
+            const nodeDiv = document.createElement('div');
+            nodeDiv.className = 'inspector-node';
+            const tag = el.tagName.toLowerCase();
+            const cls = el.className ? '.' + el.className.split(/\s+/).slice(0, 2).join('.') : '';
+            const txt = (el.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 80);
+
+            nodeDiv.innerHTML = `<span style="color: #2563eb; font-weight: 700;">&lt;${tag}${cls}&gt;</span> <span style="color: #374151;">${escapeHtml(txt)}</span>`;
+            nodeDiv.onclick = () => {
+                const optimalSel = generateOptimalSelector(el, doc);
+                document.getElementById('customSelectorInput').value = optimalSel;
+                document.getElementById('pickedElementBox').style.display = 'block';
+                document.getElementById('pickedSelectorDisplay').textContent = optimalSel;
+                const matches = doc.querySelectorAll(optimalSel).length;
+                const p = parsePriceNumber(el.textContent);
+                document.getElementById('pickedSelectorStats').textContent = `Matches in DOM: ${matches} • Parsed Price: ${p ? p.toFixed(2) + ' €' : 'N/A'}`;
+                testCustomSelector();
+            };
+            previewContainer.appendChild(nodeDiv);
+        });
+
+        tree.appendChild(previewContainer);
+    } catch (_) {}
+}
+
+function generateOptimalSelector(el, doc) {
+    if (el.id && !/^\d|[a-f0-9]{8}/.test(el.id)) {
+        if (doc.querySelectorAll('#' + el.id).length === 1) return '#' + el.id;
+    }
+    const testId = el.getAttribute('data-testid') || el.getAttribute('data-test-id');
+    if (testId) {
+        const sel = `[data-testid="${testId}"]`;
+        if (doc.querySelectorAll(sel).length === 1) return sel;
+    }
+    if (el.hasAttribute('data-price')) return '[data-price]';
+    if (el.hasAttribute('data-product-price')) return '[data-product-price]';
+
+    const tag = el.tagName.toLowerCase();
+    if (el.classList.length > 0) {
+        for (const c of el.classList) {
+            if (/price|title|heading|detail/i.test(c) && !/css-[a-z0-9]{5,}|_[a-zA-Z0-9]{4,8}$/.test(c)) {
+                const sel = `.${c}`;
+                if (doc.querySelectorAll(sel).length === 1) return sel;
+                const scoped = `${tag}.${c}`;
+                if (doc.querySelectorAll(scoped).length === 1) return scoped;
+            }
+        }
+    }
+
+    // Hierarchical path
+    if (el.parentElement) {
+        const pTag = el.parentElement.tagName.toLowerCase();
+        const pCls = el.parentElement.className ? '.' + el.parentElement.className.split(/\s+/)[0] : '';
+        return `${pTag}${pCls} ${tag}`;
+    }
+
+    return tag;
+}
+
 // Stores Directory Tab
 let currentStoreFilter = 'all';
 
@@ -2630,8 +3025,9 @@ function renderStoreList() {
     }
 }
 
-// Initial render
+// Initial renders
 renderStoreList();
+renderCustomPresetsBar();
 </script>
 
 </body>

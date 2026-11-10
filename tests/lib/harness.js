@@ -62,6 +62,7 @@ globalThis.__HT_TEST_EXPORTS__ = {
     extractConciseVehicleQuery,
     buildAutomotiveMarketLinks,
     calculateVehicleDepreciation,
+    estimateFinnishVehicleRunningCosts,
     detectAndExtractVehicleData,
     buildVehicleDepreciationChartHtml,
     I18N
