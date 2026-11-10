@@ -928,6 +928,11 @@
         if (typeof str === 'number') return Number.isFinite(str) ? str : null;
         if (!str || typeof str !== 'string') return null;
 
+        // Reject obvious non-price strings: installment rate schedules, SVG paths, cart quantities
+        if (/\b(?:kk\s*[x*]|\/kk\b|\bkk-erä\b|\bluottohinta\b|\bluottokorko\b|\bkk-maksu\b|\balkaen\s*\d+[,.]\d+\s*€?\s*\/)/i.test(str)) return null;
+        if (/\b(?:d\s*=\s*["']?[MLHVCSQTAZ\d]|\bsvg\b|\bpath\b)/i.test(str)) return null;
+        if (/\b(?:ostoskori|kori|kpl\b|tuotetta\b|kappaletta\b)/i.test(str)) return null;
+
         const cleaned = str
             .replace(/\(sis\.?\s*alv[^)]*\)/gi, ' ')
             .replace(/\bsis\.?\s*alv\s*\d*(?:[,.]\d+)?\s*%?/gi, ' ')
@@ -1308,7 +1313,11 @@
 
     function extractCoreProductTitle(rawStr) {
         let s = normalizeSwappedModelOrder(rawStr || '')
-            .replace(/^(?:Myydään|M|O|Ostetaan|Tuote)\s*:\s*/i, '');
+            .replace(/^(?:Myydään|M|O|Ostetaan|Tuote|ALE)\s*:\s*/i, '');
+
+        // Strip store name suffix (e.g. " - Verkkokauppa.com", " | Jimm's", " - Tori.fi (Käytetty)")
+        s = s.replace(/\s+[-|•–]\s*(?:Jula|Hinta(?:\.fi)?|CS(?:\s*MEGASTORE)?|Verkkokauppa\.com|Gigantti(?:\s+verkkokauppa)?|Power(?:\.fi)?|Proshop|Jimm's|Datatronic|Multitronic|Tietokonekauppa|Data-Systems|Komponenttikauppa|Cruzbroker|MaxGaming|VPD|Puolenkuun(?:\s+Pelit)?|Veikon(?:\s+Kone)?|Euronics|Kärkkäinen|Prisma|Telia|Elisa|DNA|HobbyHall|Bigbox|Kasuplan|Mikromafia|TeraStore|DigiDreamer|MEGASTORE|e-ville|SatShop|Dustin|Amazon(?:\.de)?|Tori(?:\.fi)?(?:\s*\([^)]*\))?|Vinted(?:\s*\([^)]*\))?|Huuto(?:\.net)?(?:\s*\([^)]*\))?|Swappie(?:\s*\([^)]*\))?|Taitonetti(?:\s*\([^)]*\))?|Fonum(?:\s*\([^)]*\))?|XXL|Varuste(?:\.net)?|Intersport|Budget\s*Sport|Scandinavian\s*Outdoor|Stadium|Partioaitta|Haglöfs|Hintaseuranta|Yliopiston\s*Apteekki|Lyko|Kicks|Musti\s*ja\s*Mirri|Zooplus|Peten\s*Koiratarvike|Adlibris|Suomalainen(?:\s*Kirjakauppa)?|Taloon(?:\.com)?|Netrauta|S-kaupat|K-Ruoka|Fiksuruoka|Matsmart|Ruohonjuuri|Tokmanni|Puuilo|IKEA|JYSK|Sotka|Asko|Masku|Isku|Veke|Finnish\s*Design\s*Shop|K-Rauta|Bauhaus|Motonet|Biltema|Clas\s*Ohlson|Rusta|Stockmann|Nettiauto|Kamux|Saka|Rinta-Jouppi|Autotie|K-Auto|Hedin(?:\s*Automotive)?|Bilar99e|VaihtoPlus|Autolle(?:\.com)?|Veho|Delta(?:\s*Auto)?|MS-Auto|Nettimoto|Nettikaravaani|Nettivene|Nettikone).*$/i, '');
+
         // Strip Amazon / marketplace marketing description clauses after ':' or ';' when prefix has >= 2 words
         const colonIdx = s.search(/\s*[:;]\s*/);
         if (colonIdx >= 6) {
@@ -1570,10 +1579,10 @@
                     // For groceries, keep brand, product name, and weight/volume (e.g. "Juhla Mokka 500 g")
                     return !/^(laktoositon|gluteeniton|luomu|suomalainen|kotimainen|uutuus|tarjous|erä)$/i.test(w);
                 }
-                return !/^(GDDR\dX?|PCIe|AM4|AM5|LGA\d+|ATX|mATX|ITX|Wi-?Fi|Bluetooth|5G|4G|LTE|Dual|SIM|RGB|ARGB|Black|White|Silver|Gold|Blue|Green|Pink|Purple|Gray|Grey|Red|Wine|Burgundy|Glacier|Polar|Midnight|Starlight|Sage|Lavender|Orange|Desert|Titanium|Natural|Alpine|Space|Graphite|Sierra|Cosmic|Aura|Phantom|Obsidian|Hazel|Porcelain|Bay|Mint|Lilac|Coral|Amber|Onyx|Marble|Sandstone|Titaani|Aavikko|Musta|Valkoinen|Hopea|Sininen|Vihreä|Harmaa|Punainen|Viininpunainen|Jäätikkö|Salvia|Laventeli|Oranssi|kultainen|mustatitaani|luonnontitaani|valkotitaani|tammi|koivu|mänty|valkolakattu|petsattu|Phone|Edition|Series|Gaming|OC|Takuu|Takuulla|Kuitti|Uudenveroinen|Hyväkuntoinen|Drone|Drooni|\d+kg|\d+kpl)$/i.test(w);
+                return !/^(GDDR\dX?|PCIe|AM4|AM5|LGA\d+|ATX|mATX|ITX|Wi-?Fi|Bluetooth|5G|4G|LTE|Dual|SIM|RGB|ARGB|Black|White|Silver|Gold|Blue|Green|Pink|Purple|Gray|Grey|Red|Wine|Burgundy|Glacier|Polar|Midnight|Starlight|Sage|Lavender|Orange|Desert|Titanium|Natural|Alpine|Space|Graphite|Sierra|Cosmic|Aura|Phantom|Obsidian|Hazel|Porcelain|Bay|Mint|Lilac|Coral|Amber|Onyx|Marble|Sandstone|Titaani|Aavikko|Musta|Valkoinen|Hopea|Sininen|Vihreä|Harmaa|Punainen|Viininpunainen|Jäätikkö|Salvia|Laventeli|Oranssi|kultainen|mustatitaani|luonnontitaani|valkotitaani|tammi|koivu|mänty|valkolakattu|petsattu|Phone|Edition|Series|Gaming|OC|Takuu|Takuulla|Kuitti|Uudenveroinen|Hyväkuntoinen|Uutuus|Uutuus!|Tarjous|Tarjouksessa|Kampanja|Kampanjaerä|Erä|Ale|Drone|Drooni|\d+kg|\d+kpl)$/i.test(w);
             });
 
-        const mCodes = extractModelCodes(name).filter(c => !isAppleRegionalPartNumber(c));
+        const mCodes = extractModelCodes(coreInput).filter(c => !isAppleRegionalPartNumber(c));
         if (mCodes.length > 0) {
             const code = mCodes[0];
             const hasCode = words.slice(0, 6).some(w => w.toUpperCase().includes(code.toUpperCase().split(/[-/]/)[0]));
@@ -2355,7 +2364,7 @@
     function buildAutomotiveMarketLinks(makeModel, regPlate = null) {
         const q = encodeURIComponent(makeModel || '');
         const qPlus = q.replace(/%20/g, '+');
-        const reg = regPlate ? encodeURIComponent(regPlate.trim().toUpperCase()) : '';
+        const reg = (typeof regPlate === 'string') ? encodeURIComponent(regPlate.trim().toUpperCase()) : '';
         return {
             hedinUrl: `https://www.hedinautomotive.fi/vaihtoautot/?search=${q}`,
             auto1Url: `https://www.auto1.fi/haku/${qPlus}`,
@@ -2373,8 +2382,15 @@
         };
     }
 
-    function estimateFinnishVehicleRunningCosts(engineOrFuel) {
-        const text = (engineOrFuel || '').toLowerCase();
+    function estimateFinnishVehicleRunningCosts(engineOrFuel, maybeFuel = null) {
+        let text = '';
+        if (typeof engineOrFuel === 'string') {
+            text = engineOrFuel.toLowerCase();
+        } else if (typeof maybeFuel === 'string') {
+            text = maybeFuel.toLowerCase();
+        } else {
+            text = String(engineOrFuel || '').toLowerCase();
+        }
         const isDiesel = text.includes('diesel');
         const isElectric = text.includes('sähkö') || text.includes('electric') || text.includes('ev');
         const isPhev = text.includes('hybrid') || text.includes('plug-in') || text.includes('phev');
@@ -2410,6 +2426,7 @@
             basicTax,
             powerSourceTax,
             totalTaxAnnual,
+            annualAjoneuvovero: totalTaxAnnual,
             fuelCostPer100km: +fuelCostPer100km.toFixed(2),
             annualFuelCost,
             annualTotalOperating: totalTaxAnnual + annualFuelCost
@@ -2471,6 +2488,7 @@
             savingsVsNew,
             savingsVsNewPct,
             points,
+            trajectory: points,
             carYear,
             carMileage,
             carAge,
@@ -5774,9 +5792,9 @@
             'DDR4', 'DDR5', 'GDDR6', 'GDDR6X', 'GDDR7', 'PCI4', 'PCIE4', 'PCIE5',
             'ONE', 'LED', 'USB', 'USBC', 'USB-C', 'RGB', 'ARGB', 'OLED', 'QLED', 'WIFI',
             'PRO', 'MAX', 'PLUS', 'MINI', 'SLIM', 'ULTRA', 'LITE', 'SE', 'CORE', 'SERIES',
-            'IPV4', 'IPV6', 'HDR10', 'RJ45', 'CAT6', 'CAT6A', 'CAT7'
+            'IPV4', 'IPV6', 'HDR10', 'RJ45', 'CAT6', 'CAT6A', 'CAT7', 'BILAR99E'
         ]);
-        const specUnitRx = /^(?:\d+(?:[.,]\d+)?(?:V|W|KW|HZ|MHZ|GHZ|GB|GT|TB|TT|MB|KG|G|MM|CM|M|ML|CL|DL|L|MAH|AH|LM|LUX|DB|RPM|FPS|MP|MPX|NIT|NITS|BIT|BITS|CH|SIM|ESIM|GEN|P|K|NM|BAR|PSI|XL|KPL|PACK)|CL\d{1,2}|CAS\d{1,2}|IPX?\d{1,2}|WIFI-?\d[A-Z]?|BT\d(?:\.\d)?|HDMI\d(?:\.\d)?|20[1-3]\d)$/;
+        const specUnitRx = /^(?:\d+(?:[.,]\d+)?(?:V|W|KW|HZ|MHZ|GHZ|GB|GT|TB|TT|MB|KG|G|MM|CM|M|ML|CL|DL|L|MAH|AH|LM|LUX|DB|RPM|FPS|MP|MPX|NIT|NITS|BIT|BITS|CH|SIM|ESIM|GEN|P|K|NM|BAR|PSI|XL|KPL|PACK)|\d+[X×]\d+(?:[X×]\d+)?|CL\d{1,2}|CAS\d{1,2}|IPX?\d{1,2}|WIFI-?\d[A-Z]?|BT\d(?:\.\d)?|HDMI\d(?:\.\d)?|20[1-3]\d)$/;
 
         for (const m of rawMatches) {
             const cleaned = m.replace(/^[-/]+|[-/]+$/g, '');
