@@ -1,0 +1,2963 @@
+{
+  "meta": {
+    "timestamp": "2026-11-10T17:29:12.678Z",
+    "totalProductsTested": 100000,
+    "storesCount": 98,
+    "durationMs": 3477,
+    "itemsPerSec": 28760,
+    "failuresCount": 0
+  },
+  "categoryStats": {
+    "tech_hardware": 20803,
+    "mobile_audio": 20804,
+    "automotive": 16738,
+    "grocery": 7354,
+    "furniture": 8632,
+    "sports": 8636,
+    "diy_tools": 9274,
+    "recommerce": 7759
+  },
+  "storeBreakdown": [
+    {
+      "storeName": "Tori.fi (Käytetty)",
+      "domain": "tori.fi",
+      "categoryHint": "general/tech",
+      "itemsTested": 1400,
+      "itemsPassed": 1400,
+      "samples": [
+        {
+          "title": "Apple iPhone 14 Pro 128GB Tähtipöly (Uudenveroinen) - Tori.fi (Käytetty)",
+          "price": "580,00 €",
+          "parsedPrice": 580,
+          "conciseQ": "Apple iPhone 14 Pro 128GB Tähtipöly",
+          "category": "recommerce"
+        },
+        {
+          "title": "Sony PlayStation 5 Digital Edition Pelikonsoli (Hyväkuntoinen) - Tori.fi (Käytetty)",
+          "price": "320,00 € sis. ALV",
+          "parsedPrice": 320,
+          "conciseQ": "Sony PlayStation 5 Digital Pelikonsoli",
+          "category": "recommerce"
+        },
+        {
+          "title": "NVIDIA GeForce RTX 3080 10GB Näytönohjain (Hyväkuntoinen) - Tori.fi (Käytetty)",
+          "price": "420,00 EUR",
+          "parsedPrice": 420,
+          "conciseQ": "NVIDIA GeForce RTX 3080 10GB Näytönohjain",
+          "category": "recommerce"
+        }
+      ]
+    },
+    {
+      "storeName": "Vinted (Käytetty)",
+      "domain": "vinted.fi",
+      "categoryHint": "general/tech",
+      "itemsTested": 1400,
+      "itemsPassed": 1400,
+      "samples": [
+        {
+          "title": "NVIDIA GeForce RTX 3080 10GB Näytönohjain (Hyväkuntoinen) - Vinted (Käytetty)",
+          "price": "Vain 420,00 €!",
+          "parsedPrice": 420,
+          "conciseQ": "NVIDIA GeForce RTX 3080 10GB Näytönohjain",
+          "category": "recommerce"
+        },
+        {
+          "title": "Apple MacBook Air 13\" M1 8GB 256GB Tähtiharmaa (Erittäin hyvä) - Vinted (Käytetty)",
+          "price": "550,00 €",
+          "parsedPrice": 550,
+          "conciseQ": "Apple MacBook Air 13\" M1 8GB",
+          "category": "recommerce"
+        },
+        {
+          "title": "Nintendo Switch OLED Pelikonsoli Valkoinen (Uudenveroinen) - Vinted (Käytetty)",
+          "price": "230,00 € sis. ALV",
+          "parsedPrice": 230,
+          "conciseQ": "Nintendo Switch OLED Pelikonsoli",
+          "category": "recommerce"
+        }
+      ]
+    },
+    {
+      "storeName": "Huuto.net (Käytetty)",
+      "domain": "huuto.net",
+      "categoryHint": "general/tech",
+      "itemsTested": 1400,
+      "itemsPassed": 1400,
+      "samples": [
+        {
+          "title": "Nintendo Switch OLED Pelikonsoli Valkoinen (Uudenveroinen) - Huuto.net (Käytetty)",
+          "price": "230 €",
+          "parsedPrice": 230,
+          "conciseQ": "Nintendo Switch OLED Pelikonsoli",
+          "category": "recommerce"
+        },
+        {
+          "title": "Apple iPhone 14 Pro 128GB Tähtipöly (Uudenveroinen) - Huuto.net (Käytetty)",
+          "price": "Vain 580,00 €!",
+          "parsedPrice": 580,
+          "conciseQ": "Apple iPhone 14 Pro 128GB Tähtipöly",
+          "category": "recommerce"
+        },
+        {
+          "title": "Sony PlayStation 5 Digital Edition Pelikonsoli (Hyväkuntoinen) - Huuto.net (Käytetty)",
+          "price": "320,00 €",
+          "parsedPrice": 320,
+          "conciseQ": "Sony PlayStation 5 Digital Pelikonsoli",
+          "category": "recommerce"
+        }
+      ]
+    },
+    {
+      "storeName": "Swappie (Kunnostettu)",
+      "domain": "swappie.com",
+      "categoryHint": "general/tech",
+      "itemsTested": 1400,
+      "itemsPassed": 1400,
+      "samples": [
+        {
+          "title": "Sony PlayStation 5 Digital Edition Pelikonsoli (Hyväkuntoinen) - Swappie (Kunnostettu)",
+          "price": "320.00 € sis. alv 25,5%",
+          "parsedPrice": 320,
+          "conciseQ": "Sony PlayStation 5 Digital Pelikonsoli",
+          "category": "recommerce"
+        },
+        {
+          "title": "NVIDIA GeForce RTX 3080 10GB Näytönohjain (Hyväkuntoinen) - Swappie (Kunnostettu)",
+          "price": "420 €",
+          "parsedPrice": 420,
+          "conciseQ": "NVIDIA GeForce RTX 3080 10GB Näytönohjain",
+          "category": "recommerce"
+        },
+        {
+          "title": "Apple MacBook Air 13\" M1 8GB 256GB Tähtiharmaa (Erittäin hyvä) - Swappie (Kunnostettu)",
+          "price": "Vain 550,00 €!",
+          "parsedPrice": 550,
+          "conciseQ": "Apple MacBook Air 13\" M1 8GB",
+          "category": "recommerce"
+        }
+      ]
+    },
+    {
+      "storeName": "Taitonetti (Kunnostettu)",
+      "domain": "taitonetti.fi",
+      "categoryHint": "general/tech",
+      "itemsTested": 1400,
+      "itemsPassed": 1400,
+      "samples": [
+        {
+          "title": "Apple MacBook Air 13\" M1 8GB 256GB Tähtiharmaa (Erittäin hyvä) - Taitonetti (Kunnostettu)",
+          "price": "550,-",
+          "parsedPrice": 550,
+          "conciseQ": "Apple MacBook Air 13\" M1 8GB",
+          "category": "recommerce"
+        },
+        {
+          "title": "Nintendo Switch OLED Pelikonsoli Valkoinen (Uudenveroinen) - Taitonetti (Kunnostettu)",
+          "price": "230.00 € sis. alv 25,5%",
+          "parsedPrice": 230,
+          "conciseQ": "Nintendo Switch OLED Pelikonsoli",
+          "category": "recommerce"
+        },
+        {
+          "title": "Apple iPhone 14 Pro 128GB Tähtipöly (Uudenveroinen) - Taitonetti (Kunnostettu)",
+          "price": "580 €",
+          "parsedPrice": 580,
+          "conciseQ": "Apple iPhone 14 Pro 128GB Tähtipöly",
+          "category": "recommerce"
+        }
+      ]
+    },
+    {
+      "storeName": "Verkkokauppa.com",
+      "domain": "verkkokauppa.com",
+      "categoryHint": "general/tech",
+      "itemsTested": 1400,
+      "itemsPassed": 1400,
+      "samples": [
+        {
+          "title": "AirPods Pro 2 USB-C | Verkkokauppa.com",
+          "price": "279,- €",
+          "parsedPrice": 279,
+          "conciseQ": "AirPods Pro 2 USB-C",
+          "category": "mobile_audio"
+        },
+        {
+          "title": "Lian Li NM790 M.2 2280 NVMe SSD 4TB - Verkkokauppa.com",
+          "price": "221,-",
+          "parsedPrice": 221,
+          "conciseQ": "Lian Li NM790 M.2 2280 NVMe",
+          "category": "tech_hardware"
+        },
+        {
+          "title": "OnePlus 13 256GB Rose | Verkkokauppa.com",
+          "price": "1 524.00 € sis. alv 25,5%",
+          "parsedPrice": 1524,
+          "conciseQ": "OnePlus 13 256GB Rose",
+          "category": "mobile_audio"
+        }
+      ]
+    },
+    {
+      "storeName": "Gigantti",
+      "domain": "gigantti.fi",
+      "categoryHint": "general/tech",
+      "itemsTested": 1400,
+      "itemsPassed": 1400,
+      "samples": [
+        {
+          "title": "Western Digital Radeon RX 9070 XT 16GB Hyväkuntoinen - Gigantti",
+          "price": "2 119,00 EUR",
+          "parsedPrice": 2119,
+          "conciseQ": "Western Digital Radeon RX 9070 XT",
+          "category": "tech_hardware"
+        },
+        {
+          "title": "AirPods Pro 2 USB-C | Gigantti",
+          "price": "399,- €",
+          "parsedPrice": 399,
+          "conciseQ": "AirPods Pro 2 USB-C",
+          "category": "mobile_audio"
+        },
+        {
+          "title": "Thermalright T700 PCIe 5.0 NVMe SSD 2TB - Gigantti",
+          "price": "317,-",
+          "parsedPrice": 317,
+          "conciseQ": "Thermalright T700 5.0 NVMe SSD 2TB",
+          "category": "tech_hardware"
+        }
+      ]
+    },
+    {
+      "storeName": "Power",
+      "domain": "power.fi",
+      "categoryHint": "general/tech",
+      "itemsTested": 1400,
+      "itemsPassed": 1400,
+      "samples": [
+        {
+          "title": "OLED77G4 77\" 4K OLED evo TV | Power",
+          "price": "2 459,00 € sis. ALV",
+          "parsedPrice": 2459,
+          "conciseQ": "OLED77G4 77\" 4K OLED evo TV",
+          "category": "mobile_audio"
+        },
+        {
+          "title": "G.Skill GeForce RTX 5070 Ti 16GB Uutuus! - Power",
+          "price": "649,00 EUR",
+          "parsedPrice": 649,
+          "conciseQ": "G.Skill GeForce RTX 5070 Ti 16GB",
+          "category": "tech_hardware"
+        },
+        {
+          "title": "AirPods Pro 2 USB-C | Power",
+          "price": "144,- €",
+          "parsedPrice": 144,
+          "conciseQ": "AirPods Pro 2 USB-C",
+          "category": "mobile_audio"
+        }
+      ]
+    },
+    {
+      "storeName": "Proshop",
+      "domain": "proshop.fi",
+      "categoryHint": "general/tech",
+      "itemsTested": 1400,
+      "itemsPassed": 1400,
+      "samples": [
+        {
+          "title": "Gigabyte TUF GAMING B650-PLUS WIFI ATX - Proshop",
+          "price": "219,00 €",
+          "parsedPrice": 219,
+          "conciseQ": "Gigabyte TUF B650-PLUS",
+          "category": "tech_hardware"
+        },
+        {
+          "title": "OLED77G4 77\" 4K OLED evo TV | Proshop",
+          "price": "779,00 € sis. ALV",
+          "parsedPrice": 779,
+          "conciseQ": "OLED77G4 77\" 4K OLED evo TV",
+          "category": "mobile_audio"
+        },
+        {
+          "title": "Corsair Radeon RX 9070 XT 16GB Tarjouksessa - Proshop",
+          "price": "929,00 EUR",
+          "parsedPrice": 929,
+          "conciseQ": "Corsair Radeon RX 9070 XT 16GB",
+          "category": "tech_hardware"
+        }
+      ]
+    },
+    {
+      "storeName": "Jimm's",
+      "domain": "jimms.fi",
+      "categoryHint": "general/tech",
+      "itemsTested": 1400,
+      "itemsPassed": 1400,
+      "samples": [
+        {
+          "title": "Galaxy S24 Ultra 1TB Black Titanium | Jimm's",
+          "price": "Vain 1 174,00 €!",
+          "parsedPrice": 1174,
+          "conciseQ": "Galaxy S24 Ultra 1TB",
+          "category": "mobile_audio"
+        },
+        {
+          "title": "ASUS TUF GAMING B650-PLUS WIFI ATX - Jimm's",
+          "price": "299,00 €",
+          "parsedPrice": 299,
+          "conciseQ": "ASUS TUF B650-PLUS",
+          "category": "tech_hardware"
+        },
+        {
+          "title": "OLED77G4 77\" 4K OLED evo TV | Jimm's",
+          "price": "1 099,00 € sis. ALV",
+          "parsedPrice": 1099,
+          "conciseQ": "OLED77G4 77\" 4K OLED evo TV",
+          "category": "mobile_audio"
+        }
+      ]
+    },
+    {
+      "storeName": "Datatronic",
+      "domain": "datatronic.fi",
+      "categoryHint": "general/tech",
+      "itemsTested": 1400,
+      "itemsPassed": 1400,
+      "samples": [
+        {
+          "title": "Gainward KC3000 PCIe 4.0 NVMe M.2 SSD 2TB - Datatronic",
+          "price": "329 €",
+          "parsedPrice": 329,
+          "conciseQ": "Gainward KC3000 4.0 NVMe M.2 SSD",
+          "category": "tech_hardware"
+        },
+        {
+          "title": "Galaxy S24 Ultra 1TB Black Titanium | Datatronic",
+          "price": "Vain 1 374,00 €!",
+          "parsedPrice": 1374,
+          "conciseQ": "Galaxy S24 Ultra 1TB",
+          "category": "mobile_audio"
+        },
+        {
+          "title": "Inno3D TUF GAMING B650-PLUS WIFI ATX - Datatronic",
+          "price": "379,00 €",
+          "parsedPrice": 379,
+          "conciseQ": "Inno3D TUF B650-PLUS",
+          "category": "tech_hardware"
+        }
+      ]
+    },
+    {
+      "storeName": "Multitronic",
+      "domain": "multitronic.fi",
+      "categoryHint": "general/tech",
+      "itemsTested": 1400,
+      "itemsPassed": 1400,
+      "samples": [
+        {
+          "title": "Major IV Bluetooth-kuulokkeet | Multitronic",
+          "price": "159.00 € sis. alv 25,5%",
+          "parsedPrice": 159,
+          "conciseQ": "Major IV Bluetooth-kuulokkeet",
+          "category": "mobile_audio"
+        },
+        {
+          "title": "XFX 990 PRO NVMe M.2 SSD 4TB - Multitronic",
+          "price": "125 €",
+          "parsedPrice": 125,
+          "conciseQ": "XFX 990 PRO NVMe M.2 SSD",
+          "category": "tech_hardware"
+        },
+        {
+          "title": "Galaxy S24 Ultra 1TB Black Titanium | Multitronic",
+          "price": "Vain 1 574,00 €!",
+          "parsedPrice": 1574,
+          "conciseQ": "Galaxy S24 Ultra 1TB",
+          "category": "mobile_audio"
+        }
+      ]
+    },
+    {
+      "storeName": "Kärkkäinen",
+      "domain": "karkkainen.com",
+      "categoryHint": "general/tech",
+      "itemsTested": 1400,
+      "itemsPassed": 1400,
+      "samples": [
+        {
+          "title": "Crucial GeForce RTX 4090 24GB Varastontyhjennys - Kärkkäinen",
+          "price": "1 839,-",
+          "parsedPrice": 1839,
+          "conciseQ": "Crucial GeForce RTX 4090 24GB Varastontyhjennys",
+          "category": "tech_hardware"
+        },
+        {
+          "title": "Major IV Bluetooth-kuulokkeet | Kärkkäinen",
+          "price": "279.00 € sis. alv 25,5%",
+          "parsedPrice": 279,
+          "conciseQ": "Major IV Bluetooth-kuulokkeet",
+          "category": "mobile_audio"
+        },
+        {
+          "title": "Zotac 870 EVO SATA SSD 2TB - Kärkkäinen",
+          "price": "221 €",
+          "parsedPrice": 221,
+          "conciseQ": "Zotac 870 EVO SATA SSD 2TB",
+          "category": "tech_hardware"
+        }
+      ]
+    },
+    {
+      "storeName": "Prisma",
+      "domain": "prisma.fi",
+      "categoryHint": "general/tech",
+      "itemsTested": 1400,
+      "itemsPassed": 1400,
+      "samples": [
+        {
+          "title": "ROG Swift PG32UCDM 32\" QD-OLED | Prisma",
+          "price": "2 139,- €",
+          "parsedPrice": 2139,
+          "conciseQ": "ROG Swift PG32UCDM 32\" QD-OLED",
+          "category": "mobile_audio"
+        },
+        {
+          "title": "be quiet! Radeon RX 7900 XTX 24GB Hyväkuntoinen - Prisma",
+          "price": "2 119,-",
+          "parsedPrice": 2119,
+          "conciseQ": "be quiet! Radeon RX 7900 XTX",
+          "category": "tech_hardware"
+        },
+        {
+          "title": "Major IV Bluetooth-kuulokkeet | Prisma",
+          "price": "399.00 € sis. alv 25,5%",
+          "parsedPrice": 399,
+          "conciseQ": "Major IV Bluetooth-kuulokkeet",
+          "category": "mobile_audio"
+        }
+      ]
+    },
+    {
+      "storeName": "Telia",
+      "domain": "telia.fi",
+      "categoryHint": "general/tech",
+      "itemsTested": 1400,
+      "itemsPassed": 1400,
+      "samples": [
+        {
+          "title": "Thermalright MAG B650 TOMAHAWK WIFI - Telia",
+          "price": "389,00 EUR",
+          "parsedPrice": 389,
+          "conciseQ": "Thermalright MAG B650 TOMAHAWK",
+          "category": "tech_hardware"
+        },
+        {
+          "title": "ROG Swift PG32UCDM 32\" QD-OLED | Telia",
+          "price": "2 459,- €",
+          "parsedPrice": 2459,
+          "conciseQ": "ROG Swift PG32UCDM 32\" QD-OLED",
+          "category": "mobile_audio"
+        },
+        {
+          "title": "Lian Li GeForce RTX 4090 24GB Uutuus! - Telia",
+          "price": "649,-",
+          "parsedPrice": 649,
+          "conciseQ": "Lian Li GeForce RTX 4090 24GB",
+          "category": "tech_hardware"
+        }
+      ]
+    },
+    {
+      "storeName": "Elisa",
+      "domain": "elisa.fi",
+      "categoryHint": "general/tech",
+      "itemsTested": 1400,
+      "itemsPassed": 1400,
+      "samples": [
+        {
+          "title": "iPhone 16 Plus 256GB Rose | Elisa",
+          "price": "1 224,00 € sis. ALV",
+          "parsedPrice": 1224,
+          "conciseQ": "iPhone 16 Plus 256GB Rose",
+          "category": "mobile_audio"
+        },
+        {
+          "title": "Western Digital MAG B650 TOMAHAWK WIFI - Elisa",
+          "price": "219,00 EUR",
+          "parsedPrice": 219,
+          "conciseQ": "Western Digital MAG B650 TOMAHAWK",
+          "category": "tech_hardware"
+        },
+        {
+          "title": "ROG Swift PG32UCDM 32\" QD-OLED | Elisa",
+          "price": "779,- €",
+          "parsedPrice": 779,
+          "conciseQ": "ROG Swift PG32UCDM 32\" QD-OLED",
+          "category": "mobile_audio"
+        }
+      ]
+    },
+    {
+      "storeName": "DNA",
+      "domain": "dna.fi",
+      "categoryHint": "general/tech",
+      "itemsTested": 1400,
+      "itemsPassed": 1400,
+      "samples": [
+        {
+          "title": "Corsair NM790 M.2 2280 NVMe SSD 2TB - DNA",
+          "price": "233,00 €",
+          "parsedPrice": 233,
+          "conciseQ": "Corsair NM790 M.2 2280 NVMe SSD",
+          "category": "tech_hardware"
+        },
+        {
+          "title": "iPhone 16 Plus 256GB Rose | DNA",
+          "price": "1 424,00 € sis. ALV",
+          "parsedPrice": 1424,
+          "conciseQ": "iPhone 16 Plus 256GB Rose",
+          "category": "mobile_audio"
+        },
+        {
+          "title": "G.Skill MAG B650 TOMAHAWK WIFI - DNA",
+          "price": "299,00 EUR",
+          "parsedPrice": 299,
+          "conciseQ": "G.Skill MAG B650 TOMAHAWK",
+          "category": "tech_hardware"
+        }
+      ]
+    },
+    {
+      "storeName": "Amazon.de",
+      "domain": "amazon.de",
+      "categoryHint": "general/tech",
+      "itemsTested": 1400,
+      "itemsPassed": 1400,
+      "samples": [
+        {
+          "title": "WH-1000XM4 Vastamelukuulokkeet | Amazon.de",
+          "price": "Vain 414,00 €!",
+          "parsedPrice": 414,
+          "conciseQ": "WH-1000XM4",
+          "category": "mobile_audio"
+        },
+        {
+          "title": "Gigabyte Black SN850X NVMe SSD 4TB - Amazon.de",
+          "price": "329,00 €",
+          "parsedPrice": 329,
+          "conciseQ": "Gigabyte SN850X NVMe SSD 4TB",
+          "category": "tech_hardware"
+        },
+        {
+          "title": "iPhone 16 Plus 256GB Rose | Amazon.de",
+          "price": "624,00 € sis. ALV",
+          "parsedPrice": 624,
+          "conciseQ": "iPhone 16 Plus 256GB Rose",
+          "category": "mobile_audio"
+        }
+      ]
+    },
+    {
+      "storeName": "XXL",
+      "domain": "xxl.fi",
+      "categoryHint": "sports",
+      "itemsTested": 1400,
+      "itemsPassed": 1400,
+      "samples": [
+        {
+          "title": "Garmin Fenix 7 Pro Sapphire Solar GPS-multisportkello - XXL",
+          "price": "649 €",
+          "parsedPrice": 649,
+          "conciseQ": "Garmin Fenix 7 Pro Sapphire Solar",
+          "category": "sports"
+        },
+        {
+          "title": "Suunto Race Titanium Urheilukello AMOLED - XXL",
+          "price": "Vain 449,00 €!",
+          "parsedPrice": 449,
+          "conciseQ": "Suunto Race Urheilukello AMOLED",
+          "category": "sports"
+        },
+        {
+          "title": "Hoka Bondi 8 Juoksukengät Miesten juoksukengät - XXL",
+          "price": "139,00 €",
+          "parsedPrice": 139,
+          "conciseQ": "Hoka Bondi 8 Juoksukengät Miesten juoksukengät",
+          "category": "sports"
+        }
+      ]
+    },
+    {
+      "storeName": "Intersport",
+      "domain": "intersport.fi",
+      "categoryHint": "sports",
+      "itemsTested": 1400,
+      "itemsPassed": 1400,
+      "samples": [
+        {
+          "title": "Helly Hansen Salt Coastal Jacket Purjehdustakki - Intersport",
+          "price": "219.00 € sis. alv 25,5%",
+          "parsedPrice": 219,
+          "conciseQ": "Helly Hansen Salt Coastal Jacket Purjehdustakki",
+          "category": "sports"
+        },
+        {
+          "title": "Garmin Fenix 7 Pro Sapphire Solar GPS-multisportkello - Intersport",
+          "price": "649 €",
+          "parsedPrice": 649,
+          "conciseQ": "Garmin Fenix 7 Pro Sapphire Solar",
+          "category": "sports"
+        },
+        {
+          "title": "Suunto Race Titanium Urheilukello AMOLED - Intersport",
+          "price": "Vain 449,00 €!",
+          "parsedPrice": 449,
+          "conciseQ": "Suunto Race Urheilukello AMOLED",
+          "category": "sports"
+        }
+      ]
+    },
+    {
+      "storeName": "Budget Sport",
+      "domain": "budgetsport.fi",
+      "categoryHint": "sports",
+      "itemsTested": 1400,
+      "itemsPassed": 1400,
+      "samples": [
+        {
+          "title": "Fjällräven Keb Trousers Regular Vaellushousut - Budget Sport",
+          "price": "199,-",
+          "parsedPrice": 199,
+          "conciseQ": "Fjällräven Keb Trousers Regular Vaellushousut",
+          "category": "sports"
+        },
+        {
+          "title": "Helly Hansen Salt Coastal Jacket Purjehdustakki - Budget Sport",
+          "price": "219.00 € sis. alv 25,5%",
+          "parsedPrice": 219,
+          "conciseQ": "Helly Hansen Salt Coastal Jacket Purjehdustakki",
+          "category": "sports"
+        },
+        {
+          "title": "Garmin Fenix 7 Pro Sapphire Solar GPS-multisportkello - Budget Sport",
+          "price": "649 €",
+          "parsedPrice": 649,
+          "conciseQ": "Garmin Fenix 7 Pro Sapphire Solar",
+          "category": "sports"
+        }
+      ]
+    },
+    {
+      "storeName": "Stadium",
+      "domain": "stadium.fi",
+      "categoryHint": "sports",
+      "itemsTested": 1400,
+      "itemsPassed": 1400,
+      "samples": [
+        {
+          "title": "Haglöfs Astral GTX Takki Gore-Tex kuoritakki - Stadium",
+          "price": "299,- €",
+          "parsedPrice": 299,
+          "conciseQ": "Haglöfs Astral GTX Takki Gore-Tex kuoritakki",
+          "category": "sports"
+        },
+        {
+          "title": "Fjällräven Keb Trousers Regular Vaellushousut - Stadium",
+          "price": "199,-",
+          "parsedPrice": 199,
+          "conciseQ": "Fjällräven Keb Trousers Regular Vaellushousut",
+          "category": "sports"
+        },
+        {
+          "title": "Helly Hansen Salt Coastal Jacket Purjehdustakki - Stadium",
+          "price": "219.00 € sis. alv 25,5%",
+          "parsedPrice": 219,
+          "conciseQ": "Helly Hansen Salt Coastal Jacket Purjehdustakki",
+          "category": "sports"
+        }
+      ]
+    },
+    {
+      "storeName": "S-kaupat",
+      "domain": "s-kaupat.fi",
+      "categoryHint": "grocery",
+      "itemsTested": 1400,
+      "itemsPassed": 1400,
+      "samples": [
+        {
+          "title": "Valio Luomumaito Rasvaton 1,5 l - S-kaupat",
+          "price": "2,19 EUR",
+          "parsedPrice": 2.19,
+          "conciseQ": "Valio Luomumaito Rasvaton 1 5",
+          "category": "grocery"
+        },
+        {
+          "title": "Valio Oivariini Perinteinen Levite 400g - S-kaupat",
+          "price": "3,29 €",
+          "parsedPrice": 3.29,
+          "conciseQ": "Valio Oivariini Perinteinen Levite 400g",
+          "category": "grocery"
+        },
+        {
+          "title": "Oatly Barista Kaurajuoma 1 l - S-kaupat",
+          "price": "2.29 €",
+          "parsedPrice": 2.29,
+          "conciseQ": "Oatly Barista Kaurajuoma 1",
+          "category": "grocery"
+        }
+      ]
+    },
+    {
+      "storeName": "K-Ruoka",
+      "domain": "k-ruoka.fi",
+      "categoryHint": "grocery",
+      "itemsTested": 1400,
+      "itemsPassed": 1400,
+      "samples": [
+        {
+          "title": "Hau-Hau Champion Kana-riisi Täysravinto 12 kg - K-Ruoka",
+          "price": "24,90 € sis. ALV",
+          "parsedPrice": 24.9,
+          "conciseQ": "Hau-Hau Champion Kana-riisi Täysravinto 12 kg",
+          "category": "grocery"
+        },
+        {
+          "title": "Royal Canin Medium Adult Koiranruoka 15 kg - K-Ruoka",
+          "price": "64,90 EUR",
+          "parsedPrice": 64.9,
+          "conciseQ": "Royal Canin Medium Adult Koiranruoka 15",
+          "category": "grocery"
+        },
+        {
+          "title": "Juhla Mokka Kahvi Paahdettu 500g - K-Ruoka",
+          "price": "4,99 €",
+          "parsedPrice": 4.99,
+          "conciseQ": "Juhla Mokka Kahvi Paahdettu 500g",
+          "category": "grocery"
+        }
+      ]
+    },
+    {
+      "storeName": "Tokmanni",
+      "domain": "tokmanni.fi",
+      "categoryHint": "general/tech",
+      "itemsTested": 1400,
+      "itemsPassed": 1400,
+      "samples": [
+        {
+          "title": "G.Skill GeForce RTX 4060 Ti 8GB Tarjouksessa - Tokmanni",
+          "price": "1 279,00 €",
+          "parsedPrice": 1279,
+          "conciseQ": "G.Skill GeForce RTX 4060 Ti 8GB",
+          "category": "tech_hardware"
+        },
+        {
+          "title": "AirPods Pro 2 USB-C | Tokmanni",
+          "price": "414,00 € sis. ALV",
+          "parsedPrice": 414,
+          "conciseQ": "AirPods Pro 2 USB-C",
+          "category": "mobile_audio"
+        },
+        {
+          "title": "Western Digital NM790 M.2 2280 NVMe SSD 2TB - Tokmanni",
+          "price": "329,00 EUR",
+          "parsedPrice": 329,
+          "conciseQ": "Western Digital NM790 M.2 2280 NVMe",
+          "category": "tech_hardware"
+        }
+      ]
+    },
+    {
+      "storeName": "IKEA",
+      "domain": "ikea.com",
+      "categoryHint": "furniture",
+      "itemsTested": 1400,
+      "itemsPassed": 1400,
+      "samples": [
+        {
+          "title": "STRANDMON Lepotuoli 82x96x101 cm nordvalla tummanharmaa - IKEA",
+          "price": "Vain 249,00 €!",
+          "parsedPrice": 249,
+          "conciseQ": "STRANDMON Lepotuoli nordvalla tummanharmaa",
+          "category": "furniture"
+        },
+        {
+          "title": "EKEDALEN Jatkettava pöytä 120/180x80 cm valkoinen - IKEA",
+          "price": "229,00 €",
+          "parsedPrice": 229,
+          "conciseQ": "EKEDALEN Jatkettava pöytä 120",
+          "category": "furniture"
+        },
+        {
+          "title": "Vedde Vaatekaappi 166x197 cm villi tammi - IKEA",
+          "price": "349,00 € sis. ALV",
+          "parsedPrice": 349,
+          "conciseQ": "Vedde Vaatekaappi villi",
+          "category": "furniture"
+        }
+      ]
+    },
+    {
+      "storeName": "JYSK",
+      "domain": "jysk.fi",
+      "categoryHint": "furniture",
+      "itemsTested": 1400,
+      "itemsPassed": 1400,
+      "samples": [
+        {
+          "title": "KALLAX Hyllykkö 77x147 cm mustanruskea - JYSK",
+          "price": "79 €",
+          "parsedPrice": 79,
+          "conciseQ": "KALLAX Hyllykkö mustanruskea",
+          "category": "furniture"
+        },
+        {
+          "title": "MALM Sänky runkopatjalle 160x200 cm valkoinen - JYSK",
+          "price": "Vain 249,00 €!",
+          "parsedPrice": 249,
+          "conciseQ": "MALM Sänky runkopatjalle",
+          "category": "furniture"
+        },
+        {
+          "title": "POÄNG Nojatuoli ja rahi 68x82x100 cm koivuviilu / knisa musta - JYSK",
+          "price": "129,00 €",
+          "parsedPrice": 129,
+          "conciseQ": "POÄNG Nojatuoli ja rahi koivuviilu knisa",
+          "category": "furniture"
+        }
+      ]
+    },
+    {
+      "storeName": "Sotka",
+      "domain": "sotka.fi",
+      "categoryHint": "furniture",
+      "itemsTested": 1400,
+      "itemsPassed": 1400,
+      "samples": [
+        {
+          "title": "Bonnell Runkopatjapaketti 160x200 cm medium harmaa - Sotka",
+          "price": "599.00 € sis. alv 25,5%",
+          "parsedPrice": 599,
+          "conciseQ": "Bonnell Runkopatjapaketti medium",
+          "category": "furniture"
+        },
+        {
+          "title": "HEMNES Kirjahylly 90x197 cm valkoinen petsi - Sotka",
+          "price": "199 €",
+          "parsedPrice": 199,
+          "conciseQ": "HEMNES Kirjahylly petsi",
+          "category": "furniture"
+        },
+        {
+          "title": "BILLY Kirjahylly 80x28x202 cm valkoinen - Sotka",
+          "price": "Vain 69,95 €!",
+          "parsedPrice": 69.95,
+          "conciseQ": "BILLY Kirjahylly",
+          "category": "furniture"
+        }
+      ]
+    },
+    {
+      "storeName": "Masku",
+      "domain": "masku.com",
+      "categoryHint": "furniture",
+      "itemsTested": 1400,
+      "itemsPassed": 1400,
+      "samples": [
+        {
+          "title": "EKEDALEN Jatkettava pöytä 120/180x80 cm valkoinen - Masku",
+          "price": "229,-",
+          "parsedPrice": 229,
+          "conciseQ": "EKEDALEN Jatkettava pöytä 120",
+          "category": "furniture"
+        },
+        {
+          "title": "Vedde Vaatekaappi 166x197 cm villi tammi - Masku",
+          "price": "349.00 € sis. alv 25,5%",
+          "parsedPrice": 349,
+          "conciseQ": "Vedde Vaatekaappi villi",
+          "category": "furniture"
+        },
+        {
+          "title": "Bellus Kulmasohva Divan 280x160 cm kangas harmaa - Masku",
+          "price": "1 299 €",
+          "parsedPrice": 1299,
+          "conciseQ": "Bellus Kulmasohva Divan kangas",
+          "category": "furniture"
+        }
+      ]
+    },
+    {
+      "storeName": "K-Rauta",
+      "domain": "k-rauta.fi",
+      "categoryHint": "general/tech",
+      "itemsTested": 1400,
+      "itemsPassed": 1400,
+      "samples": [
+        {
+          "title": "Kärcher K5 Premium Smart Control Painepesuri 145 bar 500 l/h - K-Rauta",
+          "price": "399,- €",
+          "parsedPrice": 399,
+          "conciseQ": "Kärcher K5 Premium Smart Control Painepesuri",
+          "category": "diy_tools"
+        },
+        {
+          "title": "Fiskars X25 Halkaasukirves XL 72 cm 2.4 kg - K-Rauta",
+          "price": "69.90 €",
+          "parsedPrice": 69.9,
+          "conciseQ": "Fiskars X25 Halkaasukirves XL 72 cm",
+          "category": "diy_tools"
+        },
+        {
+          "title": "Bahco S910 Hylsysarja 1/4\" ja 1/2\" 91-osainen - K-Rauta",
+          "price": "109.00 € sis. alv 25,5%",
+          "parsedPrice": 109,
+          "conciseQ": "Bahco S910 Hylsysarja 1 4\" ja",
+          "category": "diy_tools"
+        }
+      ]
+    },
+    {
+      "storeName": "Bauhaus",
+      "domain": "bauhaus.fi",
+      "categoryHint": "general/tech",
+      "itemsTested": 1400,
+      "itemsPassed": 1400,
+      "samples": [
+        {
+          "title": "Bosch Professional GSR 18V-55 Akkuporakonetti 18V 2x4.0Ah ProCORE - Bauhaus",
+          "price": "229,00 EUR",
+          "parsedPrice": 229,
+          "conciseQ": "Bosch Professional GSR 18V-55 Akkuporakonetti 18V",
+          "category": "diy_tools"
+        },
+        {
+          "title": "DeWalt DCD796P2 Iskuporakone 18V XR 2x5.0Ah Li-Ion - Bauhaus",
+          "price": "289,- €",
+          "parsedPrice": 289,
+          "conciseQ": "DeWalt DCD796P2 Iskuporakone 18V XR 2x5.0Ah",
+          "category": "diy_tools"
+        },
+        {
+          "title": "Ryobi ONE+ R18DD3-220S Akkuporakone 18V 2x2.0Ah - Bauhaus",
+          "price": "129,-",
+          "parsedPrice": 129,
+          "conciseQ": "Ryobi ONE+ R18DD3-220S Akkuporakone 18V 2x2.0Ah",
+          "category": "diy_tools"
+        }
+      ]
+    },
+    {
+      "storeName": "Motonet",
+      "domain": "motonet.fi",
+      "categoryHint": "general/tech",
+      "itemsTested": 1400,
+      "itemsPassed": 1400,
+      "samples": [
+        {
+          "title": "Fiskars X25 Halkaasukirves XL 72 cm 2.4 kg - Motonet",
+          "price": "69,90 € sis. ALV",
+          "parsedPrice": 69.9,
+          "conciseQ": "Fiskars X25 Halkaasukirves XL 72 cm",
+          "category": "diy_tools"
+        },
+        {
+          "title": "Bahco S910 Hylsysarja 1/4\" ja 1/2\" 91-osainen - Motonet",
+          "price": "109,00 EUR",
+          "parsedPrice": 109,
+          "conciseQ": "Bahco S910 Hylsysarja 1 4\" ja",
+          "category": "diy_tools"
+        },
+        {
+          "title": "Makita DDF485Z Akkuporakone 18V Runko LXT - Motonet",
+          "price": "99,90 €",
+          "parsedPrice": 99.9,
+          "conciseQ": "Makita DDF485Z Akkuporakone 18V Runko LXT",
+          "category": "diy_tools"
+        }
+      ]
+    },
+    {
+      "storeName": "Biltema",
+      "domain": "biltema.fi",
+      "categoryHint": "general/tech",
+      "itemsTested": 1400,
+      "itemsPassed": 1400,
+      "samples": [
+        {
+          "title": "DeWalt DCD796P2 Iskuporakone 18V XR 2x5.0Ah Li-Ion - Biltema",
+          "price": "289,00 €",
+          "parsedPrice": 289,
+          "conciseQ": "DeWalt DCD796P2 Iskuporakone 18V XR 2x5.0Ah",
+          "category": "diy_tools"
+        },
+        {
+          "title": "Ryobi ONE+ R18DD3-220S Akkuporakone 18V 2x2.0Ah - Biltema",
+          "price": "129,00 € sis. ALV",
+          "parsedPrice": 129,
+          "conciseQ": "Ryobi ONE+ R18DD3-220S Akkuporakone 18V 2x2.0Ah",
+          "category": "diy_tools"
+        },
+        {
+          "title": "Kärcher K5 Premium Smart Control Painepesuri 145 bar 500 l/h - Biltema",
+          "price": "399,00 EUR",
+          "parsedPrice": 399,
+          "conciseQ": "Kärcher K5 Premium Smart Control Painepesuri",
+          "category": "diy_tools"
+        }
+      ]
+    },
+    {
+      "storeName": "Clas Ohlson",
+      "domain": "clasohlson.com",
+      "categoryHint": "general/tech",
+      "itemsTested": 1400,
+      "itemsPassed": 1400,
+      "samples": [
+        {
+          "title": "Bahco S910 Hylsysarja 1/4\" ja 1/2\" 91-osainen - Clas Ohlson",
+          "price": "Vain 109,00 €!",
+          "parsedPrice": 109,
+          "conciseQ": "Bahco S910 Hylsysarja 1 4\" ja",
+          "category": "diy_tools"
+        },
+        {
+          "title": "Makita DDF485Z Akkuporakone 18V Runko LXT - Clas Ohlson",
+          "price": "99,90 €",
+          "parsedPrice": 99.9,
+          "conciseQ": "Makita DDF485Z Akkuporakone 18V Runko LXT",
+          "category": "diy_tools"
+        },
+        {
+          "title": "Bosch Professional GSR 18V-55 Akkuporakonetti 18V 2x4.0Ah ProCORE - Clas Ohlson",
+          "price": "229,00 € sis. ALV",
+          "parsedPrice": 229,
+          "conciseQ": "Bosch Professional GSR 18V-55 Akkuporakonetti 18V",
+          "category": "diy_tools"
+        }
+      ]
+    },
+    {
+      "storeName": "Nettiauto",
+      "domain": "nettiauto.com",
+      "categoryHint": "vehicles",
+      "itemsTested": 1400,
+      "itemsPassed": 1400,
+      "samples": [
+        {
+          "title": "Volkswagen ID.4 Pro 2.0 TSI 180kW Automaatti 2018 - Nettiauto",
+          "price": "25 600 €",
+          "parsedPrice": 25600,
+          "conciseQ": "Volkswagen ID.4 Pro 2.0 TSI 180kW",
+          "category": "automotive"
+        },
+        {
+          "title": "Volvo EX30 Twin Motor 2.5 Hybrid AWD Manuaali 2017 - Nettiauto",
+          "price": "Vain 26 050,00 €!",
+          "parsedPrice": 26050,
+          "conciseQ": "Volvo EX30 Twin Motor 2.5 Hybrid",
+          "category": "automotive"
+        },
+        {
+          "title": "Kia Ceed Sportswagon 1.8 Hybrid Automaatti 2016 - Nettiauto",
+          "price": "26 500,00 €",
+          "parsedPrice": 26500,
+          "conciseQ": "Kia Ceed Sportswagon 1.8 Hybrid Automaatti",
+          "category": "automotive"
+        }
+      ]
+    },
+    {
+      "storeName": "Kamux",
+      "domain": "kamux.fi",
+      "categoryHint": "vehicles",
+      "itemsTested": 1400,
+      "itemsPassed": 1400,
+      "samples": [
+        {
+          "title": "Toyota Corolla Touring Sports 1.5 TSI 110kW Manuaali 2016 - Kamux",
+          "price": "73 750.00 € sis. alv 25,5%",
+          "parsedPrice": 73750,
+          "conciseQ": "Toyota Corolla Touring Sports 1.5 TSI",
+          "category": "automotive"
+        },
+        {
+          "title": "Volkswagen Passat Variant 2.0 TSI 180kW Automaatti 2015 - Kamux",
+          "price": "74 200 €",
+          "parsedPrice": 74200,
+          "conciseQ": "Volkswagen Passat Variant 2.0 TSI 180kW",
+          "category": "automotive"
+        },
+        {
+          "title": "Volvo XC90 T8 Recharge 2.5 Hybrid AWD Manuaali 2014 - Kamux",
+          "price": "Vain 74 650,00 €!",
+          "parsedPrice": 74650,
+          "conciseQ": "Volvo XC90 T8 Recharge 2.5 Hybrid",
+          "category": "automotive"
+        }
+      ]
+    },
+    {
+      "storeName": "Saka",
+      "domain": "saka.fi",
+      "categoryHint": "vehicles",
+      "itemsTested": 1400,
+      "itemsPassed": 1400,
+      "samples": [
+        {
+          "title": "Skoda Kodiaq 2.0 TDI 110kW Automaatti 2014 - Saka",
+          "price": "54 400,-",
+          "parsedPrice": 54400,
+          "conciseQ": "Skoda Kodiaq 2.0 TDI 110kW Automaatti",
+          "category": "automotive"
+        },
+        {
+          "title": "Toyota Camry 1.5 TSI 110kW Manuaali 2013 - Saka",
+          "price": "54 850.00 € sis. alv 25,5%",
+          "parsedPrice": 54850,
+          "conciseQ": "Toyota Camry 1.5 TSI 110kW Manuaali",
+          "category": "automotive"
+        },
+        {
+          "title": "Volkswagen ID.7 Tourer 2.0 TSI 180kW Automaatti 2012 - Saka",
+          "price": "55 300 €",
+          "parsedPrice": 55300,
+          "conciseQ": "Volkswagen ID.7 Tourer 2.0 TSI 180kW",
+          "category": "automotive"
+        }
+      ]
+    },
+    {
+      "storeName": "Rinta-Jouppi",
+      "domain": "rinta-jouppi.com",
+      "categoryHint": "vehicles",
+      "itemsTested": 1400,
+      "itemsPassed": 1400,
+      "samples": [
+        {
+          "title": "Polestar Polestar 4 Long Range 50 TFSI e quattro Manuaali 2012 - Rinta-Jouppi",
+          "price": "35 050,- €",
+          "parsedPrice": 35050,
+          "conciseQ": "Polestar Polestar 4 Long Range 50",
+          "category": "automotive"
+        },
+        {
+          "title": "Skoda Octavia Combi 2.0 TDI 110kW Automaatti 2026 - Rinta-Jouppi",
+          "price": "35 500,-",
+          "parsedPrice": 35500,
+          "conciseQ": "Skoda Octavia Combi 2.0 TDI 110kW",
+          "category": "automotive"
+        },
+        {
+          "title": "Toyota Yaris Hybrid 1.5 TSI 110kW Manuaali 2025 - Rinta-Jouppi",
+          "price": "35 950.00 € sis. alv 25,5%",
+          "parsedPrice": 35950,
+          "conciseQ": "Toyota Yaris Hybrid 1.5 TSI 110kW",
+          "category": "automotive"
+        }
+      ]
+    },
+    {
+      "storeName": "K-Auto",
+      "domain": "k-auto.fi",
+      "categoryHint": "vehicles",
+      "itemsTested": 1400,
+      "itemsPassed": 1400,
+      "samples": [
+        {
+          "title": "Mazda CX-5 4MATIC A Automaatti 2025 - K-Auto",
+          "price": "15 700,00 EUR",
+          "parsedPrice": 15700,
+          "conciseQ": "Mazda CX-5 4MATIC Automaatti 2025",
+          "category": "automotive"
+        },
+        {
+          "title": "Polestar Polestar 4 Long Range 50 TFSI e quattro Manuaali 2024 - K-Auto",
+          "price": "16 150,- €",
+          "parsedPrice": 16150,
+          "conciseQ": "Polestar Polestar 4 Long Range 50",
+          "category": "automotive"
+        },
+        {
+          "title": "Skoda Karoq 2.0 TDI 110kW Automaatti 2023 - K-Auto",
+          "price": "16 600,-",
+          "parsedPrice": 16600,
+          "conciseQ": "Skoda Karoq 2.0 TDI 110kW Automaatti",
+          "category": "automotive"
+        }
+      ]
+    },
+    {
+      "storeName": "Hedin Automotive",
+      "domain": "hedinautomotive.fi",
+      "categoryHint": "vehicles",
+      "itemsTested": 1400,
+      "itemsPassed": 1400,
+      "samples": [
+        {
+          "title": "Renault Megane E-Tech Electric xDrive20d Manuaali 2023 - Hedin Automotive",
+          "price": "63 850,00 € sis. ALV",
+          "parsedPrice": 63850,
+          "conciseQ": "Renault Megane E-Tech Electric xDrive20d Manuaali",
+          "category": "automotive"
+        },
+        {
+          "title": "Mazda CX-5 4MATIC A Automaatti 2022 - Hedin Automotive",
+          "price": "64 300,00 EUR",
+          "parsedPrice": 64300,
+          "conciseQ": "Mazda CX-5 4MATIC Automaatti 2022",
+          "category": "automotive"
+        },
+        {
+          "title": "Polestar Polestar 4 Long Range 50 TFSI e quattro Manuaali 2021 - Hedin Automotive",
+          "price": "64 750,- €",
+          "parsedPrice": 64750,
+          "conciseQ": "Polestar Polestar 4 Long Range 50",
+          "category": "automotive"
+        }
+      ]
+    },
+    {
+      "storeName": "Fonum (Kunnostettu)",
+      "domain": "fonum.fi",
+      "categoryHint": "general/tech",
+      "itemsTested": 759,
+      "itemsPassed": 759,
+      "samples": [
+        {
+          "title": "Apple iPhone 14 Pro 128GB Tähtipöly (Uudenveroinen) - Fonum (Kunnostettu)",
+          "price": "580,00 €",
+          "parsedPrice": 580,
+          "conciseQ": "Apple iPhone 14 Pro 128GB Tähtipöly",
+          "category": "recommerce"
+        },
+        {
+          "title": "Sony PlayStation 5 Digital Edition Pelikonsoli (Hyväkuntoinen) - Fonum (Kunnostettu)",
+          "price": "320,00 € sis. ALV",
+          "parsedPrice": 320,
+          "conciseQ": "Sony PlayStation 5 Digital Pelikonsoli",
+          "category": "recommerce"
+        },
+        {
+          "title": "NVIDIA GeForce RTX 3080 10GB Näytönohjain (Hyväkuntoinen) - Fonum (Kunnostettu)",
+          "price": "420,00 EUR",
+          "parsedPrice": 420,
+          "conciseQ": "NVIDIA GeForce RTX 3080 10GB Näytönohjain",
+          "category": "recommerce"
+        }
+      ]
+    },
+    {
+      "storeName": "Hinta.fi",
+      "domain": "hinta.fi",
+      "categoryHint": "general/tech",
+      "itemsTested": 759,
+      "itemsPassed": 759,
+      "samples": [
+        {
+          "title": "AirPods Pro 2 USB-C | Hinta.fi",
+          "price": "Vain 309,00 €!",
+          "parsedPrice": 309,
+          "conciseQ": "AirPods Pro 2 USB-C",
+          "category": "mobile_audio"
+        },
+        {
+          "title": "Western Digital 870 EVO SATA SSD 2TB - Hinta.fi",
+          "price": "245,00 €",
+          "parsedPrice": 245,
+          "conciseQ": "Western Digital 870 EVO SATA SSD",
+          "category": "tech_hardware"
+        },
+        {
+          "title": "OnePlus 13 256GB Rose | Hinta.fi",
+          "price": "824,00 € sis. ALV",
+          "parsedPrice": 824,
+          "conciseQ": "OnePlus 13 256GB Rose",
+          "category": "mobile_audio"
+        }
+      ]
+    },
+    {
+      "storeName": "Tietokonekauppa.fi",
+      "domain": "tietokonekauppa.fi",
+      "categoryHint": "general/tech",
+      "itemsTested": 759,
+      "itemsPassed": 759,
+      "samples": [
+        {
+          "title": "Corsair GeForce RTX 4070 Ti Super 16GB Varastontyhjennys - Tietokonekauppa.fi",
+          "price": "2 189 €",
+          "parsedPrice": 2189,
+          "conciseQ": "Corsair GeForce RTX 4070 Ti Super",
+          "category": "tech_hardware"
+        },
+        {
+          "title": "AirPods Pro 2 USB-C | Tietokonekauppa.fi",
+          "price": "Vain 429,00 €!",
+          "parsedPrice": 429,
+          "conciseQ": "AirPods Pro 2 USB-C",
+          "category": "mobile_audio"
+        },
+        {
+          "title": "G.Skill NM790 M.2 2280 NVMe SSD 4TB - Tietokonekauppa.fi",
+          "price": "341,00 €",
+          "parsedPrice": 341,
+          "conciseQ": "G.Skill NM790 M.2 2280 NVMe SSD",
+          "category": "tech_hardware"
+        }
+      ]
+    },
+    {
+      "storeName": "Data-Systems",
+      "domain": "data-systems.fi",
+      "categoryHint": "general/tech",
+      "itemsTested": 759,
+      "itemsPassed": 759,
+      "samples": [
+        {
+          "title": "OLED77G4 77\" 4K OLED evo TV | Data-Systems",
+          "price": "539.00 € sis. alv 25,5%",
+          "parsedPrice": 539,
+          "conciseQ": "OLED77G4 77\" 4K OLED evo TV",
+          "category": "mobile_audio"
+        },
+        {
+          "title": "Gigabyte Radeon RX 7800 XT 16GB Hyväkuntoinen - Data-Systems",
+          "price": "719 €",
+          "parsedPrice": 719,
+          "conciseQ": "Gigabyte Radeon RX 7800 XT 16GB",
+          "category": "tech_hardware"
+        },
+        {
+          "title": "AirPods Pro 2 USB-C | Data-Systems",
+          "price": "Vain 174,00 €!",
+          "parsedPrice": 174,
+          "conciseQ": "AirPods Pro 2 USB-C",
+          "category": "mobile_audio"
+        }
+      ]
+    },
+    {
+      "storeName": "Komponenttikauppa.fi",
+      "domain": "komponenttikauppa.fi",
+      "categoryHint": "general/tech",
+      "itemsTested": 759,
+      "itemsPassed": 759,
+      "samples": [
+        {
+          "title": "Inno3D B650M Pro RS WiFi mATX - Komponenttikauppa.fi",
+          "price": "239,-",
+          "parsedPrice": 239,
+          "conciseQ": "Inno3D B650M Pro RS",
+          "category": "tech_hardware"
+        },
+        {
+          "title": "OLED77G4 77\" 4K OLED evo TV | Komponenttikauppa.fi",
+          "price": "859.00 € sis. alv 25,5%",
+          "parsedPrice": 859,
+          "conciseQ": "OLED77G4 77\" 4K OLED evo TV",
+          "category": "mobile_audio"
+        },
+        {
+          "title": "ASUS GeForce RTX 4070 Ti Super 16GB Uutuus! - Komponenttikauppa.fi",
+          "price": "999 €",
+          "parsedPrice": 999,
+          "conciseQ": "ASUS GeForce RTX 4070 Ti Super",
+          "category": "tech_hardware"
+        }
+      ]
+    },
+    {
+      "storeName": "Cruzbroker",
+      "domain": "cruzbroker.fi",
+      "categoryHint": "general/tech",
+      "itemsTested": 759,
+      "itemsPassed": 759,
+      "samples": [
+        {
+          "title": "Galaxy S24 Ultra 1TB Black Titanium | Cruzbroker",
+          "price": "1 474,- €",
+          "parsedPrice": 1474,
+          "conciseQ": "Galaxy S24 Ultra 1TB",
+          "category": "mobile_audio"
+        },
+        {
+          "title": "Gainward B650M Pro RS WiFi mATX - Cruzbroker",
+          "price": "319,-",
+          "parsedPrice": 319,
+          "conciseQ": "Gainward B650M Pro RS",
+          "category": "tech_hardware"
+        },
+        {
+          "title": "OLED77G4 77\" 4K OLED evo TV | Cruzbroker",
+          "price": "1 179.00 € sis. alv 25,5%",
+          "parsedPrice": 1179,
+          "conciseQ": "OLED77G4 77\" 4K OLED evo TV",
+          "category": "mobile_audio"
+        }
+      ]
+    },
+    {
+      "storeName": "MaxGaming",
+      "domain": "maxgaming.fi",
+      "categoryHint": "general/tech",
+      "itemsTested": 759,
+      "itemsPassed": 759,
+      "samples": [
+        {
+          "title": "Zotac Black SN850X NVMe SSD 4TB - MaxGaming",
+          "price": "353,00 EUR",
+          "parsedPrice": 353,
+          "conciseQ": "Zotac SN850X NVMe SSD 4TB",
+          "category": "tech_hardware"
+        },
+        {
+          "title": "Galaxy S24 Ultra 1TB Black Titanium | MaxGaming",
+          "price": "674,- €",
+          "parsedPrice": 674,
+          "conciseQ": "Galaxy S24 Ultra 1TB",
+          "category": "mobile_audio"
+        },
+        {
+          "title": "XFX B650M Pro RS WiFi mATX - MaxGaming",
+          "price": "399,-",
+          "parsedPrice": 399,
+          "conciseQ": "XFX B650M Pro RS",
+          "category": "tech_hardware"
+        }
+      ]
+    },
+    {
+      "storeName": "VPD Pelikauppa",
+      "domain": "vpd.fi",
+      "categoryHint": "general/tech",
+      "itemsTested": 759,
+      "itemsPassed": 759,
+      "samples": [
+        {
+          "title": "Major IV Bluetooth-kuulokkeet | VPD Pelikauppa",
+          "price": "189,00 € sis. ALV",
+          "parsedPrice": 189,
+          "conciseQ": "Major IV Bluetooth-kuulokkeet",
+          "category": "mobile_audio"
+        },
+        {
+          "title": "Crucial KC3000 PCIe 4.0 NVMe M.2 SSD 2TB - VPD Pelikauppa",
+          "price": "149,00 EUR",
+          "parsedPrice": 149,
+          "conciseQ": "Crucial KC3000 4.0 NVMe M.2 SSD",
+          "category": "tech_hardware"
+        },
+        {
+          "title": "Galaxy S24 Ultra 1TB Black Titanium | VPD Pelikauppa",
+          "price": "874,- €",
+          "parsedPrice": 874,
+          "conciseQ": "Galaxy S24 Ultra 1TB",
+          "category": "mobile_audio"
+        }
+      ]
+    },
+    {
+      "storeName": "Puolenkuun Pelit",
+      "domain": "puolenkuunpelit.com",
+      "categoryHint": "general/tech",
+      "itemsTested": 759,
+      "itemsPassed": 759,
+      "samples": [
+        {
+          "title": "Lian Li GeForce RTX 5090 32GB Superale - Puolenkuun Pelit",
+          "price": "1 909,00 €",
+          "parsedPrice": 1909,
+          "conciseQ": "Lian Li GeForce RTX 5090 32GB",
+          "category": "tech_hardware"
+        },
+        {
+          "title": "Major IV Bluetooth-kuulokkeet | Puolenkuun Pelit",
+          "price": "309,00 € sis. ALV",
+          "parsedPrice": 309,
+          "conciseQ": "Major IV Bluetooth-kuulokkeet",
+          "category": "mobile_audio"
+        },
+        {
+          "title": "be quiet! 990 PRO NVMe M.2 SSD 4TB - Puolenkuun Pelit",
+          "price": "245,00 EUR",
+          "parsedPrice": 245,
+          "conciseQ": "be quiet! 990 PRO NVMe M.2",
+          "category": "tech_hardware"
+        }
+      ]
+    },
+    {
+      "storeName": "Veikon Kone",
+      "domain": "veikonkone.fi",
+      "categoryHint": "general/tech",
+      "itemsTested": 759,
+      "itemsPassed": 759,
+      "samples": [
+        {
+          "title": "ROG Swift PG32UCDM 32\" QD-OLED | Veikon Kone",
+          "price": "Vain 2 219,00 €!",
+          "parsedPrice": 2219,
+          "conciseQ": "ROG Swift PG32UCDM 32\" QD-OLED",
+          "category": "mobile_audio"
+        },
+        {
+          "title": "Thermalright GeForce RTX 4060 Ti 8GB Varastontyhjennys - Veikon Kone",
+          "price": "2 189,00 €",
+          "parsedPrice": 2189,
+          "conciseQ": "Thermalright GeForce RTX 4060 Ti 8GB",
+          "category": "tech_hardware"
+        },
+        {
+          "title": "Major IV Bluetooth-kuulokkeet | Veikon Kone",
+          "price": "429,00 € sis. ALV",
+          "parsedPrice": 429,
+          "conciseQ": "Major IV Bluetooth-kuulokkeet",
+          "category": "mobile_audio"
+        }
+      ]
+    },
+    {
+      "storeName": "Euronics",
+      "domain": "euronics.fi",
+      "categoryHint": "general/tech",
+      "itemsTested": 759,
+      "itemsPassed": 759,
+      "samples": [
+        {
+          "title": "G.Skill MAG Z790 TOMAHAWK MAX WIFI - Euronics",
+          "price": "159 €",
+          "parsedPrice": 159,
+          "conciseQ": "G.Skill MAG Z790 TOMAHAWK MAX",
+          "category": "tech_hardware"
+        },
+        {
+          "title": "ROG Swift PG32UCDM 32\" QD-OLED | Euronics",
+          "price": "Vain 539,00 €!",
+          "parsedPrice": 539,
+          "conciseQ": "ROG Swift PG32UCDM 32\" QD-OLED",
+          "category": "mobile_audio"
+        },
+        {
+          "title": "Western Digital GeForce RTX 5090 32GB Hyväkuntoinen - Euronics",
+          "price": "719,00 €",
+          "parsedPrice": 719,
+          "conciseQ": "Western Digital GeForce RTX 5090 32GB",
+          "category": "tech_hardware"
+        }
+      ]
+    },
+    {
+      "storeName": "HobbyHall",
+      "domain": "hobbyhall.fi",
+      "categoryHint": "general/tech",
+      "itemsTested": 759,
+      "itemsPassed": 759,
+      "samples": [
+        {
+          "title": "iPhone 16 Plus 256GB Rose | HobbyHall",
+          "price": "1 524.00 € sis. alv 25,5%",
+          "parsedPrice": 1524,
+          "conciseQ": "iPhone 16 Plus 256GB Rose",
+          "category": "mobile_audio"
+        },
+        {
+          "title": "Corsair MAG Z790 TOMAHAWK MAX WIFI - HobbyHall",
+          "price": "239 €",
+          "parsedPrice": 239,
+          "conciseQ": "Corsair MAG Z790 TOMAHAWK MAX",
+          "category": "tech_hardware"
+        },
+        {
+          "title": "ROG Swift PG32UCDM 32\" QD-OLED | HobbyHall",
+          "price": "Vain 859,00 €!",
+          "parsedPrice": 859,
+          "conciseQ": "ROG Swift PG32UCDM 32\" QD-OLED",
+          "category": "mobile_audio"
+        }
+      ]
+    },
+    {
+      "storeName": "Bigbox",
+      "domain": "bigbox.fi",
+      "categoryHint": "general/tech",
+      "itemsTested": 759,
+      "itemsPassed": 759,
+      "samples": [
+        {
+          "title": "ASUS 870 EVO SATA SSD 1TB - Bigbox",
+          "price": "257,-",
+          "parsedPrice": 257,
+          "conciseQ": "ASUS 870 EVO SATA SSD 1TB",
+          "category": "tech_hardware"
+        },
+        {
+          "title": "iPhone 16 Plus 256GB Rose | Bigbox",
+          "price": "724.00 € sis. alv 25,5%",
+          "parsedPrice": 724,
+          "conciseQ": "iPhone 16 Plus 256GB Rose",
+          "category": "mobile_audio"
+        },
+        {
+          "title": "Gigabyte MAG Z790 TOMAHAWK MAX WIFI - Bigbox",
+          "price": "319 €",
+          "parsedPrice": 319,
+          "conciseQ": "Gigabyte MAG Z790 TOMAHAWK MAX",
+          "category": "tech_hardware"
+        }
+      ]
+    },
+    {
+      "storeName": "Kasuplan",
+      "domain": "kasuplan.fi",
+      "categoryHint": "general/tech",
+      "itemsTested": 759,
+      "itemsPassed": 759,
+      "samples": [
+        {
+          "title": "WH-1000XM4 Vastamelukuulokkeet | Kasuplan",
+          "price": "444,- €",
+          "parsedPrice": 444,
+          "conciseQ": "WH-1000XM4",
+          "category": "mobile_audio"
+        },
+        {
+          "title": "Inno3D NM790 M.2 2280 NVMe SSD 2TB - Kasuplan",
+          "price": "353,-",
+          "parsedPrice": 353,
+          "conciseQ": "Inno3D NM790 M.2 2280 NVMe SSD",
+          "category": "tech_hardware"
+        },
+        {
+          "title": "iPhone 16 Plus 256GB Rose | Kasuplan",
+          "price": "924.00 € sis. alv 25,5%",
+          "parsedPrice": 924,
+          "conciseQ": "iPhone 16 Plus 256GB Rose",
+          "category": "mobile_audio"
+        }
+      ]
+    },
+    {
+      "storeName": "Mikromafia",
+      "domain": "mikromafia.fi",
+      "categoryHint": "general/tech",
+      "itemsTested": 759,
+      "itemsPassed": 759,
+      "samples": [
+        {
+          "title": "XFX Radeon RX 9070 XT 16GB Tarjouksessa - Mikromafia",
+          "price": "1 629,00 EUR",
+          "parsedPrice": 1629,
+          "conciseQ": "XFX Radeon RX 9070 XT 16GB",
+          "category": "tech_hardware"
+        },
+        {
+          "title": "WH-1000XM4 Vastamelukuulokkeet | Mikromafia",
+          "price": "189,- €",
+          "parsedPrice": 189,
+          "conciseQ": "WH-1000XM4",
+          "category": "mobile_audio"
+        },
+        {
+          "title": "Gainward Black SN850X NVMe SSD 4TB - Mikromafia",
+          "price": "149,-",
+          "parsedPrice": 149,
+          "conciseQ": "Gainward SN850X NVMe SSD 4TB",
+          "category": "tech_hardware"
+        }
+      ]
+    },
+    {
+      "storeName": "TeraStore",
+      "domain": "terastore.fi",
+      "categoryHint": "general/tech",
+      "itemsTested": 759,
+      "itemsPassed": 759,
+      "samples": [
+        {
+          "title": "Alienware AW3423DWF 34\" Curved QD-OLED | TeraStore",
+          "price": "1 899,00 € sis. ALV",
+          "parsedPrice": 1899,
+          "conciseQ": "Alienware AW3423DWF 34\" Curved QD-OLED",
+          "category": "mobile_audio"
+        },
+        {
+          "title": "Zotac GeForce RTX 5070 Ti 16GB Superale - TeraStore",
+          "price": "1 909,00 EUR",
+          "parsedPrice": 1909,
+          "conciseQ": "Zotac GeForce RTX 5070 Ti 16GB",
+          "category": "tech_hardware"
+        },
+        {
+          "title": "WH-1000XM4 Vastamelukuulokkeet | TeraStore",
+          "price": "309,- €",
+          "parsedPrice": 309,
+          "conciseQ": "WH-1000XM4",
+          "category": "mobile_audio"
+        }
+      ]
+    },
+    {
+      "storeName": "DigiDreamer",
+      "domain": "digidreamer.fi",
+      "categoryHint": "general/tech",
+      "itemsTested": 759,
+      "itemsPassed": 759,
+      "samples": [
+        {
+          "title": "be quiet! TUF GAMING B650-PLUS WIFI ATX - DigiDreamer",
+          "price": "329,00 €",
+          "parsedPrice": 329,
+          "conciseQ": "be quiet! TUF B650-PLUS",
+          "category": "tech_hardware"
+        },
+        {
+          "title": "Alienware AW3423DWF 34\" Curved QD-OLED | DigiDreamer",
+          "price": "2 219,00 € sis. ALV",
+          "parsedPrice": 2219,
+          "conciseQ": "Alienware AW3423DWF 34\" Curved QD-OLED",
+          "category": "mobile_audio"
+        },
+        {
+          "title": "Crucial Radeon RX 9070 XT 16GB Varastontyhjennys - DigiDreamer",
+          "price": "2 189,00 EUR",
+          "parsedPrice": 2189,
+          "conciseQ": "Crucial Radeon RX 9070 XT 16GB",
+          "category": "tech_hardware"
+        }
+      ]
+    },
+    {
+      "storeName": "CS MEGASTORE",
+      "domain": "csmegastore.com",
+      "categoryHint": "general/tech",
+      "itemsTested": 759,
+      "itemsPassed": 759,
+      "samples": [
+        {
+          "title": "OnePlus 13 1TB Black Titanium | CS MEGASTORE",
+          "price": "Vain 1 574,00 €!",
+          "parsedPrice": 1574,
+          "conciseQ": "OnePlus 13 1TB",
+          "category": "mobile_audio"
+        },
+        {
+          "title": "Lian Li TUF GAMING B650-PLUS WIFI ATX - CS MEGASTORE",
+          "price": "159,00 €",
+          "parsedPrice": 159,
+          "conciseQ": "Lian Li TUF B650-PLUS",
+          "category": "tech_hardware"
+        },
+        {
+          "title": "Alienware AW3423DWF 34\" Curved QD-OLED | CS MEGASTORE",
+          "price": "539,00 € sis. ALV",
+          "parsedPrice": 539,
+          "conciseQ": "Alienware AW3423DWF 34\" Curved QD-OLED",
+          "category": "mobile_audio"
+        }
+      ]
+    },
+    {
+      "storeName": "e-ville.com",
+      "domain": "e-ville.com",
+      "categoryHint": "general/tech",
+      "itemsTested": 759,
+      "itemsPassed": 759,
+      "samples": [
+        {
+          "title": "Western Digital 990 PRO NVMe M.2 SSD 1TB - e-ville.com",
+          "price": "161 €",
+          "parsedPrice": 161,
+          "conciseQ": "Western Digital 990 PRO NVMe M.2",
+          "category": "tech_hardware"
+        },
+        {
+          "title": "OnePlus 13 1TB Black Titanium | e-ville.com",
+          "price": "Vain 774,00 €!",
+          "parsedPrice": 774,
+          "conciseQ": "OnePlus 13 1TB",
+          "category": "mobile_audio"
+        },
+        {
+          "title": "Thermalright TUF GAMING B650-PLUS WIFI ATX - e-ville.com",
+          "price": "239,00 €",
+          "parsedPrice": 239,
+          "conciseQ": "Thermalright TUF B650-PLUS",
+          "category": "tech_hardware"
+        }
+      ]
+    },
+    {
+      "storeName": "SatShop.fi",
+      "domain": "satshop.fi",
+      "categoryHint": "general/tech",
+      "itemsTested": 759,
+      "itemsPassed": 759,
+      "samples": [
+        {
+          "title": "AirPods Pro 2 USB-C | SatShop.fi",
+          "price": "324.00 € sis. alv 25,5%",
+          "parsedPrice": 324,
+          "conciseQ": "AirPods Pro 2 USB-C",
+          "category": "mobile_audio"
+        },
+        {
+          "title": "G.Skill 990 PRO NVMe M.2 SSD 2TB - SatShop.fi",
+          "price": "257 €",
+          "parsedPrice": 257,
+          "conciseQ": "G.Skill 990 PRO NVMe M.2 SSD",
+          "category": "tech_hardware"
+        },
+        {
+          "title": "OnePlus 13 1TB Black Titanium | SatShop.fi",
+          "price": "Vain 974,00 €!",
+          "parsedPrice": 974,
+          "conciseQ": "OnePlus 13 1TB",
+          "category": "mobile_audio"
+        }
+      ]
+    },
+    {
+      "storeName": "Dustin",
+      "domain": "dustin",
+      "categoryHint": "general/tech",
+      "itemsTested": 759,
+      "itemsPassed": 759,
+      "samples": [
+        {
+          "title": "Gigabyte GeForce RTX 4090 24GB Uutuus! - Dustin",
+          "price": "1 349,-",
+          "parsedPrice": 1349,
+          "conciseQ": "Gigabyte GeForce RTX 4090 24GB",
+          "category": "tech_hardware"
+        },
+        {
+          "title": "AirPods Pro 2 USB-C | Dustin",
+          "price": "444.00 € sis. alv 25,5%",
+          "parsedPrice": 444,
+          "conciseQ": "AirPods Pro 2 USB-C",
+          "category": "mobile_audio"
+        },
+        {
+          "title": "Corsair 870 EVO SATA SSD 1TB - Dustin",
+          "price": "353 €",
+          "parsedPrice": 353,
+          "conciseQ": "Corsair 870 EVO SATA SSD 1TB",
+          "category": "tech_hardware"
+        }
+      ]
+    },
+    {
+      "storeName": "Varuste.net",
+      "domain": "varuste.net",
+      "categoryHint": "sports",
+      "itemsTested": 759,
+      "itemsPassed": 759,
+      "samples": [
+        {
+          "title": "Haglöfs Astral GTX Takki Gore-Tex kuoritakki - Varuste.net",
+          "price": "299,- €",
+          "parsedPrice": 299,
+          "conciseQ": "Haglöfs Astral GTX Takki Gore-Tex kuoritakki",
+          "category": "sports"
+        },
+        {
+          "title": "Fjällräven Keb Trousers Regular Vaellushousut - Varuste.net",
+          "price": "199,-",
+          "parsedPrice": 199,
+          "conciseQ": "Fjällräven Keb Trousers Regular Vaellushousut",
+          "category": "sports"
+        },
+        {
+          "title": "Helly Hansen Salt Coastal Jacket Purjehdustakki - Varuste.net",
+          "price": "219.00 € sis. alv 25,5%",
+          "parsedPrice": 219,
+          "conciseQ": "Helly Hansen Salt Coastal Jacket Purjehdustakki",
+          "category": "sports"
+        }
+      ]
+    },
+    {
+      "storeName": "Scandinavian Outdoor",
+      "domain": "scandinavianoutdoor.fi",
+      "categoryHint": "sports",
+      "itemsTested": 759,
+      "itemsPassed": 759,
+      "samples": [
+        {
+          "title": "Salomon Speedcross 6 GTX Polkujuoksukengät - Scandinavian Outdoor",
+          "price": "129,95 EUR",
+          "parsedPrice": 129.95,
+          "conciseQ": "Salomon Speedcross 6 GTX Polkujuoksukengät",
+          "category": "sports"
+        },
+        {
+          "title": "Haglöfs Astral GTX Takki Gore-Tex kuoritakki - Scandinavian Outdoor",
+          "price": "299,- €",
+          "parsedPrice": 299,
+          "conciseQ": "Haglöfs Astral GTX Takki Gore-Tex kuoritakki",
+          "category": "sports"
+        },
+        {
+          "title": "Fjällräven Keb Trousers Regular Vaellushousut - Scandinavian Outdoor",
+          "price": "199,-",
+          "parsedPrice": 199,
+          "conciseQ": "Fjällräven Keb Trousers Regular Vaellushousut",
+          "category": "sports"
+        }
+      ]
+    },
+    {
+      "storeName": "Partioaitta",
+      "domain": "partioaitta.fi",
+      "categoryHint": "sports",
+      "itemsTested": 759,
+      "itemsPassed": 759,
+      "samples": [
+        {
+          "title": "Asics Gel-Nimbus 26 Miesten juoksujalkineet - Partioaitta",
+          "price": "159,00 € sis. ALV",
+          "parsedPrice": 159,
+          "conciseQ": "Asics Gel-Nimbus 26 Miesten juoksujalkineet",
+          "category": "sports"
+        },
+        {
+          "title": "Salomon Speedcross 6 GTX Polkujuoksukengät - Partioaitta",
+          "price": "129,95 EUR",
+          "parsedPrice": 129.95,
+          "conciseQ": "Salomon Speedcross 6 GTX Polkujuoksukengät",
+          "category": "sports"
+        },
+        {
+          "title": "Haglöfs Astral GTX Takki Gore-Tex kuoritakki - Partioaitta",
+          "price": "299,- €",
+          "parsedPrice": 299,
+          "conciseQ": "Haglöfs Astral GTX Takki Gore-Tex kuoritakki",
+          "category": "sports"
+        }
+      ]
+    },
+    {
+      "storeName": "Haglöfs",
+      "domain": "haglofs.com",
+      "categoryHint": "sports",
+      "itemsTested": 759,
+      "itemsPassed": 759,
+      "samples": [
+        {
+          "title": "Hoka Bondi 8 Juoksukengät Miesten juoksukengät - Haglöfs",
+          "price": "139,00 €",
+          "parsedPrice": 139,
+          "conciseQ": "Hoka Bondi 8 Juoksukengät Miesten juoksukengät",
+          "category": "sports"
+        },
+        {
+          "title": "Asics Gel-Nimbus 26 Miesten juoksujalkineet - Haglöfs",
+          "price": "159,00 € sis. ALV",
+          "parsedPrice": 159,
+          "conciseQ": "Asics Gel-Nimbus 26 Miesten juoksujalkineet",
+          "category": "sports"
+        },
+        {
+          "title": "Salomon Speedcross 6 GTX Polkujuoksukengät - Haglöfs",
+          "price": "129,95 EUR",
+          "parsedPrice": 129.95,
+          "conciseQ": "Salomon Speedcross 6 GTX Polkujuoksukengät",
+          "category": "sports"
+        }
+      ]
+    },
+    {
+      "storeName": "Hintaseuranta",
+      "domain": "hintaseuranta.fi",
+      "categoryHint": "general/tech",
+      "itemsTested": 759,
+      "itemsPassed": 759,
+      "samples": [
+        {
+          "title": "Major IV Bluetooth-kuulokkeet | Hintaseuranta",
+          "price": "Vain 204,00 €!",
+          "parsedPrice": 204,
+          "conciseQ": "Major IV Bluetooth-kuulokkeet",
+          "category": "mobile_audio"
+        },
+        {
+          "title": "be quiet! Black SN850X NVMe SSD 2TB - Hintaseuranta",
+          "price": "161,00 €",
+          "parsedPrice": 161,
+          "conciseQ": "be quiet! SN850X NVMe SSD 2TB",
+          "category": "tech_hardware"
+        },
+        {
+          "title": "Galaxy S24 Ultra 256GB Rose | Hintaseuranta",
+          "price": "1 024,00 € sis. ALV",
+          "parsedPrice": 1024,
+          "conciseQ": "Galaxy S24 Ultra 256GB Rose",
+          "category": "mobile_audio"
+        }
+      ]
+    },
+    {
+      "storeName": "Yliopiston Apteekki",
+      "domain": "ya.fi",
+      "categoryHint": "grocery",
+      "itemsTested": 759,
+      "itemsPassed": 759,
+      "samples": [
+        {
+          "title": "Hartwall Original Long Drink Gin 24 x 0,33 l - Yliopiston Apteekki",
+          "price": "34 €",
+          "parsedPrice": 34,
+          "conciseQ": "Hartwall Original Long Drink Gin 24",
+          "category": "grocery"
+        },
+        {
+          "title": "Olvi Vichy Kivennäisvesi 6 x 0,5 l - Yliopiston Apteekki",
+          "price": "Vain 6,49 €!",
+          "parsedPrice": 6.49,
+          "conciseQ": "Olvi Vichy Kivennäisvesi 6 0 5",
+          "category": "grocery"
+        },
+        {
+          "title": "Red Bull Energy Drink Sokeriton 4 x 250 ml - Yliopiston Apteekki",
+          "price": "6,99 €",
+          "parsedPrice": 6.99,
+          "conciseQ": "Bull Energy Drink Sokeriton 4 250",
+          "category": "grocery"
+        }
+      ]
+    },
+    {
+      "storeName": "Lyko",
+      "domain": "lyko.com",
+      "categoryHint": "general/tech",
+      "itemsTested": 759,
+      "itemsPassed": 759,
+      "samples": [
+        {
+          "title": "ROG Swift PG32UCDM 32\" QD-OLED | Lyko",
+          "price": "1 259.00 € sis. alv 25,5%",
+          "parsedPrice": 1259,
+          "conciseQ": "ROG Swift PG32UCDM 32\" QD-OLED",
+          "category": "mobile_audio"
+        },
+        {
+          "title": "Western Digital GeForce RTX 4070 Ti Super 16GB Uutuus! - Lyko",
+          "price": "1 349 €",
+          "parsedPrice": 1349,
+          "conciseQ": "Western Digital GeForce RTX 4070 Ti",
+          "category": "tech_hardware"
+        },
+        {
+          "title": "Major IV Bluetooth-kuulokkeet | Lyko",
+          "price": "Vain 444,00 €!",
+          "parsedPrice": 444,
+          "conciseQ": "Major IV Bluetooth-kuulokkeet",
+          "category": "mobile_audio"
+        }
+      ]
+    },
+    {
+      "storeName": "Kicks",
+      "domain": "kicks.fi",
+      "categoryHint": "general/tech",
+      "itemsTested": 759,
+      "itemsPassed": 759,
+      "samples": [
+        {
+          "title": "Corsair B650M Pro RS WiFi mATX - Kicks",
+          "price": "169,-",
+          "parsedPrice": 169,
+          "conciseQ": "Corsair B650M Pro RS",
+          "category": "tech_hardware"
+        },
+        {
+          "title": "ROG Swift PG32UCDM 32\" QD-OLED | Kicks",
+          "price": "1 579.00 € sis. alv 25,5%",
+          "parsedPrice": 1579,
+          "conciseQ": "ROG Swift PG32UCDM 32\" QD-OLED",
+          "category": "mobile_audio"
+        },
+        {
+          "title": "G.Skill Radeon RX 7800 XT 16GB Tarjouksessa - Kicks",
+          "price": "1 629 €",
+          "parsedPrice": 1629,
+          "conciseQ": "G.Skill Radeon RX 7800 XT 16GB",
+          "category": "tech_hardware"
+        }
+      ]
+    },
+    {
+      "storeName": "Musti ja Mirri",
+      "domain": "mustijamirri.fi",
+      "categoryHint": "grocery",
+      "itemsTested": 759,
+      "itemsPassed": 759,
+      "samples": [
+        {
+          "title": "Coca-Cola Zero Sokeriton Virvoitusjuoma 24 x 0,33 l - Musti ja Mirri",
+          "price": "18,99 €",
+          "parsedPrice": 18.99,
+          "conciseQ": "Coca-Cola Zero Sokeriton Virvoitusjuoma 24 0",
+          "category": "grocery"
+        },
+        {
+          "title": "Hartwall Original Long Drink Gin 24 x 0,33 l - Musti ja Mirri",
+          "price": "34.90 €",
+          "parsedPrice": 34.9,
+          "conciseQ": "Hartwall Original Long Drink Gin 24",
+          "category": "grocery"
+        },
+        {
+          "title": "Olvi Vichy Kivennäisvesi 6 x 0,5 l - Musti ja Mirri",
+          "price": "6.49 € sis. alv 25,5%",
+          "parsedPrice": 6.49,
+          "conciseQ": "Olvi Vichy Kivennäisvesi 6 0 5",
+          "category": "grocery"
+        }
+      ]
+    },
+    {
+      "storeName": "Zooplus",
+      "domain": "zooplus.fi",
+      "categoryHint": "grocery",
+      "itemsTested": 759,
+      "itemsPassed": 759,
+      "samples": [
+        {
+          "title": "Valio Oivariini Perinteinen Levite 400g - Zooplus",
+          "price": "3,29 EUR",
+          "parsedPrice": 3.29,
+          "conciseQ": "Valio Oivariini Perinteinen Levite 400g",
+          "category": "grocery"
+        },
+        {
+          "title": "Oatly Barista Kaurajuoma 1 l - Zooplus",
+          "price": "2,29 €",
+          "parsedPrice": 2.29,
+          "conciseQ": "Oatly Barista Kaurajuoma 1",
+          "category": "grocery"
+        },
+        {
+          "title": "Valio Oltermanni Kermajuusto 1 kg - Zooplus",
+          "price": "7.99 €",
+          "parsedPrice": 7.99,
+          "conciseQ": "Valio Oltermanni Kermajuusto 1 kg",
+          "category": "grocery"
+        }
+      ]
+    },
+    {
+      "storeName": "Peten Koiratarvike",
+      "domain": "petenkoiratarvike.com",
+      "categoryHint": "grocery",
+      "itemsTested": 759,
+      "itemsPassed": 759,
+      "samples": [
+        {
+          "title": "Royal Canin Medium Adult Koiranruoka 15 kg - Peten Koiratarvike",
+          "price": "64,90 € sis. ALV",
+          "parsedPrice": 64.9,
+          "conciseQ": "Royal Canin Medium Adult Koiranruoka 15",
+          "category": "grocery"
+        },
+        {
+          "title": "Juhla Mokka Kahvi Paahdettu 500g - Peten Koiratarvike",
+          "price": "4,99 EUR",
+          "parsedPrice": 4.99,
+          "conciseQ": "Juhla Mokka Kahvi Paahdettu 500g",
+          "category": "grocery"
+        },
+        {
+          "title": "Presidentti Tumma Paahto Kahvi 500g - Peten Koiratarvike",
+          "price": "5,49 €",
+          "parsedPrice": 5.49,
+          "conciseQ": "Presidentti Tumma Paahto Kahvi 500g",
+          "category": "grocery"
+        }
+      ]
+    },
+    {
+      "storeName": "Adlibris",
+      "domain": "adlibris.com",
+      "categoryHint": "general/tech",
+      "itemsTested": 759,
+      "itemsPassed": 759,
+      "samples": [
+        {
+          "title": "Zotac GeForce RTX 4060 Ti 8GB Varastontyhjennys - Adlibris",
+          "price": "789,00 €",
+          "parsedPrice": 789,
+          "conciseQ": "Zotac GeForce RTX 4060 Ti 8GB",
+          "category": "tech_hardware"
+        },
+        {
+          "title": "WH-1000XM4 Vastamelukuulokkeet | Adlibris",
+          "price": "204,00 € sis. ALV",
+          "parsedPrice": 204,
+          "conciseQ": "WH-1000XM4",
+          "category": "mobile_audio"
+        },
+        {
+          "title": "XFX T700 PCIe 5.0 NVMe SSD 2TB - Adlibris",
+          "price": "161,00 EUR",
+          "parsedPrice": 161,
+          "conciseQ": "XFX T700 5.0 NVMe SSD 2TB",
+          "category": "tech_hardware"
+        }
+      ]
+    },
+    {
+      "storeName": "Suomalainen Kirjakauppa",
+      "domain": "suomalainen.com",
+      "categoryHint": "general/tech",
+      "itemsTested": 759,
+      "itemsPassed": 759,
+      "samples": [
+        {
+          "title": "Alienware AW3423DWF 34\" Curved QD-OLED | Suomalainen Kirjakauppa",
+          "price": "Vain 939,00 €!",
+          "parsedPrice": 939,
+          "conciseQ": "Alienware AW3423DWF 34\" Curved QD-OLED",
+          "category": "mobile_audio"
+        },
+        {
+          "title": "Crucial GeForce RTX 5090 32GB Hyväkuntoinen - Suomalainen Kirjakauppa",
+          "price": "1 069,00 €",
+          "parsedPrice": 1069,
+          "conciseQ": "Crucial GeForce RTX 5090 32GB",
+          "category": "tech_hardware"
+        },
+        {
+          "title": "WH-1000XM4 Vastamelukuulokkeet | Suomalainen Kirjakauppa",
+          "price": "324,00 € sis. ALV",
+          "parsedPrice": 324,
+          "conciseQ": "WH-1000XM4",
+          "category": "mobile_audio"
+        }
+      ]
+    },
+    {
+      "storeName": "Fiksuruoka",
+      "domain": "fiksuruoka.fi",
+      "categoryHint": "grocery",
+      "itemsTested": 759,
+      "itemsPassed": 759,
+      "samples": [
+        {
+          "title": "Hau-Hau Champion Kana-riisi Täysravinto 12 kg - Fiksuruoka",
+          "price": "24 €",
+          "parsedPrice": 24,
+          "conciseQ": "Hau-Hau Champion Kana-riisi Täysravinto 12 kg",
+          "category": "grocery"
+        },
+        {
+          "title": "Royal Canin Medium Adult Koiranruoka 15 kg - Fiksuruoka",
+          "price": "Vain 64,90 €!",
+          "parsedPrice": 64.9,
+          "conciseQ": "Royal Canin Medium Adult Koiranruoka 15",
+          "category": "grocery"
+        },
+        {
+          "title": "Juhla Mokka Kahvi Paahdettu 500g - Fiksuruoka",
+          "price": "4,99 €",
+          "parsedPrice": 4.99,
+          "conciseQ": "Juhla Mokka Kahvi Paahdettu 500g",
+          "category": "grocery"
+        }
+      ]
+    },
+    {
+      "storeName": "Matsmart",
+      "domain": "matsmart.fi",
+      "categoryHint": "grocery",
+      "itemsTested": 759,
+      "itemsPassed": 759,
+      "samples": [
+        {
+          "title": "Snellman Kunnon Maalaispalvikinkku 150g - Matsmart",
+          "price": "2.49 € sis. alv 25,5%",
+          "parsedPrice": 2.49,
+          "conciseQ": "Snellman Kunnon Maalaispalvikinkku 150g",
+          "category": "grocery"
+        },
+        {
+          "title": "Kariniemen Kananpojan Fileesuikale Mieto 300g - Matsmart",
+          "price": "3 €",
+          "parsedPrice": 3,
+          "conciseQ": "Kariniemen Kananpojan Fileesuikale Mieto 300g",
+          "category": "grocery"
+        },
+        {
+          "title": "Coca-Cola Zero Sokeriton Virvoitusjuoma 24 x 0,33 l - Matsmart",
+          "price": "Vain 18,99 €!",
+          "parsedPrice": 18.99,
+          "conciseQ": "Coca-Cola Zero Sokeriton Virvoitusjuoma 24 0",
+          "category": "grocery"
+        }
+      ]
+    },
+    {
+      "storeName": "Ruohonjuuri",
+      "domain": "ruohonjuuri.fi",
+      "categoryHint": "general/tech",
+      "itemsTested": 758,
+      "itemsPassed": 758,
+      "samples": [
+        {
+          "title": "G.Skill KC3000 PCIe 4.0 NVMe M.2 SSD 2TB - Ruohonjuuri",
+          "price": "173,-",
+          "parsedPrice": 173,
+          "conciseQ": "G.Skill KC3000 4.0 NVMe M.2 SSD",
+          "category": "tech_hardware"
+        },
+        {
+          "title": "OnePlus 13 256GB Rose | Ruohonjuuri",
+          "price": "924.00 € sis. alv 25,5%",
+          "parsedPrice": 924,
+          "conciseQ": "OnePlus 13 256GB Rose",
+          "category": "mobile_audio"
+        },
+        {
+          "title": "Western Digital MAG Z790 TOMAHAWK MAX WIFI - Ruohonjuuri",
+          "price": "249 €",
+          "parsedPrice": 249,
+          "conciseQ": "Western Digital MAG Z790 TOMAHAWK MAX",
+          "category": "tech_hardware"
+        }
+      ]
+    },
+    {
+      "storeName": "Puuilo",
+      "domain": "puuilo.fi",
+      "categoryHint": "general/tech",
+      "itemsTested": 758,
+      "itemsPassed": 758,
+      "samples": [
+        {
+          "title": "Makita DDF485Z Akkuporakone 18V Runko LXT - Puuilo",
+          "price": "99,90 €",
+          "parsedPrice": 99.9,
+          "conciseQ": "Makita DDF485Z Akkuporakone 18V Runko LXT",
+          "category": "diy_tools"
+        },
+        {
+          "title": "Bosch Professional GSR 18V-55 Akkuporakonetti 18V 2x4.0Ah ProCORE - Puuilo",
+          "price": "229,-",
+          "parsedPrice": 229,
+          "conciseQ": "Bosch Professional GSR 18V-55 Akkuporakonetti 18V",
+          "category": "diy_tools"
+        },
+        {
+          "title": "DeWalt DCD796P2 Iskuporakone 18V XR 2x5.0Ah Li-Ion - Puuilo",
+          "price": "289.00 € sis. alv 25,5%",
+          "parsedPrice": 289,
+          "conciseQ": "DeWalt DCD796P2 Iskuporakone 18V XR 2x5.0Ah",
+          "category": "diy_tools"
+        }
+      ]
+    },
+    {
+      "storeName": "Asko",
+      "domain": "asko.fi",
+      "categoryHint": "furniture",
+      "itemsTested": 758,
+      "itemsPassed": 758,
+      "samples": [
+        {
+          "title": "EKEDALEN Jatkettava pöytä 120/180x80 cm valkoinen - Asko",
+          "price": "229,00 EUR",
+          "parsedPrice": 229,
+          "conciseQ": "EKEDALEN Jatkettava pöytä 120",
+          "category": "furniture"
+        },
+        {
+          "title": "Vedde Vaatekaappi 166x197 cm villi tammi - Asko",
+          "price": "349,- €",
+          "parsedPrice": 349,
+          "conciseQ": "Vedde Vaatekaappi villi",
+          "category": "furniture"
+        },
+        {
+          "title": "Bellus Kulmasohva Divan 280x160 cm kangas harmaa - Asko",
+          "price": "1 299,-",
+          "parsedPrice": 1299,
+          "conciseQ": "Bellus Kulmasohva Divan kangas",
+          "category": "furniture"
+        }
+      ]
+    },
+    {
+      "storeName": "Isku",
+      "domain": "isku.fi",
+      "categoryHint": "furniture",
+      "itemsTested": 758,
+      "itemsPassed": 758,
+      "samples": [
+        {
+          "title": "MALM Sänky runkopatjalle 160x200 cm valkoinen - Isku",
+          "price": "249,00 € sis. ALV",
+          "parsedPrice": 249,
+          "conciseQ": "MALM Sänky runkopatjalle",
+          "category": "furniture"
+        },
+        {
+          "title": "POÄNG Nojatuoli ja rahi 68x82x100 cm koivuviilu / knisa musta - Isku",
+          "price": "129,00 EUR",
+          "parsedPrice": 129,
+          "conciseQ": "POÄNG Nojatuoli ja rahi koivuviilu knisa",
+          "category": "furniture"
+        },
+        {
+          "title": "STRANDMON Lepotuoli 82x96x101 cm nordvalla tummanharmaa - Isku",
+          "price": "249,- €",
+          "parsedPrice": 249,
+          "conciseQ": "STRANDMON Lepotuoli nordvalla tummanharmaa",
+          "category": "furniture"
+        }
+      ]
+    },
+    {
+      "storeName": "Veke",
+      "domain": "veke.fi",
+      "categoryHint": "furniture",
+      "itemsTested": 758,
+      "itemsPassed": 758,
+      "samples": [
+        {
+          "title": "HEMNES Kirjahylly 90x197 cm valkoinen petsi - Veke",
+          "price": "199,00 €",
+          "parsedPrice": 199,
+          "conciseQ": "HEMNES Kirjahylly petsi",
+          "category": "furniture"
+        },
+        {
+          "title": "BILLY Kirjahylly 80x28x202 cm valkoinen - Veke",
+          "price": "69,95 € sis. ALV",
+          "parsedPrice": 69.95,
+          "conciseQ": "BILLY Kirjahylly",
+          "category": "furniture"
+        },
+        {
+          "title": "KALLAX Hyllykkö 77x147 cm mustanruskea - Veke",
+          "price": "79,95 EUR",
+          "parsedPrice": 79.95,
+          "conciseQ": "KALLAX Hyllykkö mustanruskea",
+          "category": "furniture"
+        }
+      ]
+    },
+    {
+      "storeName": "Finnish Design Shop",
+      "domain": "finnishdesignshop.fi",
+      "categoryHint": "furniture",
+      "itemsTested": 758,
+      "itemsPassed": 758,
+      "samples": [
+        {
+          "title": "Vedde Vaatekaappi 166x197 cm villi tammi - Finnish Design Shop",
+          "price": "Vain 349,00 €!",
+          "parsedPrice": 349,
+          "conciseQ": "Vedde Vaatekaappi villi",
+          "category": "furniture"
+        },
+        {
+          "title": "Bellus Kulmasohva Divan 280x160 cm kangas harmaa - Finnish Design Shop",
+          "price": "1 299,00 €",
+          "parsedPrice": 1299,
+          "conciseQ": "Bellus Kulmasohva Divan kangas",
+          "category": "furniture"
+        },
+        {
+          "title": "Bonnell Runkopatjapaketti 160x200 cm medium harmaa - Finnish Design Shop",
+          "price": "599,00 € sis. ALV",
+          "parsedPrice": 599,
+          "conciseQ": "Bonnell Runkopatjapaketti medium",
+          "category": "furniture"
+        }
+      ]
+    },
+    {
+      "storeName": "Taloon.com",
+      "domain": "taloon.com",
+      "categoryHint": "general/tech",
+      "itemsTested": 758,
+      "itemsPassed": 758,
+      "samples": [
+        {
+          "title": "be quiet! NM790 M.2 2280 NVMe SSD 2TB - Taloon.com",
+          "price": "377 €",
+          "parsedPrice": 377,
+          "conciseQ": "be quiet! NM790 M.2 2280 NVMe",
+          "category": "tech_hardware"
+        },
+        {
+          "title": "Galaxy S24 Ultra 1TB Black Titanium | Taloon.com",
+          "price": "Vain 974,00 €!",
+          "parsedPrice": 974,
+          "conciseQ": "Galaxy S24 Ultra 1TB",
+          "category": "mobile_audio"
+        },
+        {
+          "title": "Crucial TUF GAMING B650-PLUS WIFI ATX - Taloon.com",
+          "price": "169,00 €",
+          "parsedPrice": 169,
+          "conciseQ": "Crucial TUF B650-PLUS",
+          "category": "tech_hardware"
+        }
+      ]
+    },
+    {
+      "storeName": "Netrauta",
+      "domain": "netrauta.fi",
+      "categoryHint": "general/tech",
+      "itemsTested": 758,
+      "itemsPassed": 758,
+      "samples": [
+        {
+          "title": "Major IV Bluetooth-kuulokkeet | Netrauta",
+          "price": "219.00 € sis. alv 25,5%",
+          "parsedPrice": 219,
+          "conciseQ": "Major IV Bluetooth-kuulokkeet",
+          "category": "mobile_audio"
+        },
+        {
+          "title": "Lian Li Black SN850X NVMe SSD 4TB - Netrauta",
+          "price": "173 €",
+          "parsedPrice": 173,
+          "conciseQ": "Lian Li SN850X NVMe SSD 4TB",
+          "category": "tech_hardware"
+        },
+        {
+          "title": "Galaxy S24 Ultra 1TB Black Titanium | Netrauta",
+          "price": "Vain 1 174,00 €!",
+          "parsedPrice": 1174,
+          "conciseQ": "Galaxy S24 Ultra 1TB",
+          "category": "mobile_audio"
+        }
+      ]
+    },
+    {
+      "storeName": "Jula",
+      "domain": "jula.fi",
+      "categoryHint": "general/tech",
+      "itemsTested": 758,
+      "itemsPassed": 758,
+      "samples": [
+        {
+          "title": "Makita DDF485Z Akkuporakone 18V Runko LXT - Jula",
+          "price": "99.90 €",
+          "parsedPrice": 99.9,
+          "conciseQ": "Makita DDF485Z Akkuporakone 18V Runko LXT",
+          "category": "diy_tools"
+        },
+        {
+          "title": "Bosch Professional GSR 18V-55 Akkuporakonetti 18V 2x4.0Ah ProCORE - Jula",
+          "price": "229.00 € sis. alv 25,5%",
+          "parsedPrice": 229,
+          "conciseQ": "Bosch Professional GSR 18V-55 Akkuporakonetti 18V",
+          "category": "diy_tools"
+        },
+        {
+          "title": "DeWalt DCD796P2 Iskuporakone 18V XR 2x5.0Ah Li-Ion - Jula",
+          "price": "289 €",
+          "parsedPrice": 289,
+          "conciseQ": "DeWalt DCD796P2 Iskuporakone 18V XR 2x5.0Ah",
+          "category": "diy_tools"
+        }
+      ]
+    },
+    {
+      "storeName": "Rusta",
+      "domain": "rusta.com",
+      "categoryHint": "general/tech",
+      "itemsTested": 758,
+      "itemsPassed": 758,
+      "samples": [
+        {
+          "title": "Kärcher K5 Premium Smart Control Painepesuri 145 bar 500 l/h - Rusta",
+          "price": "399,- €",
+          "parsedPrice": 399,
+          "conciseQ": "Kärcher K5 Premium Smart Control Painepesuri",
+          "category": "diy_tools"
+        },
+        {
+          "title": "Fiskars X25 Halkaasukirves XL 72 cm 2.4 kg - Rusta",
+          "price": "69.90 €",
+          "parsedPrice": 69.9,
+          "conciseQ": "Fiskars X25 Halkaasukirves XL 72 cm",
+          "category": "diy_tools"
+        },
+        {
+          "title": "Bahco S910 Hylsysarja 1/4\" ja 1/2\" 91-osainen - Rusta",
+          "price": "109.00 € sis. alv 25,5%",
+          "parsedPrice": 109,
+          "conciseQ": "Bahco S910 Hylsysarja 1 4\" ja",
+          "category": "diy_tools"
+        }
+      ]
+    },
+    {
+      "storeName": "Stockmann",
+      "domain": "stockmann.com",
+      "categoryHint": "general/tech",
+      "itemsTested": 758,
+      "itemsPassed": 758,
+      "samples": [
+        {
+          "title": "Gigabyte MAG B650 TOMAHAWK WIFI - Stockmann",
+          "price": "179,00 EUR",
+          "parsedPrice": 179,
+          "conciseQ": "Gigabyte MAG B650 TOMAHAWK",
+          "category": "tech_hardware"
+        },
+        {
+          "title": "ROG Swift PG32UCDM 32\" QD-OLED | Stockmann",
+          "price": "619,- €",
+          "parsedPrice": 619,
+          "conciseQ": "ROG Swift PG32UCDM 32\" QD-OLED",
+          "category": "mobile_audio"
+        },
+        {
+          "title": "Corsair Radeon RX 7900 XTX 24GB Varastontyhjennys - Stockmann",
+          "price": "789,-",
+          "parsedPrice": 789,
+          "conciseQ": "Corsair Radeon RX 7900 XTX 24GB",
+          "category": "tech_hardware"
+        }
+      ]
+    },
+    {
+      "storeName": "Autotie",
+      "domain": "autotie.fi",
+      "categoryHint": "vehicles",
+      "itemsTested": 758,
+      "itemsPassed": 758,
+      "samples": [
+        {
+          "title": "Volvo EX30 Twin Motor xDrive20d Manuaali 2017 - Autotie",
+          "price": "12 550,00 € sis. ALV",
+          "parsedPrice": 12550,
+          "conciseQ": "Volvo EX30 Twin Motor xDrive20d Manuaali",
+          "category": "automotive"
+        },
+        {
+          "title": "Kia Ceed Sportswagon 4MATIC A Automaatti 2016 - Autotie",
+          "price": "13 000,00 EUR",
+          "parsedPrice": 13000,
+          "conciseQ": "Kia Ceed Sportswagon 4MATIC Automaatti 2016",
+          "category": "automotive"
+        },
+        {
+          "title": "BMW 530e xDrive Sedan 50 TFSI e quattro Manuaali 2015 - Autotie",
+          "price": "13 450,- €",
+          "parsedPrice": 13450,
+          "conciseQ": "BMW 530e xDrive Sedan 50 TFSI",
+          "category": "automotive"
+        }
+      ]
+    },
+    {
+      "storeName": "Bilar99e",
+      "domain": "bilar99e.fi",
+      "categoryHint": "vehicles",
+      "itemsTested": 758,
+      "itemsPassed": 758,
+      "samples": [
+        {
+          "title": "Volkswagen Passat Variant T8 Twin Engine AWD Automaatti 2015 - Bilar99e",
+          "price": "60 700,00 €",
+          "parsedPrice": 60700,
+          "conciseQ": "Volkswagen Passat Variant T8 Twin Engine",
+          "category": "automotive"
+        },
+        {
+          "title": "Volvo XC90 T8 Recharge xDrive20d Manuaali 2014 - Bilar99e",
+          "price": "61 150,00 € sis. ALV",
+          "parsedPrice": 61150,
+          "conciseQ": "Volvo XC90 T8 Recharge xDrive20d Manuaali",
+          "category": "automotive"
+        },
+        {
+          "title": "Kia Niro EV 4MATIC A Automaatti 2013 - Bilar99e",
+          "price": "61 600,00 EUR",
+          "parsedPrice": 61600,
+          "conciseQ": "Kia Niro EV 4MATIC Automaatti 2013",
+          "category": "automotive"
+        }
+      ]
+    },
+    {
+      "storeName": "VaihtoPlus",
+      "domain": "vaihtoplus.fi",
+      "categoryHint": "vehicles",
+      "itemsTested": 758,
+      "itemsPassed": 758,
+      "samples": [
+        {
+          "title": "Toyota Camry Long Range AWD Manuaali 2013 - VaihtoPlus",
+          "price": "Vain 41 350,00 €!",
+          "parsedPrice": 41350,
+          "conciseQ": "Toyota Camry Long Range AWD Manuaali",
+          "category": "automotive"
+        },
+        {
+          "title": "Volkswagen ID.7 Tourer T8 Twin Engine AWD Automaatti 2012 - VaihtoPlus",
+          "price": "41 800,00 €",
+          "parsedPrice": 41800,
+          "conciseQ": "Volkswagen ID.7 Tourer T8 Twin Engine",
+          "category": "automotive"
+        },
+        {
+          "title": "Volvo XC60 T8 Recharge xDrive20d Manuaali 2026 - VaihtoPlus",
+          "price": "42 250,00 € sis. ALV",
+          "parsedPrice": 42250,
+          "conciseQ": "Volvo XC60 T8 Recharge xDrive20d Manuaali",
+          "category": "automotive"
+        }
+      ]
+    },
+    {
+      "storeName": "Autolle.com",
+      "domain": "autolle.com",
+      "categoryHint": "vehicles",
+      "itemsTested": 758,
+      "itemsPassed": 758,
+      "samples": [
+        {
+          "title": "Skoda Octavia Combi Dual Motor AWD Automaatti 2026 - Autolle.com",
+          "price": "22 000 €",
+          "parsedPrice": 22000,
+          "conciseQ": "Skoda Octavia Combi Motor AWD Automaatti",
+          "category": "automotive"
+        },
+        {
+          "title": "Toyota Yaris Hybrid Long Range AWD Manuaali 2025 - Autolle.com",
+          "price": "Vain 22 450,00 €!",
+          "parsedPrice": 22450,
+          "conciseQ": "Toyota Yaris Hybrid Long Range AWD",
+          "category": "automotive"
+        },
+        {
+          "title": "Volkswagen Tiguan T8 Twin Engine AWD Automaatti 2024 - Autolle.com",
+          "price": "22 900,00 €",
+          "parsedPrice": 22900,
+          "conciseQ": "Volkswagen Tiguan T8 Twin Engine AWD",
+          "category": "automotive"
+        }
+      ]
+    },
+    {
+      "storeName": "Veho",
+      "domain": "veho.fi",
+      "categoryHint": "vehicles",
+      "itemsTested": 758,
+      "itemsPassed": 758,
+      "samples": [
+        {
+          "title": "Polestar Polestar 4 Long Range Plug-in Hybrid AWD Manuaali 2024 - Veho",
+          "price": "70 150.00 € sis. alv 25,5%",
+          "parsedPrice": 70150,
+          "conciseQ": "Polestar Polestar 4 Long Range Plug-in",
+          "category": "automotive"
+        },
+        {
+          "title": "Skoda Karoq Dual Motor AWD Automaatti 2023 - Veho",
+          "price": "70 600 €",
+          "parsedPrice": 70600,
+          "conciseQ": "Skoda Karoq Motor AWD Automaatti 2023",
+          "category": "automotive"
+        },
+        {
+          "title": "Toyota C-HR Long Range AWD Manuaali 2022 - Veho",
+          "price": "Vain 71 050,00 €!",
+          "parsedPrice": 71050,
+          "conciseQ": "Toyota C-HR Long Range AWD Manuaali",
+          "category": "automotive"
+        }
+      ]
+    },
+    {
+      "storeName": "Delta Auto",
+      "domain": "delta.fi",
+      "categoryHint": "vehicles",
+      "itemsTested": 758,
+      "itemsPassed": 758,
+      "samples": [
+        {
+          "title": "Mazda CX-5 1.8 Hybrid Automaatti 2022 - Delta Auto",
+          "price": "50 800,-",
+          "parsedPrice": 50800,
+          "conciseQ": "Mazda CX-5 1.8 Hybrid Automaatti 2022",
+          "category": "automotive"
+        },
+        {
+          "title": "Polestar Polestar 4 Long Range Plug-in Hybrid AWD Manuaali 2021 - Delta Auto",
+          "price": "51 250.00 € sis. alv 25,5%",
+          "parsedPrice": 51250,
+          "conciseQ": "Polestar Polestar 4 Long Range Plug-in",
+          "category": "automotive"
+        },
+        {
+          "title": "Skoda Superb Combi Dual Motor AWD Automaatti 2020 - Delta Auto",
+          "price": "51 700 €",
+          "parsedPrice": 51700,
+          "conciseQ": "Skoda Superb Combi Motor AWD Automaatti",
+          "category": "automotive"
+        }
+      ]
+    },
+    {
+      "storeName": "MS-Auto",
+      "domain": "ms-auto.fi",
+      "categoryHint": "vehicles",
+      "itemsTested": 758,
+      "itemsPassed": 758,
+      "samples": [
+        {
+          "title": "Renault Megane E-Tech Electric 2.5 Hybrid AWD Manuaali 2020 - MS-Auto",
+          "price": "31 450,- €",
+          "parsedPrice": 31450,
+          "conciseQ": "Renault Megane E-Tech Electric 2.5 Hybrid",
+          "category": "automotive"
+        },
+        {
+          "title": "Mazda CX-5 1.8 Hybrid Automaatti 2019 - MS-Auto",
+          "price": "31 900,-",
+          "parsedPrice": 31900,
+          "conciseQ": "Mazda CX-5 1.8 Hybrid Automaatti 2019",
+          "category": "automotive"
+        },
+        {
+          "title": "Polestar Polestar 4 Long Range Plug-in Hybrid AWD Manuaali 2018 - MS-Auto",
+          "price": "32 350.00 € sis. alv 25,5%",
+          "parsedPrice": 32350,
+          "conciseQ": "Polestar Polestar 4 Long Range Plug-in",
+          "category": "automotive"
+        }
+      ]
+    },
+    {
+      "storeName": "Nettimoto",
+      "domain": "nettimoto.com",
+      "categoryHint": "vehicles",
+      "itemsTested": 758,
+      "itemsPassed": 758,
+      "samples": [
+        {
+          "title": "Peugeot 508 SW PSE 2.0 TSI 180kW Automaatti 2018 - Nettimoto",
+          "price": "12 100,00 EUR",
+          "parsedPrice": 12100,
+          "conciseQ": "Peugeot 508 SW PSE 2.0 TSI",
+          "category": "automotive"
+        },
+        {
+          "title": "Renault Megane E-Tech Electric 2.5 Hybrid AWD Manuaali 2017 - Nettimoto",
+          "price": "12 550,- €",
+          "parsedPrice": 12550,
+          "conciseQ": "Renault Megane E-Tech Electric 2.5 Hybrid",
+          "category": "automotive"
+        },
+        {
+          "title": "Mazda CX-5 1.8 Hybrid Automaatti 2016 - Nettimoto",
+          "price": "13 000,-",
+          "parsedPrice": 13000,
+          "conciseQ": "Mazda CX-5 1.8 Hybrid Automaatti 2016",
+          "category": "automotive"
+        }
+      ]
+    },
+    {
+      "storeName": "Nettikaravaani",
+      "domain": "nettikaravaani.com",
+      "categoryHint": "vehicles",
+      "itemsTested": 758,
+      "itemsPassed": 758,
+      "samples": [
+        {
+          "title": "Cupra Born 77kWh 1.5 TSI 110kW Manuaali 2016 - Nettikaravaani",
+          "price": "60 250,00 € sis. ALV",
+          "parsedPrice": 60250,
+          "conciseQ": "Cupra Born 77kWh 1.5 TSI 110kW",
+          "category": "automotive"
+        },
+        {
+          "title": "Peugeot 508 SW PSE 2.0 TSI 180kW Automaatti 2015 - Nettikaravaani",
+          "price": "60 700,00 EUR",
+          "parsedPrice": 60700,
+          "conciseQ": "Peugeot 508 SW PSE 2.0 TSI",
+          "category": "automotive"
+        },
+        {
+          "title": "Renault Megane E-Tech Electric 2.5 Hybrid AWD Manuaali 2014 - Nettikaravaani",
+          "price": "61 150,- €",
+          "parsedPrice": 61150,
+          "conciseQ": "Renault Megane E-Tech Electric 2.5 Hybrid",
+          "category": "automotive"
+        }
+      ]
+    },
+    {
+      "storeName": "Nettivene",
+      "domain": "nettivene.com",
+      "categoryHint": "vehicles",
+      "itemsTested": 758,
+      "itemsPassed": 758,
+      "samples": [
+        {
+          "title": "Seat Leon Sportstourer 2.0 TDI 110kW Automaatti 2014 - Nettivene",
+          "price": "40 900,00 €",
+          "parsedPrice": 40900,
+          "conciseQ": "Seat Leon Sportstourer 2.0 TDI 110kW",
+          "category": "automotive"
+        },
+        {
+          "title": "Cupra Born 77kWh 1.5 TSI 110kW Manuaali 2013 - Nettivene",
+          "price": "41 350,00 € sis. ALV",
+          "parsedPrice": 41350,
+          "conciseQ": "Cupra Born 77kWh 1.5 TSI 110kW",
+          "category": "automotive"
+        },
+        {
+          "title": "Peugeot 508 SW PSE 2.0 TSI 180kW Automaatti 2012 - Nettivene",
+          "price": "41 800,00 EUR",
+          "parsedPrice": 41800,
+          "conciseQ": "Peugeot 508 SW PSE 2.0 TSI",
+          "category": "automotive"
+        }
+      ]
+    },
+    {
+      "storeName": "Nettikone",
+      "domain": "nettikone.com",
+      "categoryHint": "vehicles",
+      "itemsTested": 758,
+      "itemsPassed": 758,
+      "samples": [
+        {
+          "title": "Nissan Ariya 87kWh AWD 50 TFSI e quattro Manuaali 2012 - Nettikone",
+          "price": "Vain 21 550,00 €!",
+          "parsedPrice": 21550,
+          "conciseQ": "Nissan Ariya 87kWh AWD 50 TFSI",
+          "category": "automotive"
+        },
+        {
+          "title": "Seat Leon Sportstourer 2.0 TDI 110kW Automaatti 2026 - Nettikone",
+          "price": "22 000,00 €",
+          "parsedPrice": 22000,
+          "conciseQ": "Seat Leon Sportstourer 2.0 TDI 110kW",
+          "category": "automotive"
+        },
+        {
+          "title": "Cupra Born 77kWh 1.5 TSI 110kW Manuaali 2025 - Nettikone",
+          "price": "22 450,00 € sis. ALV",
+          "parsedPrice": 22450,
+          "conciseQ": "Cupra Born 77kWh 1.5 TSI 110kW",
+          "category": "automotive"
+        }
+      ]
+    }
+  ],
+  "failures": []
+}
