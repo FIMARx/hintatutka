@@ -14,6 +14,7 @@
     "test:categories": "node --test tests/categories.test.js",
     "test:fixtures": "node --test tests/fixtures.test.js",
     "test:priceability": "node --test tests/priceability.test.js",
+    "test:field": "node scripts/field-tester.mjs",
     "test:parsers": "node --test tests/parsers.test.js",
     "test:algorithms": "node --test tests/algorithms.test.js",
     "test:cache": "node --test tests/cache.test.js",
