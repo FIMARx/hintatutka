@@ -5,7 +5,7 @@
 - **Supported Stores Covered**: 98 / 98 stores
 - **Pass Rate**: 100.0000% (100000 / 100000 passed)
 - **Failures Discovered**: 0
-- **Execution Time**: 3.80 seconds (26,323 products/sec)
+- **Execution Time**: 3.81 seconds (26,240 products/sec)
 
 ## Category Distribution Across 100,000 Products
 

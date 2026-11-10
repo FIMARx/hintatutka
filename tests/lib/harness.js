@@ -65,6 +65,7 @@ globalThis.__HT_TEST_EXPORTS__ = {
     estimateFinnishVehicleRunningCosts,
     detectAndExtractVehicleData,
     buildVehicleDepreciationChartHtml,
+    isNonProductPath,
     I18N
 };
 `;

@@ -929,7 +929,7 @@
         if (!str || typeof str !== 'string') return null;
 
         // Reject obvious non-price strings: installment rate schedules, SVG paths, cart quantities
-        if (/\b(?:kk\s*[x*]|\/kk\b|\bkk-erä\b|\bluottohinta\b|\bluottokorko\b|\bkk-maksu\b|\balkaen\s*\d+[,.]\d+\s*€?\s*\/)/i.test(str)) return null;
+        if (/(?:\/\s*kk\b|\bkk\s*[x*]|\bkk-erä\b|\bluottohinta\b|\bluottokorko\b|\bkk-maksu\b|\balkaen\s*\d+[,.]\d+\s*€?\s*\/|\b\d+\s*kk\b|\bkuukaudessa\b|\bkuukausimaksu\b)/i.test(str)) return null;
         if (/\b(?:d\s*=\s*["']?[MLHVCSQTAZ\d]|\bsvg\b|\bpath\b)/i.test(str)) return null;
         if (/\b(?:ostoskori|kori|kpl\b|tuotetta\b|kappaletta\b)/i.test(str)) return null;
 
@@ -1092,7 +1092,7 @@
     function cleanTitle(str) {
         if (!str) return '';
         return normalizeSwappedModelOrder(str)
-            .replace(/[-|•–].*?(Verkkokauppa|Gigantti|Power|Proshop|Jimm's|Datatronic|Multitronic|Tietokonekauppa|Data-Systems|Komponenttikauppa|Cruzbroker|MaxGaming|VPD|Puolenkuun|Veikon|Euronics|Kärkkäinen|Prisma|Telia|Elisa|DNA|HobbyHall|Bigbox|Kasuplan|Mikromafia|TeraStore|DigiDreamer|MEGASTORE|e-ville|SatShop|Dustin|Amazon|Tori|Vinted|Huuto|Swappie|Taitonetti|Fonum|XXL|Varuste|Intersport|Budget Sport|Scandinavian Outdoor|Stadium|Partioaitta|Haglöfs|Hintaseuranta|Yliopiston Apteekki|Lyko|Kicks|Musti ja Mirri|Zooplus|Peten Koiratarvike|Adlibris|Suomalainen|Taloon|Netrauta|S-kaupat|K-Ruoka|Fiksuruoka|Matsmart|Ruohonjuuri|Tokmanni|Puuilo|IKEA|JYSK|Sotka|Asko|Masku|Isku|Veke|Finnish Design Shop|K-Rauta|Bauhaus|Motonet|Biltema|Clas Ohlson|Rusta|Stockmann).*$/i, '')
+            .replace(/[-|•–].*?(Verkkokauppa(?:\.com)?|Gigantti(?:\.fi)?|Power(?:\.fi)?|Proshop(?:\.fi)?|Jimm(?:'s|s)?(?:\.fi)?|Datatronic(?:\.fi)?|Multitronic(?:\.fi)?|Tietokonekauppa|Data-Systems|Komponenttikauppa|Cruzbroker|MaxGaming|VPD|Puolenkuun|Veikon|Euronics|Kärkkäinen|Prisma|Telia(?:\.fi)?|Elisa(?:\.fi)?|DNA(?:\.fi)?|HobbyHall|Bigbox|Kasuplan|Mikromafia|TeraStore|DigiDreamer|MEGASTORE|e-ville|SatShop|Dustin|Amazon|Tori|Vinted|Huuto|Swappie|Taitonetti|Fonum|XXL|Varuste|Intersport|Budget Sport|Scandinavian Outdoor|Stadium|Partioaitta|Haglöfs|Hintaseuranta|Yliopiston Apteekki|Lyko|Kicks|Musti ja Mirri|Zooplus|Peten Koiratarvike|Adlibris|Suomalainen|Taloon|Netrauta|S-kaupat|K-Ruoka|Fiksuruoka|Matsmart|Ruohonjuuri|Tokmanni(?:\.fi)?|Puuilo|IKEA(?:\.fi)?|JYSK|Sotka|Asko|Masku|Isku|Veke|Finnish Design Shop|K-Rauta|Bauhaus|Motonet(?:\.fi)?|Biltema|Clas Ohlson|Rusta|Stockmann).*$/i, '')
             .replace(/^(Myydään|M:|ALE)\s+/i, '')
             .replace(/\s+/g, ' ')
             .trim();
@@ -1316,7 +1316,7 @@
             .replace(/^(?:Myydään|M|O|Ostetaan|Tuote|ALE)\s*:\s*/i, '');
 
         // Strip store name suffix (e.g. " - Verkkokauppa.com", " | Jimm's", " - Tori.fi (Käytetty)")
-        s = s.replace(/\s+[-|•–]\s*(?:Jula|Hinta(?:\.fi)?|CS(?:\s*MEGASTORE)?|Verkkokauppa\.com|Gigantti(?:\s+verkkokauppa)?|Power(?:\.fi)?|Proshop|Jimm's|Datatronic|Multitronic|Tietokonekauppa|Data-Systems|Komponenttikauppa|Cruzbroker|MaxGaming|VPD|Puolenkuun(?:\s+Pelit)?|Veikon(?:\s+Kone)?|Euronics|Kärkkäinen|Prisma|Telia|Elisa|DNA|HobbyHall|Bigbox|Kasuplan|Mikromafia|TeraStore|DigiDreamer|MEGASTORE|e-ville|SatShop|Dustin|Amazon(?:\.de)?|Tori(?:\.fi)?(?:\s*\([^)]*\))?|Vinted(?:\s*\([^)]*\))?|Huuto(?:\.net)?(?:\s*\([^)]*\))?|Swappie(?:\s*\([^)]*\))?|Taitonetti(?:\s*\([^)]*\))?|Fonum(?:\s*\([^)]*\))?|XXL|Varuste(?:\.net)?|Intersport|Budget\s*Sport|Scandinavian\s*Outdoor|Stadium|Partioaitta|Haglöfs|Hintaseuranta|Yliopiston\s*Apteekki|Lyko|Kicks|Musti\s*ja\s*Mirri|Zooplus|Peten\s*Koiratarvike|Adlibris|Suomalainen(?:\s*Kirjakauppa)?|Taloon(?:\.com)?|Netrauta|S-kaupat|K-Ruoka|Fiksuruoka|Matsmart|Ruohonjuuri|Tokmanni|Puuilo|IKEA|JYSK|Sotka|Asko|Masku|Isku|Veke|Finnish\s*Design\s*Shop|K-Rauta|Bauhaus|Motonet|Biltema|Clas\s*Ohlson|Rusta|Stockmann|Nettiauto|Kamux|Saka|Rinta-Jouppi|Autotie|K-Auto|Hedin(?:\s*Automotive)?|Bilar99e|VaihtoPlus|Autolle(?:\.com)?|Veho|Delta(?:\s*Auto)?|MS-Auto|Nettimoto|Nettikaravaani|Nettivene|Nettikone).*$/i, '');
+        s = s.replace(/\s+[-|•–]\s*(?:Jula|Hinta(?:\.fi)?|CS(?:\s*MEGASTORE)?|Verkkokauppa(?:\.com)?|Gigantti(?:\.fi|\s+verkkokauppa)?|Power(?:\.fi)?|Proshop(?:\.fi)?|Jimm(?:'s|s)?(?:\.fi)?|Datatronic(?:\.fi)?|Multitronic(?:\.fi)?|Tietokonekauppa|Data-Systems|Komponenttikauppa|Cruzbroker|MaxGaming|VPD|Puolenkuun(?:\s+Pelit)?|Veikon(?:\s+Kone)?|Euronics|Kärkkäinen|Prisma|Telia(?:\.fi)?|Elisa(?:\.fi)?|DNA(?:\.fi)?|HobbyHall|Bigbox|Kasuplan|Mikromafia|TeraStore|DigiDreamer|MEGASTORE|e-ville|SatShop|Dustin|Amazon(?:\.de)?|Tori(?:\.fi)?(?:\s*\([^)]*\))?|Vinted(?:\s*\([^)]*\))?|Huuto(?:\.net)?(?:\s*\([^)]*\))?|Swappie(?:\s*\([^)]*\))?|Taitonetti(?:\s*\([^)]*\))?|Fonum(?:\s*\([^)]*\))?|XXL|Varuste(?:\.net)?|Intersport|Budget\s*Sport|Scandinavian\s*Outdoor|Stadium|Partioaitta|Haglöfs|Hintaseuranta|Yliopiston\s*Apteekki|Lyko|Kicks|Musti\s*ja\s*Mirri|Zooplus|Peten\s*Koiratarvike|Adlibris|Suomalainen(?:\s*Kirjakauppa)?|Taloon(?:\.com)?|Netrauta|S-kaupat|K-Ruoka|Fiksuruoka|Matsmart|Ruohonjuuri|Tokmanni(?:\.fi)?|Puuilo|IKEA(?:\.fi)?|JYSK|Sotka|Asko|Masku|Isku|Veke|Finnish\s*Design\s*Shop|K-Rauta|Bauhaus|Motonet(?:\.fi)?|Biltema|Clas\s*Ohlson|Rusta|Stockmann|Nettiauto|Kamux|Saka|Rinta-Jouppi|Autotie|K-Auto|Hedin(?:\s*Automotive)?|Bilar99e|VaihtoPlus|Autolle(?:\.com)?|Veho|Delta(?:\s*Auto)?|MS-Auto|Nettimoto|Nettikaravaani|Nettivene|Nettikone).*$/i, '');
 
         // Strip Amazon / marketplace marketing description clauses after ':' or ';' when prefix has >= 2 words
         const colonIdx = s.search(/\s*[:;]\s*/);
@@ -1903,6 +1903,39 @@
         if (host.includes('proshop.fi')) {
             return !/\/\d{7,}\b/i.test(p) && !/\/product/i.test(p);
         }
+        if (host.includes('multitronic.fi')) {
+            return !/\/products\/\d+/i.test(p);
+        }
+        if (host.includes('telia.fi')) {
+            return !/\/kauppa\/(?:tuote|laite|laitteet)\//i.test(p);
+        }
+        if (host.includes('elisa.fi')) {
+            return !/\/kauppa\/tuote\//i.test(p);
+        }
+        if (host.includes('dna.fi')) {
+            return !/\/(?:fi|sv|en)?\/?tuote\/\d+/i.test(p) && !/\/yrityksille\/tuote\//i.test(p);
+        }
+        if (host.includes('ikea.com')) {
+            return !/\/p\/[a-z0-9-]+-\d+\/?$/i.test(p);
+        }
+        if (host.includes('s-kaupat.fi')) {
+            return !/\/tuote\/\d+/i.test(p);
+        }
+        if (host.includes('k-ruoka.fi')) {
+            return !/\/kauppa\/tuote\//i.test(p);
+        }
+        if (host.includes('xxl.fi')) {
+            return !/\/p\/\d+/i.test(p);
+        }
+        if (host.includes('stadium.fi')) {
+            return !/\/tuote\/\d+/i.test(p) && !/\/\d{7,}\b/i.test(p);
+        }
+        if (host.includes('motonet.fi')) {
+            return !/\/tuote\//i.test(p);
+        }
+        if (host.includes('tokmanni.fi')) {
+            return !/\/[a-z0-9-]+-\d{10,}\b/i.test(p);
+        }
         if (host.includes('nettiauto.com')) {
             return !/\/\d{7,}\b/i.test(p) && !/\/auto\//i.test(p);
         }
@@ -1926,7 +1959,7 @@
         }
 
         if (p === '/' || /^\/(fi|en|sv)\/?$/.test(p)) return true;
-        if (/\/(cart|ostoskori|varukorg|checkout|kassa|search|haku|sok|login|account|asiakastili|customer|wishlist|vertailu|compare|category|kategoriat?|list|tuotelista|collection|collections)\b/i.test(p)) {
+        if (/\/(cart|ostoskori|varukorg|checkout|kassa|search|haku|sok|login|account|asiakastili|customer|wishlist|vertailu|compare|category|kategoriat?|list|tuotelista|collection|collections|osasto|osastot|valikoima|brand|brands|merkit|campaign|kampanja|kampanjat|tarjoukset|club|klubi|asiakaspalvelu|info|oppaat|contact|yhteystiedot)\b/i.test(p)) {
             return true;
         }
         return false;
